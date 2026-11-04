@@ -51,6 +51,12 @@
         <section class="card" id="plateCard">
           <h2 data-i18n="plateCard">Plate</h2>
           <div id="plateControls"></div>
+          <div id="vignettePicker" class="vignette-picker" role="listbox" aria-label="Vignettes" data-i18n-label="vignettes" hidden></div>
+          <div id="svgChooser" hidden>
+            <button id="svgUpload" type="button" class="secondary" data-i18n="uploadSvg">Choose an SVG file…</button>
+            <input id="svgFile" type="file" accept=".svg,image/svg+xml" hidden />
+          </div>
+          <p id="plateStatus" class="error" role="alert" hidden></p>
         </section>
         <section class="card" id="elementsCard">
           <h2 data-i18n="elementsCard">Elements</h2>

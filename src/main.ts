@@ -5,6 +5,7 @@ import { createScene } from './render/scene';
 import { browserStorage } from './storage';
 import { FONTS, fontReady, loadFont } from './ui/fonts';
 import { decodeRaster, importImageFile } from './ui/imageImport';
+import { browserSilhouettes } from './ui/svgRaster';
 import { rasterizeText } from './ui/textRaster';
 import { csgClient } from './worker/client';
 
@@ -28,5 +29,6 @@ startApp({
   timers: { set: (fn, ms) => window.setTimeout(fn, ms), clear: (id) => window.clearTimeout(id) },
   pictures: { importFile: importImageFile, decode: decodeRaster },
   texts: { fontReady, loadFont, rasterize: (text) => rasterizeText(text, FONTS[text.font]) },
+  silhouettes: browserSilhouettes(import.meta.env.BASE_URL),
 });
 if (import.meta.env.PROD) registerServiceWorker(navigator, window);

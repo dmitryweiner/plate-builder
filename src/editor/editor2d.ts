@@ -37,6 +37,8 @@ export interface EditorOptions {
   picture(image: ImageElement): CanvasImageSource | null;
   /** a text's contours in its own frame (mm), or null while its font loads */
   textShape(text: TextElement): readonly Ring[] | null;
+  /** a raised frame's contours (plate frame, mm), drawn as a tint; null without one */
+  frame(): readonly Ring[] | null;
 }
 
 export interface EditorHandle {
@@ -293,6 +295,21 @@ export function createEditor(o: EditorOptions): EditorHandle {
     ctx.save();
     path(outline);
     ctx.clip('evenodd');
+    // the rim and the frame as tints of the edge colour
+    ctx.globalAlpha = 0.18;
+    ctx.fillStyle = c.edge;
+    if (state.plate.rim) {
+      ctx.lineWidth = 2 * state.plate.rimWidth * view.scale;
+      ctx.strokeStyle = c.edge;
+      path(outline);
+      ctx.stroke();
+    }
+    const frame = o.frame();
+    if (frame) {
+      path(frame);
+      ctx.fill('nonzero');
+    }
+    ctx.globalAlpha = 1;
     for (const image of state.images) {
       const picture = image.visible ? o.picture(image) : null;
       if (!picture) continue;

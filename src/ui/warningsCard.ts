@@ -19,6 +19,7 @@ export function warningText(t: Messages, w: Warning, state: PlateState): string 
     'outline.islands': () => t.warning.islands(mm('count')),
     'outline.empty': () => t.warning.empty,
     'text.thin': () => t.warning.textThin(names),
+    'frame.thin': () => t.warning.frameThin,
     'text.arcLines': () => t.warning.arcLines(names),
     'text.buried': () => t.warning.buried(names),
     'text.arcTooLong': () => t.warning.arcTooLong(names, mm('percent')),

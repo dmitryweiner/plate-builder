@@ -489,3 +489,101 @@ describe('rim', () => {
     }
   });
 });
+
+/** A 10 px/mm silhouette: a w × h mm frame of the given band width around a window, centred. */
+function frameMask(w: number, h: number, band: number, pieces: [number, number][] = [[0, 0]]): TextRaster {
+  const pad = 10;
+  const width = w * 10 + 2 * pad;
+  const height = h * 10 + 2 * pad;
+  const data = new Uint8Array(width * height);
+  for (let j = 0; j < height; j++) {
+    for (let i = 0; i < width; i++) {
+      const x = (i + 0.5 - width / 2) / 10;
+      const y = (height / 2 - j - 0.5) / 10;
+      for (const [cx, cy] of pieces) {
+        const dx = Math.abs(x - cx);
+        const dy = Math.abs(y - cy);
+        const pw = pieces.length > 1 ? w / 4 : w / 2;
+        const inside = dx < pw && dy < h / 2;
+        const window = dx < pw - band && dy < h / 2 - band;
+        if (inside && !window) data[j * width + i] = 255;
+      }
+    }
+  }
+  return { width, height, data, pxPerMm: 10, originX: width / 2, originY: height / 2, cap: 0 };
+}
+
+function silhouetteState(over: Partial<Plate> = {}): PlateState {
+  return withPlate({ kind: 'svg', svg: 'data:image/svg+xml;base64,', rounding: 0, thickness: 3, frame: true, frameHeight: 1.5, ...over });
+}
+
+function builtSilhouette(state: PlateState, mask: TextRaster | null) {
+  const { mesh, warnings } = inScope((scope) => buildPlate(csg, scope, state, { images: [], texts: [], silhouette: mask }, 'preview'));
+  return { warnings, report: validateMesh({ ...mesh, normals: meshNormals(mesh.positions, mesh.indices) }) };
+}
+
+describe('vignettes and own SVG', () => {
+  it('the outline is the silhouette’s outer contour, its window filled', () => {
+    const { rings, area } = inScope((scope) => {
+      const { section } = stateOutline(csg, scope, silhouetteState(), { images: [], texts: [], silhouette: frameMask(60, 40, 5) });
+      return { rings: outlineRings(section), area: section.area() };
+    });
+    expect(rings).toHaveLength(1);
+    expect(area).toBeCloseTo(60 * 40, -1);
+  });
+
+  it('raises the frame by its height and leaves the window at the base', () => {
+    const { report } = builtSilhouette(silhouetteState(), frameMask(60, 40, 5));
+    expect(report.watertight).toBe(true);
+    expect(meshProblems(report)).toEqual([]);
+    expect(report.bbox.max[2]).toBeCloseTo(4.5, 4);
+    expect(report.volume).toBeCloseTo(60 * 40 * 3 + (60 * 40 - 50 * 30) * 1.5, -1);
+  });
+
+  it('without the frame it is a figured outline only', () => {
+    const { report } = builtSilhouette(silhouetteState({ frame: false }), frameMask(60, 40, 5));
+    expect(report.volume).toBeCloseTo(60 * 40 * 3, -1);
+  });
+
+  it('a rim and a frame of different heights make one closed solid', () => {
+    for (const [rimHeight, frameHeight] of [
+      [1, 2],
+      [2, 1],
+      [1.5, 1.5],
+    ]) {
+      const { report } = builtSilhouette(silhouetteState({ rim: true, rimWidth: 2, rimHeight, frameHeight }), frameMask(60, 40, 5));
+      expect({ rimHeight, frameHeight, watertight: report.watertight, problems: meshProblems(report) }).toEqual({
+        rimHeight,
+        frameHeight,
+        watertight: true,
+        problems: [],
+      });
+      // the rim's 2 mm ring lies within the frame's 5 mm band: the frame stands at its height,
+      // and the ring above it where the rim is higher
+      const ring = 60 * 40 - 56 * 36;
+      expect(report.volume).toBeCloseTo(60 * 40 * 3 + (60 * 40 - 50 * 30) * frameHeight + ring * Math.max(0, rimHeight - frameHeight), -1);
+    }
+  });
+
+  it('warns about a frame thinner than 0.8 mm', () => {
+    expect(builtSilhouette(silhouetteState(), frameMask(60, 40, 0.5)).warnings.map((w) => w.code)).toEqual(['frame.thin']);
+    expect(builtSilhouette(silhouetteState({ frame: false }), frameMask(60, 40, 0.5)).warnings).toEqual([]);
+  });
+
+  it('an SVG with two pieces gives two islands and the warning', () => {
+    const { warnings } = builtSilhouette(
+      silhouetteState({ frame: false }),
+      frameMask(60, 40, 5, [
+        [-20, 0],
+        [20, 0],
+      ]),
+    );
+    expect(warnings).toEqual([expect.objectContaining({ code: 'outline.islands', params: { count: 2 } })]);
+  });
+
+  it('is empty, with a warning, without a silhouette', () => {
+    const { warnings, report } = builtSilhouette(silhouetteState(), null);
+    expect(warnings.map((w) => w.code)).toEqual(['outline.empty']);
+    expect(meshProblems(report)).toEqual(['empty']);
+  });
+});

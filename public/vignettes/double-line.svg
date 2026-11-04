@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 200" width="300" height="200">
+  <!-- Two rounded bands joined at the corners by squares: one piece around a window. Drawn for Plate Builder, CC0. -->
+  <path fill="#000" fill-rule="evenodd" d="
+    M 16 0 H 284 A 16 16 0 0 1 300 16 V 184 A 16 16 0 0 1 284 200 H 16 A 16 16 0 0 1 0 184 V 16 A 16 16 0 0 1 16 0 Z
+    M 20 8 A 12 12 0 0 0 8 20 V 180 A 12 12 0 0 0 20 192 H 280 A 12 12 0 0 0 292 180 V 20 A 12 12 0 0 0 280 8 Z"/>
+  <path fill="#000" fill-rule="evenodd" d="
+    M 8 8 H 40 V 20 H 260 V 8 H 292 V 40 H 280 V 160 H 292 V 192 H 260 V 180 H 40 V 192 H 8 V 160 H 20 V 40 H 8 Z
+    M 30 30 V 170 H 270 V 30 Z"/>
+</svg>

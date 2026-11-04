@@ -30,6 +30,7 @@ export function runJob(csg: CsgApi, job: Job): JobResult {
         const raster = job.textRasters?.[i];
         return isTextRaster(raster) ? raster : null;
       }),
+      silhouette: isTextRaster(job.silhouette) ? job.silhouette : null,
     };
     if (job.kind === 'outline') {
       const { section, warnings } = stateOutline(csg, scope, state, rasters);

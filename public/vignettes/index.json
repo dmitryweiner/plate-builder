@@ -1,0 +1,28 @@
+{
+  "vignettes": [
+    {
+      "id": "cartouche",
+      "file": "cartouche.svg",
+      "names": { "en": "Cartouche", "ru": "Картуш", "uk": "Картуш", "he": "קרטוש" },
+      "source": "drawn for Plate Builder",
+      "author": "Plate Builder",
+      "licence": "CC0-1.0"
+    },
+    {
+      "id": "scalloped-oval",
+      "file": "scalloped-oval.svg",
+      "names": { "en": "Scalloped oval", "ru": "Фигурный овал", "uk": "Фігурний овал", "he": "סגלגל מסולסל" },
+      "source": "drawn for Plate Builder",
+      "author": "Plate Builder",
+      "licence": "CC0-1.0"
+    },
+    {
+      "id": "double-line",
+      "file": "double-line.svg",
+      "names": { "en": "Double line", "ru": "Двойная линия", "uk": "Подвійна лінія", "he": "קו כפול" },
+      "source": "drawn for Plate Builder",
+      "author": "Plate Builder",
+      "licence": "CC0-1.0"
+    }
+  ]
+}
