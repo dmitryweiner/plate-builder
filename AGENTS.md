@@ -112,7 +112,7 @@ browser (service worker, layout, workers) → a step in `scripts/smoke.mjs`.
   rows), `plateCard.ts`, `selectedCard.ts` (the cards' controls),
   `elementsCard.ts` (the element list), `warningsCard.ts`,
   `imageImport.ts` (files → grayscale + alpha PNG, decoding, height
-  pictures), `fonts.ts` (bundled fonts, loaded on first use),
+  pictures), `sheet.ts` (the panel as a bottom sheet on a phone), `fonts.ts` (bundled fonts, loaded on first use),
   `textRaster.ts` (a text block drawn at 10 px/mm), `svgRaster.ts`
   (vignette catalog schema, SVG silhouettes, own SVG files), `dom.ts`.
 - `public/fonts/` — woff2 subsets with their OFL licences.

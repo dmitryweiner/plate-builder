@@ -55,15 +55,11 @@ async function built(page, before = '') {
   return handle.jsonValue();
 }
 
-/**
- * Where a plate point is on the page in the 2D view as first fitted: the
- * default 100 × 60 plate in the middle of the canvas, 24 px from its edges
- * (editor/view.ts fitView).
- */
+/** Where a plate point is on the page in the 2D view, from the transform the editor publishes (data-view). */
 async function plateToPage(page, [x, y]) {
   const box = await page.locator('#view2d').boundingBox();
-  const scale = Math.min((box.width - 48) / 100, (box.height - 48) / 60);
-  return [box.x + box.width / 2 + x * scale, box.y + box.height / 2 - y * scale, scale];
+  const [scale, cx, cy] = (await page.locator('#view2d').getAttribute('data-view')).split(' ').map(Number);
+  return [box.x + cx + x * scale, box.y + cy - y * scale, scale];
 }
 
 /** A mouse drag between plate points, in steps. */
@@ -568,12 +564,49 @@ try {
     await context.close();
   });
 
-  await step('browser language is detected, the choice survives a reload', async () => {
+  await step('all four languages: detected from the browser, switched, remembered', async () => {
+    for (const [browser, lang, brand] of [
+      ['ru-RU', 'ru', 'Конструктор табличек'],
+      ['uk-UA', 'uk', 'Конструктор табличок'],
+      ['he-IL', 'he', 'בונה שלטים'],
+      ['de-DE', 'en', 'Plate Builder'],
+    ]) {
+      const { page, context } = await app.open({ locale: browser });
+      check((await page.locator('html').getAttribute('lang')) === lang, `${browser} browser did not get ${lang}`);
+      check((await page.locator('.brand').textContent()) === brand, `${lang}: brand ${await page.locator('.brand').textContent()}`);
+      await context.close();
+    }
     const { page, context } = await app.open({ locale: 'ru-RU' });
-    check((await page.locator('html').getAttribute('lang')) === 'ru', 'ru-RU browser did not get Russian');
-    await page.selectOption('#locale', 'en');
-    await page.reload();
-    check((await page.locator('html').getAttribute('lang')) === 'en', 'the switcher choice was lost on reload');
+    for (const lang of ['uk', 'he', 'en']) {
+      await page.selectOption('#locale', lang);
+      await page.reload();
+      check((await page.locator('html').getAttribute('lang')) === lang, `the switch to ${lang} was lost on reload`);
+    }
+    await context.close();
+  });
+
+  await step('the panel is a sheet on a phone: a tap on empty space hides it, a tap on an element shows its card', async () => {
+    const { page, context } = await app.open({ viewport: VIEWPORTS.phone });
+    await built(page);
+    await page.click('#addHole');
+    check(await page.locator('#panel').evaluate((p) => p.classList.contains('open')), 'the sheet is not open');
+    const tap = async ([x, y]) => {
+      const canvas = page.locator('#view2d');
+      for (const type of ['pointerdown', 'pointerup'])
+        await canvas.dispatchEvent(type, { pointerId: 3, pointerType: 'touch', isPrimary: true, clientX: x, clientY: y, bubbles: true });
+    };
+    await tap(await plateToPage(page, [30, 20]));
+    await page.waitForFunction(() => !document.querySelector('#panel')?.classList.contains('open'));
+    check(await page.locator('#sheetOpen').isVisible(), 'no button to bring the sheet back');
+    // the sheet slides away in 0.2 s
+    await page.waitForTimeout(300);
+    if (shots) await page.screenshot({ path: 'shots/phone-sheet-closed.png' });
+    await tap(await plateToPage(page, [0, 0]));
+    await page.waitForFunction(() => document.querySelector('#panel')?.classList.contains('open'));
+    check((await page.locator('#selectedTitle').textContent()) === 'Hole 1', 'the tapped hole is not selected');
+    await page.click('#sheetClose');
+    await page.click('#sheetOpen');
+    check(await page.locator('#panel').evaluate((p) => p.classList.contains('open')), 'the button did not bring the sheet back');
     await context.close();
   });
 
@@ -606,7 +639,15 @@ try {
       await context.setOffline(true);
       await page.reload();
       check((await page.locator('.brand').textContent()) === 'Plate Builder', 'the app did not load offline');
-      await built(page);
+      let { info } = await built(page);
+      // a font and a vignette this page never asked for online: precached all the same
+      await page.click('#addText');
+      await page.selectOption('#element-text-font', 'marckScript');
+      ({ info } = await built(page, info));
+      check(info.includes('× 4 mm'), `offline text: ${info}`);
+      await page.selectOption('#plate-kind', 'vignette');
+      ({ info } = await built(page, info));
+      check(await page.locator('#meshBlocked').isHidden(), `offline vignette: ${info}`);
       await context.close();
     });
   }

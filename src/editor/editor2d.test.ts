@@ -55,7 +55,7 @@ beforeEach(() => {
     },
     outline: () => outline,
     snapping: () => snapping,
-    sizeLabel: () => '100 × 60 mm',
+    sizeLabel: () => ({ size: '100 × 60', unit: 'mm' }),
     picture: () => null,
     textShape: () => null,
     frame: () => null,
@@ -176,6 +176,26 @@ describe('2D editor', () => {
     expect(changes).toEqual([]);
     canvas.dispatchEvent(new WheelEvent('wheel', { deltaY: -200, clientX: 200, clientY: 150 }));
     expect(editor.view().scale).toBeGreaterThan(v.scale * 2);
+  });
+
+  it('fits the plate above what covers the canvas’s bottom', () => {
+    const covered = createEditor({
+      canvas,
+      read: () => state,
+      selected: () => null,
+      select: () => {},
+      change: () => {},
+      outline: () => outline,
+      snapping: () => false,
+      sizeLabel: () => null,
+      picture: () => null,
+      textShape: () => null,
+      frame: () => null,
+      covered: () => 100,
+    });
+    covered.fit();
+    expect(toScreen(covered.view(), [0, 0])).toEqual([200, 100]);
+    covered.dispose();
   });
 
   it('frames a spot', () => {

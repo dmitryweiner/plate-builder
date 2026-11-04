@@ -367,3 +367,11 @@ sheet on a phone, offline reload.
   uses the text's traced ink where it is known.
 - **M8**: every built-in preset builds without a warning (checked by the
   smoke).
+- **M9**: the phone sheet opens when an element is selected (to edit it)
+  and closes on a tap on empty space; its button brings it back; the 2D view
+  fits the plate into the part the open sheet leaves free.
+- **M9**: the size under the plate is drawn in two pieces, the numbers left
+  to right and the unit on the reading side: canvas text has no bidi
+  isolation, and "100 × 60" came out as "60 × 100" in Hebrew.
+- **M9**: the editor publishes its transform on the canvas (`data-view`)
+  for the smoke, which maps plate points to the page with it.

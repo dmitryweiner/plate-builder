@@ -8,6 +8,8 @@ export const uk: Messages = {
   source: 'Вихідний код',
   mm: 'мм',
 
+  showPanel: 'Налаштування',
+  hidePanel: 'Сховати налаштування',
   plateCard: 'Табличка',
   outline: 'Контур',
   kindRectangle: 'Прямокутник',

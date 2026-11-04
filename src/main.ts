@@ -30,5 +30,7 @@ startApp({
   pictures: { importFile: importImageFile, decode: decodeRaster },
   texts: { fontReady, loadFont, rasterize: (text) => rasterizeText(text, FONTS[text.font]) },
   silhouettes: browserSilhouettes(import.meta.env.BASE_URL),
+  // the width where style.css puts the panel beside the view
+  narrow: window.matchMedia('(max-width: 1023px)'),
 });
 if (import.meta.env.PROD) registerServiceWorker(navigator, window);

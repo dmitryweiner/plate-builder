@@ -44,11 +44,20 @@
           <progress id="buildProgress" class="progress view-progress" hidden></progress>
           <output id="status" class="status" aria-live="polite"></output>
         </div>
+        <button id="sheetOpen" type="button" class="sheet-open" data-i18n="showPanel" hidden>Settings</button>
         <button id="swapViews" type="button" class="swap-views" title="Swap views" aria-label="Swap views" data-i18n-label="swapViews">
           ⇄
         </button>
       </section>
-      <div class="panel">
+      <div class="panel" id="panel">
+        <button
+          id="sheetClose"
+          type="button"
+          class="sheet-handle"
+          title="Hide the settings"
+          aria-label="Hide the settings"
+          data-i18n-label="hidePanel"
+        ></button>
         <div id="storageBanner" class="banner" role="status" hidden>
           <span data-i18n="storageRefused"
             >This browser does not keep the project (its storage is full or private). Save the project file to keep it.</span
