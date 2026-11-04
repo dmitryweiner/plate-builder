@@ -14,16 +14,73 @@
   <body>
     <header class="topbar">
       <span class="brand" data-i18n="title">Plate Builder</span>
+      <!-- the project's name; opens the presets -->
+      <button
+        id="presetsOpen"
+        type="button"
+        class="tool-button preset-button"
+        title="Presets"
+        aria-haspopup="dialog"
+        aria-expanded="false"
+      ></button>
       <span class="spacer"></span>
-      <button id="undo" type="button" class="tool-button" title="Undo" aria-label="Undo" data-i18n-label="undo">↶</button>
-      <button id="redo" type="button" class="tool-button" title="Redo" aria-label="Redo" data-i18n-label="redo">↷</button>
-      <select id="locale" aria-label="Language" data-i18n-label="languageLabel">
-        <option value="en" lang="en">English</option>
-        <option value="ru" lang="ru">Русский</option>
-        <option value="uk" lang="uk">Українська</option>
-        <option value="he" lang="he">עברית</option>
-      </select>
+      <label class="lang-field">
+        <span class="lang-globe" aria-hidden="true">🌐</span>
+        <select id="locale" aria-label="Language" data-i18n-label="languageLabel">
+          <option value="en" lang="en">English</option>
+          <option value="ru" lang="ru">Русский</option>
+          <option value="uk" lang="uk">Українська</option>
+          <option value="he" lang="he">עברית</option>
+        </select>
+      </label>
+      <!-- a phone breaks the bar here: the buttons go to a second line -->
+      <span class="topbar-break"></span>
+      <div class="topbar-tools">
+        <button
+          id="savePreset"
+          type="button"
+          class="tool-button"
+          title="Save as preset"
+          aria-label="Save as preset"
+          data-i18n-label="savePreset"
+        >
+          💾
+        </button>
+        <button
+          id="openProject"
+          type="button"
+          class="tool-button"
+          title="Open project file…"
+          aria-label="Open project file…"
+          data-i18n-label="openProject"
+        >
+          📂
+        </button>
+        <input id="projectFile" type="file" accept=".json,application/json" hidden />
+        <button
+          id="saveProject"
+          type="button"
+          class="tool-button"
+          title="Save project file"
+          aria-label="Save project file"
+          data-i18n-label="saveProject"
+        >
+          ⬇️
+        </button>
+        <button id="undo" type="button" class="tool-button" title="Undo" aria-label="Undo" data-i18n-label="undo">↶</button>
+        <button id="redo" type="button" class="tool-button" title="Redo" aria-label="Redo" data-i18n-label="redo">↷</button>
+      </div>
     </header>
+    <p id="projectStatus" class="topbar-note" role="alert" hidden></p>
+    <div id="presets" class="modal" hidden>
+      <div class="modal-box" role="dialog" aria-modal="true" aria-labelledby="presetsTitle">
+        <button id="presetsClose" type="button" class="icon-button modal-close" title="Close" aria-label="Close" data-i18n-label="close">
+          ✕
+        </button>
+        <h2 id="presetsTitle" data-i18n="presetsHeading">Presets</h2>
+        <ul id="presetList" class="preset-list"></ul>
+      </div>
+    </div>
     <main class="workspace">
       <section class="views" id="views" data-show="2d" aria-label="Views" data-i18n-label="views">
         <div class="view-tabs">
@@ -103,6 +160,10 @@
         </section>
         <section class="card" id="exportCard">
           <h2 data-i18n="exportCard">Export</h2>
+          <div class="row">
+            <label class="row-name" for="projectName" data-i18n="projectName">Name</label>
+            <input id="projectName" class="name-field" type="text" maxlength="60" />
+          </div>
           <p id="meshInfo" class="note"></p>
           <p id="meshBlocked" class="error" role="alert" hidden></p>
           <button id="downloadStl" type="button" class="primary" data-i18n="downloadStl">Download STL</button>
@@ -110,20 +171,6 @@
           <output id="exportStatus" class="note" aria-live="polite"></output>
           <h3 data-i18n="printHints">Printing</h3>
           <ul id="printHints" class="hints"></ul>
-          <h3 data-i18n="projectHeading">Project</h3>
-          <div class="row">
-            <label class="row-name" for="projectName" data-i18n="projectName">Name</label>
-            <input id="projectName" class="name-field" type="text" maxlength="60" />
-          </div>
-          <div class="add-buttons">
-            <button id="saveProject" type="button" class="secondary" data-i18n="saveProject">Save project file</button>
-            <button id="openProject" type="button" class="secondary" data-i18n="openProject">Open project file…</button>
-            <input id="projectFile" type="file" accept=".json,application/json" hidden />
-          </div>
-          <p id="projectStatus" class="error" role="alert" hidden></p>
-          <h3 data-i18n="presetsHeading">Presets</h3>
-          <ul id="presetList" class="preset-list"></ul>
-          <button id="savePreset" type="button" class="secondary" data-i18n="savePreset">Save as preset</button>
         </section>
         <footer>
           <a href="https://github.com/dmitryweiner/plate-builder" data-i18n="source">Source code</a>

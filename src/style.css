@@ -63,10 +63,148 @@ input {
   background: var(--panel);
   border-block-end: 1px solid var(--line);
 }
+/* A phone: the brand and the language, then the project's name and the
+   buttons in a second line; from 760 px all in one, as in Case Constructor. */
+.topbar {
+  flex-wrap: wrap;
+  row-gap: 6px;
+}
 .brand {
-  font-size: 17px;
+  flex: 1;
+  min-inline-size: 0;
+  overflow: hidden;
+  font-size: 15px;
   font-weight: 700;
   letter-spacing: 0.5px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.lang-field {
+  order: 1;
+}
+.topbar-break {
+  order: 2;
+}
+.preset-button {
+  order: 3;
+  flex: 1;
+  min-inline-size: 0;
+  max-inline-size: 240px;
+  padding-inline: 10px;
+  overflow: hidden;
+  font-size: 14px;
+  text-align: start;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.preset-button::after {
+  content: ' …';
+  color: var(--muted);
+}
+.topbar .spacer {
+  display: none;
+}
+.topbar-break {
+  flex-basis: 100%;
+  block-size: 0;
+}
+.topbar-tools {
+  order: 4;
+  display: flex;
+  gap: 6px;
+}
+.lang-field select {
+  max-inline-size: 130px;
+}
+.lang-field {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.lang-globe {
+  display: none;
+}
+.topbar-note {
+  margin: 0;
+  padding: 6px 12px;
+  border-block-end: 1px solid var(--bad);
+  background: rgb(224 108 92 / 14%);
+  font-size: 12.5px;
+}
+.topbar-note[hidden] {
+  display: none;
+}
+@media (min-width: 760px) {
+  .topbar {
+    flex-wrap: nowrap;
+  }
+  .topbar .spacer {
+    display: block;
+    order: 3;
+  }
+  .topbar-break {
+    display: none;
+  }
+  .topbar-tools {
+    order: 2;
+  }
+  .lang-field {
+    order: 4;
+  }
+  .lang-globe {
+    display: inline;
+  }
+  .brand {
+    flex: none;
+    font-size: 17px;
+  }
+  .preset-button {
+    order: 1;
+    flex: 0 1 auto;
+  }
+  .lang-field select {
+    max-inline-size: none;
+  }
+}
+
+/* the presets: a dialog over everything */
+.modal {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px;
+  background: rgb(0 0 0 / 60%);
+}
+.modal[hidden] {
+  display: none;
+}
+.modal-box {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  inline-size: min(420px, 100%);
+  max-block-size: min(80vh, 80dvh);
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--panel);
+  box-shadow: 0 12px 40px rgb(0 0 0 / 60%);
+}
+.modal-box h2 {
+  margin: 0 0 8px;
+  font-size: 16px;
+}
+.modal-close {
+  position: absolute;
+  inset-block-start: 8px;
+  inset-inline-end: 8px;
+}
+.modal-box .preset-list {
+  min-block-size: 0;
+  overflow-y: auto;
 }
 select {
   min-block-size: 40px;
@@ -749,11 +887,35 @@ footer a {
   display: flex;
   align-items: center;
   gap: 6px;
+  margin-block-end: 4px;
 }
 .preset-row .name-field {
   flex: 1;
+  min-inline-size: 0;
+}
+/* Case Constructor's preset rows: a framed button the width of the list */
+.preset-pick {
+  flex: 1;
+  min-inline-size: 0;
+  min-block-size: 38px;
+  padding-inline: 10px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--card);
+  color: var(--text);
+  text-align: start;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.preset-pick:hover {
+  border-color: var(--accent);
 }
 .preset-changed {
-  color: var(--muted);
-  font-size: 0.8rem;
+  color: var(--warn);
+  font-size: 12px;
+}
+.preset-list .link-button {
+  min-block-size: 38px;
 }

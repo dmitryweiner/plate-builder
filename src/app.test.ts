@@ -966,10 +966,53 @@ describe('projects, presets, storage', () => {
     expect($('#plate-width-n', HTMLInputElement).value).toBe('100');
   });
 
-  it('opens a built-in preset and marks it changed once edited', () => {
+  it('opens the presets dialog from the top bar and closes it by its button, Esc and the backdrop', () => {
     start();
+    const opener = $('#presetsOpen', HTMLButtonElement);
+    const dialog = $('#presets', HTMLElement);
+    expect(dialog.hidden).toBe(true);
+    for (const close of [
+      () => $('#presetsClose', HTMLButtonElement).click(),
+      () => press('Escape'),
+      () => dialog.dispatchEvent(new MouseEvent('click', { bubbles: true })),
+    ]) {
+      opener.click();
+      expect(dialog.hidden).toBe(false);
+      expect(opener.getAttribute('aria-expanded')).toBe('true');
+      close();
+      expect(dialog.hidden).toBe(true);
+      expect(document.activeElement).toBe(opener);
+    }
+    // a click inside the box is not one on the backdrop
+    opener.click();
+    $('#presetsTitle', HTMLElement).dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    expect(dialog.hidden).toBe(false);
+  });
+
+  it('Esc in the open dialog closes only the dialog, the selection stays', () => {
+    start();
+    $('#addHole', HTMLButtonElement).click();
+    $('#presetsOpen', HTMLButtonElement).click();
+    press('Escape');
+    expect($('#presets', HTMLElement).hidden).toBe(true);
+    expect(openTitle()).toBe('Hole 1');
+  });
+
+  it('names the project on the presets button of the top bar', () => {
+    storage = new MemoryStorage();
+    start();
+    expect(text('#presetsOpen')).toBe('Door sign');
+    expect($('#presetsOpen', HTMLButtonElement).getAttribute('aria-label')).toBe('Presets: Door sign');
+    setInput('#projectName', 'Gate');
+    expect(text('#presetsOpen')).toBe('Gate');
+  });
+
+  it('opens a built-in preset from the dialog, closing it, and marks it changed once edited', () => {
+    start();
+    $('#presetsOpen', HTMLButtonElement).click();
     expect([...document.querySelectorAll('.preset-row')].map((r) => r.textContent)).toEqual(BUILT_IN_PRESETS.map((p) => p.names.en));
     $('.preset-row[data-id="medal"] button', HTMLButtonElement).click();
+    expect($('#presets', HTMLElement).hidden).toBe(true);
     expect($('#projectName', HTMLInputElement).value).toBe('Medal');
     expect(document.querySelector('.preset-changed')).toBeNull();
     setInput('#plate-thickness-n', '4');

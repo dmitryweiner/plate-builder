@@ -32,7 +32,7 @@ export function renderPresetList(
   const mark = (id: string) => (id === changed ? [make('span', 'preset-changed', t.presetChanged)] : []);
   for (const preset of builtIn) {
     const item = row(preset.id);
-    const open = make('button', 'element-name', preset.names[locale]);
+    const open = make('button', 'preset-pick', preset.names[locale]);
     open.type = 'button';
     open.addEventListener('click', () => actions.open(preset.id));
     item.append(open, ...mark(preset.id));

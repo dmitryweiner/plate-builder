@@ -196,6 +196,9 @@ export function startApp({
   const projectFile = el('projectFile', HTMLInputElement);
   const projectStatus = el('projectStatus', HTMLElement);
   const presetList = el('presetList', HTMLElement);
+  const presetsOpen = el('presetsOpen', HTMLButtonElement);
+  const presetsDialog = el('presets', HTMLElement);
+  const presetsClose = el('presetsClose', HTMLButtonElement);
   const savePresetButton = el('savePreset', HTMLButtonElement);
   const buildProgress = el('buildProgress', HTMLProgressElement);
   const printHints = el('printHints', HTMLElement);
@@ -557,6 +560,9 @@ export function startApp({
     }
     renderHints();
     if (document.activeElement !== projectName) projectName.value = s.name;
+    presetsOpen.textContent = s.name;
+    presetsOpen.title = m.presetsHeading;
+    presetsOpen.setAttribute('aria-label', `${m.presetsHeading}: ${s.name}`);
     renderPresets();
     undoButton.disabled = !history.canUndo;
     redoButton.disabled = !history.canRedo;
@@ -583,7 +589,10 @@ export function startApp({
     if (key === presetsKey) return;
     presetsKey = key;
     renderPresetList(presetList, BUILT_IN_PRESETS, settings.presets, changed, t(), locale, {
-      open: (id) => openPreset(id),
+      open: (id) => {
+        openPreset(id);
+        closePresets();
+      },
       rename: (id, name) => {
         settings = {
           ...settings,
@@ -609,6 +618,22 @@ export function startApp({
     afterChange();
     editor.fit();
   }
+
+  /** The presets dialog over everything; closed, the focus goes back to its button. */
+  const openPresets = () => {
+    presetsDialog.hidden = false;
+    presetsOpen.setAttribute('aria-expanded', 'true');
+    presetsClose.focus();
+  };
+  const closePresets = () => {
+    if (presetsDialog.hidden) return;
+    presetsDialog.hidden = true;
+    presetsOpen.setAttribute('aria-expanded', 'false');
+    presetsOpen.focus();
+  };
+  const onPresetsBackdrop = (event: MouseEvent) => {
+    if (event.target === presetsDialog) closePresets();
+  };
 
   function openPreset(id: string): void {
     const preset = BUILT_IN_PRESETS.find((p) => p.id === id) ?? settings.presets.find((p) => p.id === id);
@@ -869,6 +894,14 @@ export function startApp({
   };
 
   const onKey = (event: KeyboardEvent) => {
+    // the open dialog takes Esc, even from its name fields
+    if (!presetsDialog.hidden) {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        closePresets();
+      }
+      return;
+    }
     if (typing(event.target)) return;
     const mod = event.ctrlKey || event.metaKey;
     const key = event.key.toLowerCase();
@@ -983,6 +1016,9 @@ export function startApp({
   projectFile.addEventListener('change', onProjectFile);
   projectName.addEventListener('change', onProjectName);
   savePresetButton.addEventListener('click', savePreset);
+  presetsOpen.addEventListener('click', openPresets);
+  presetsClose.addEventListener('click', closePresets);
+  presetsDialog.addEventListener('click', onPresetsBackdrop);
   svgFile.addEventListener('change', onSvgFile);
   silhouettes.catalog().then(
     (entries) => {
@@ -1017,6 +1053,9 @@ export function startApp({
     projectFile.removeEventListener('change', onProjectFile);
     projectName.removeEventListener('change', onProjectName);
     savePresetButton.removeEventListener('click', savePreset);
+    presetsOpen.removeEventListener('click', openPresets);
+    presetsClose.removeEventListener('click', closePresets);
+    presetsDialog.removeEventListener('click', onPresetsBackdrop);
     if (saveTimer !== null) {
       timers.clear(saveTimer);
       persist();

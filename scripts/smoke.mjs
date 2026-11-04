@@ -545,7 +545,11 @@ try {
     const [download] = await Promise.all([page.waitForEvent('download'), page.click('#saveProject')]);
     const path = await download.path();
     check(download.suggestedFilename() === 'door-sign.plate.json', `file name ${download.suggestedFilename()}`);
+    // the presets live in a dialog of the top bar; a pick closes it
+    await page.click('#presetsOpen');
+    if (shots) await page.screenshot({ path: 'shots/presets-dialog.png' });
     await page.click('.preset-row[data-id="medal"] button');
+    check(await page.locator('#presets').isHidden(), 'the presets dialog stayed open after a pick');
     info = await builtAs(page, '60 × 60');
     await page.setInputFiles('#projectFile', path);
     info = await builtAs(page, '170 × 60');
@@ -553,6 +557,7 @@ try {
     await page.click('#savePreset');
     check((await page.locator('.preset-row[data-id="u1"]').count()) === 1, 'the user preset is not listed');
     for (const id of ['keychain', 'pet-tag', 'house-number', 'name-plate']) {
+      await page.click('#presetsOpen');
       await page.click(`.preset-row[data-id="${id}"] button`);
       ({ info } = await built(page, info));
       check(await page.locator('#meshBlocked').isHidden(), `${id}: the mesh is blocked`);
