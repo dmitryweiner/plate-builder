@@ -160,6 +160,17 @@ describe('web app manifest', () => {
     expect(html).toContain('name="theme-color"');
   });
 
+  it('takes its colours from the stylesheet: the top bar is the theme, the page the background', () => {
+    const css = readFileSync(resolve(__dirname, 'style.css'), 'utf8');
+    const token = (name: string) => css.match(new RegExp(`${name}:\\s*(#[0-9a-f]{6});`))?.[1];
+    const themeColor = html.match(/name="theme-color" content="(#[0-9a-f]{6})"/)?.[1];
+    expect({ page: themeColor, manifest: manifest.theme_color, background: manifest.background_color }).toEqual({
+      page: token('--panel'),
+      manifest: token('--panel'),
+      background: token('--bg'),
+    });
+  });
+
   it('describes an installable standalone app with existing icons', () => {
     expect(manifest).toMatchObject({ name: 'Plate Builder', start_url: './', scope: './', display: 'standalone', lang: 'en' });
     const sizes = manifest.icons.map((i: { sizes: string }) => i.sizes);

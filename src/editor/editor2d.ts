@@ -68,12 +68,12 @@ function colors(canvas: HTMLCanvasElement) {
   const style = getComputedStyle(canvas);
   const read = (name: string, fallback: string) => style.getPropertyValue(name).trim() || fallback;
   return {
-    background: read('--editor-bg', '#e9ecf5'),
-    grid: read('--editor-grid', 'rgba(23, 34, 62, 0.08)'),
-    plate: read('--editor-plate', '#ffffff'),
-    edge: read('--editor-edge', '#17223e'),
-    accent: read('--accent', '#294edb'),
-    muted: read('--muted', '#5b6685'),
+    background: read('--editor-bg', '#181b20'),
+    grid: read('--editor-grid', 'rgba(228, 233, 239, 0.06)'),
+    plate: read('--editor-plate', '#3a424d'),
+    edge: read('--editor-edge', '#c9d1db'),
+    accent: read('--accent', '#34c38f'),
+    muted: read('--muted', '#94a0ad'),
   };
 }
 

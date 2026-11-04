@@ -3,40 +3,28 @@
    A phone: the view on top, the panel's cards below it. From 1024 px: the
    panel on the start side, the view filling the rest. */
 
+/* Case Constructor's dark palette with an emerald accent; dark only.
+   --panel is also the theme colour (index.html, the manifest; a test
+   keeps them equal), --bg the manifest's background. */
 :root {
-  --bg: #f4f6fc;
-  --fg: #17223e;
-  --muted: #5b6685;
-  --accent: #294edb;
-  --accent-fg: #fff;
-  --surface: #fff;
-  --line: #d5daea;
-  --error: #b42318;
-  --focus: #e6af00;
-  --view-bg: #1d2233;
-  --view-fg: #e7ebf7;
+  --bg: #15181c;
+  --panel: #1c2026;
+  --card: #252a31;
+  --text: #e4e9ef;
+  --muted: #94a0ad;
+  --accent: #34c38f;
+  --accent-strong: #5fd6a8;
+  --accent-soft: rgb(52 195 143 / 14%);
+  --on-accent: #04201a;
+  --warn: #e3b341;
+  --bad: #e06c5c;
+  --line: #343b44;
   /* the 2D editor's canvas, read by editor2d.ts */
-  --editor-bg: #e3e7f2;
-  --editor-grid: rgb(23 34 62 / 8%);
-  --editor-plate: #b9c0d4;
-  --editor-edge: #17223e;
-  color-scheme: light dark;
-}
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #11162a;
-    --fg: #e7ebf7;
-    --muted: #9aa4c4;
-    --accent: #6c8cff;
-    --accent-fg: #0b1020;
-    --surface: #1b2240;
-    --line: #2e3756;
-    --error: #ff8a7a;
-    --editor-bg: #0d1122;
-    --editor-grid: rgb(231 235 247 / 7%);
-    --editor-plate: #2a3356;
-    --editor-edge: #c9d1ee;
-  }
+  --editor-bg: #181b20;
+  --editor-grid: rgb(228 233 239 / 6%);
+  --editor-plate: #3a424d;
+  --editor-edge: #c9d1db;
+  color-scheme: dark;
 }
 
 * {
@@ -50,9 +38,11 @@ body {
   display: flex;
   flex-direction: column;
   background: var(--bg);
-  color: var(--fg);
+  color: var(--text);
   font:
-    16px/1.5 system-ui,
+    14px/1.45 system-ui,
+    -apple-system,
+    'Segoe UI',
     sans-serif;
 }
 button,
@@ -61,7 +51,7 @@ input {
   font: inherit;
 }
 :focus-visible {
-  outline: 3px solid var(--focus);
+  outline: 2px solid var(--accent-strong);
   outline-offset: 2px;
 }
 
@@ -69,19 +59,22 @@ input {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 8px 16px;
+  padding: 8px 12px;
+  background: var(--panel);
   border-block-end: 1px solid var(--line);
 }
 .brand {
+  font-size: 17px;
   font-weight: 700;
+  letter-spacing: 0.5px;
 }
 select {
-  min-block-size: 44px;
-  padding-inline: 8px;
-  border-radius: 8px;
-  border: 1px solid var(--muted);
-  background: var(--surface);
-  color: var(--fg);
+  min-block-size: 40px;
+  padding-inline: 6px;
+  border-radius: 6px;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  color: var(--text);
 }
 
 .workspace {
@@ -96,8 +89,8 @@ select {
   display: grid;
   block-size: 52dvh;
   min-block-size: 280px;
-  background: var(--view-bg);
-  color: var(--view-fg);
+  background: var(--bg);
+  color: var(--text);
   overflow: hidden;
 }
 /* a phone shows one view at a time; the tabs choose it */
@@ -137,14 +130,14 @@ select {
   border: 1px solid rgb(255 255 255 / 25%);
   border-radius: 8px;
   background: rgb(0 0 0 / 45%);
-  color: var(--view-fg);
+  color: var(--text);
   cursor: pointer;
 }
 .views[data-show='2d'] .view-tabs [data-show='2d'],
 .views[data-show='3d'] .view-tabs [data-show='3d'] {
   background: var(--accent);
   border-color: var(--accent);
-  color: var(--accent-fg);
+  color: var(--on-accent);
 }
 .cameras {
   position: absolute;
@@ -163,7 +156,7 @@ select {
   padding: 4px 8px;
   border-radius: 8px;
   background: rgb(0 0 0 / 45%);
-  color: var(--view-fg);
+  color: var(--text);
   font-size: 0.875rem;
 }
 .swap-views {
@@ -178,13 +171,13 @@ select {
 }
 
 .tool-button {
-  min-block-size: 44px;
-  min-inline-size: 44px;
+  min-block-size: 40px;
+  min-inline-size: 40px;
   border: 1px solid var(--line);
-  border-radius: 8px;
-  background: var(--surface);
-  color: var(--fg);
-  font-size: 1.25rem;
+  border-radius: 6px;
+  background: var(--card);
+  color: var(--text);
+  font-size: 1.125rem;
   cursor: pointer;
 }
 .tool-button:disabled {
@@ -202,10 +195,11 @@ select {
   inset-block-end: 0;
   max-block-size: 62dvh;
   overflow-y: auto;
-  padding: 4px 16px 24px;
-  border-radius: 16px 16px 0 0;
-  background: var(--bg);
-  box-shadow: 0 -4px 16px rgb(0 0 0 / 25%);
+  padding: 4px 12px 24px;
+  border-block-start: 1px solid var(--line);
+  border-radius: 14px 14px 0 0;
+  background: var(--panel);
+  box-shadow: 0 -12px 28px rgb(0 0 0 / 55%);
   transform: translateY(105%);
   transition: transform 0.2s ease;
 }
@@ -241,22 +235,24 @@ select {
   border: 0;
   border-radius: 22px;
   background: var(--accent);
-  color: var(--accent-fg);
+  color: var(--on-accent);
   cursor: pointer;
 }
 .sheet-open[hidden] {
   display: none;
 }
 .card {
-  margin-block-end: 12px;
-  padding: 12px;
-  border: 1px solid var(--line);
-  border-radius: 12px;
-  background: var(--surface);
+  margin-block-end: 8px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: var(--card);
 }
 .card h2 {
   margin-block: 0 8px;
-  font-size: 1rem;
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: var(--muted);
 }
 
 .row {
@@ -288,8 +284,8 @@ select {
   padding-inline: 6px;
   border: 1px solid var(--line);
   border-radius: 6px;
-  background: var(--bg);
-  color: var(--fg);
+  background: var(--panel);
+  color: var(--text);
 }
 .unit {
   font-size: 0.875rem;
@@ -306,24 +302,36 @@ select {
 }
 
 button.primary {
-  min-block-size: 48px;
+  min-block-size: 44px;
   inline-size: 100%;
-  padding-inline: 20px;
+  padding-inline: 12px;
   border: 0;
-  border-radius: 12px;
+  border-radius: 6px;
   background: var(--accent);
-  color: var(--accent-fg);
+  color: var(--on-accent);
+  font-weight: 600;
   cursor: pointer;
 }
+button.primary:hover:not(:disabled) {
+  background: var(--accent-strong);
+}
+/* Case Constructor's tb-btn: a quiet frame that lights up in the accent */
 button.secondary {
-  min-block-size: 44px;
-  padding-inline: 16px;
-  border: 0;
-  border-radius: 10px;
-  background: transparent;
-  color: var(--accent);
-  box-shadow: inset 0 0 0 2px var(--accent);
+  min-block-size: 40px;
+  padding-inline: 12px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--panel);
+  color: var(--text);
   cursor: pointer;
+}
+button.secondary:hover:not(:disabled),
+.tool-button:hover:not(:disabled) {
+  border-color: var(--accent);
+}
+button.secondary:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
 }
 .element-list,
 .warning-list {
@@ -405,7 +413,7 @@ button.primary:disabled {
 }
 .error {
   margin-block: 6px;
-  color: var(--error);
+  color: var(--bad);
   font-size: 0.875rem;
 }
 footer {
@@ -438,7 +446,7 @@ footer a {
   .views[data-show] .pane2d,
   .views[data-show] .pane3d {
     display: block;
-    background: var(--view-bg);
+    background: var(--bg);
   }
   .pane2d {
     grid-area: 1 / 1;
@@ -457,11 +465,12 @@ footer a {
   }
   .panel {
     position: static;
-    inline-size: 360px;
+    inline-size: 340px;
     max-block-size: none;
     flex: none;
     overflow-y: auto;
-    padding: 12px 16px 24px;
+    padding: 12px 12px 24px;
+    border-block-start: 0;
     border-radius: 0;
     box-shadow: none;
     transform: none;
@@ -471,6 +480,20 @@ footer a {
   .sheet-handle,
   .sheet-open {
     display: none;
+  }
+  /* a pointer, not a finger: Case Constructor's density */
+  select {
+    min-block-size: 30px;
+  }
+  button.primary {
+    min-block-size: 36px;
+  }
+  button.secondary {
+    min-block-size: 32px;
+  }
+  .tool-button {
+    min-block-size: 34px;
+    min-inline-size: 40px;
   }
 }
 
@@ -497,8 +520,8 @@ footer a {
   padding: 6px 8px;
   border: 1px solid var(--line);
   border-radius: 6px;
-  background: var(--bg);
-  color: var(--fg);
+  background: var(--panel);
+  color: var(--text);
   font: inherit;
   resize: vertical;
 }
@@ -517,7 +540,7 @@ footer a {
   padding: 4px;
   border: 2px solid var(--line);
   border-radius: 8px;
-  background: var(--bg);
+  background: var(--panel);
   cursor: pointer;
 }
 .vignette[aria-selected='true'] {
@@ -548,7 +571,9 @@ footer a {
 }
 .card h3 {
   margin-block: 12px 4px;
-  font-size: 0.875rem;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
 }
 .hints {
   margin: 0;
@@ -565,7 +590,7 @@ footer a {
   margin-block-end: 12px;
   padding: 10px 12px;
   border-radius: 12px;
-  background: color-mix(in srgb, var(--focus) 25%, var(--surface));
+  background: color-mix(in srgb, var(--accent-strong) 25%, var(--card));
   font-size: 0.875rem;
 }
 .banner[hidden] {
@@ -578,8 +603,8 @@ footer a {
   padding-inline: 8px;
   border: 1px solid var(--line);
   border-radius: 6px;
-  background: var(--bg);
-  color: var(--fg);
+  background: var(--panel);
+  color: var(--text);
 }
 .preset-list {
   margin: 0 0 8px;
