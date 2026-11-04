@@ -8,9 +8,10 @@
 import type { CrossSection, Manifold } from 'manifold-3d';
 import { elementBox } from '../geo/boxes';
 import { heightfieldMesh } from '../geo/grid';
-import { heightField, sampleField, type Raster } from '../geo/heightmap';
+import { traceContours, LEVEL } from '../geo/contour';
+import { heightField, processPixels, sampleField, type Raster } from '../geo/heightmap';
 import { holeCutters, type Cutter } from '../geo/holes';
-import { CHORD_TOLERANCE, primitiveOutline, segmentsFor, type Ring } from '../geo/outline';
+import { CHORD_TOLERANCE, primitiveOutline, ringArea, segmentsFor, type Ring } from '../geo/outline';
 import { PRIMITIVE_KINDS, type ImageElement, type Plate, type PlateState, type PrimitiveKind, type TextElement } from '../geo/state';
 import { textRings, type TextRaster } from '../geo/textShape';
 import type { Warning } from '../geo/warnings';
@@ -57,6 +58,78 @@ export function plateOutline(csg: CsgApi, scope: CsgScope, plate: Plate): CrossS
   const raw = scope.keep(new csg.CrossSection([ring], 'Positive'));
   if (plate.rounding <= 0) return raw;
   return fitBox(scope, roundCorners(scope, raw, plate.rounding), plate.width, plate.height);
+}
+
+/** A mask's contours in pixels (y up) → an image's footprint above its crop threshold, plate frame. */
+function imageMask(csg: CsgApi, scope: CsgScope, image: ImageElement, raster: Raster): CrossSection | null {
+  const field = processPixels(raster, image);
+  const threshold = image.threshold / 100;
+  // the threshold maps to the tracing level, linearly, so the contour keeps its sub-pixel place
+  const data = new Uint8Array(field.length);
+  for (let i = 0; i < field.length; i++) data[i] = Math.max(0, Math.min(255, Math.round(LEVEL + (field[i] - threshold) * 255)));
+  const pixels = traceContours({ width: raster.width, height: raster.height, data });
+  if (pixels.length === 0) return null;
+  const box = elementBox(image);
+  const w = box.maxX - box.minX;
+  const h = box.maxY - box.minY;
+  const rings = pixels.map((ring) =>
+    ring.map(([x, y]): [number, number] => [(x * w) / raster.width - w / 2, (y * h) / raster.height - h / 2]),
+  );
+  const local = scope.keep(new csg.CrossSection(rings, 'Positive'));
+  const turned = scope.keep(local.rotate(image.rotation));
+  return scope.keep(turned.translate([image.x, image.y]));
+}
+
+/**
+ * The crop outline (spec §2.4): the elements' masks unioned, grown by the
+ * padding with round joins, their holes filled (outer contours only), then
+ * corner rounding.
+ */
+function cropOutline(csg: CsgApi, scope: CsgScope, state: PlateState, rasters: Rasters): { section: CrossSection; warnings: Warning[] } {
+  const masks: CrossSection[] = [];
+  state.images.forEach((image, i) => {
+    const raster = rasters.images[i];
+    const mask = image.visible && image.inOutline && raster ? imageMask(csg, scope, image, raster) : null;
+    if (mask) masks.push(mask);
+  });
+  state.texts.forEach((text, i) => {
+    const raster = rasters.texts[i];
+    const made = text.visible && text.inOutline && raster ? textSection(csg, scope, text, raster) : null;
+    if (made) masks.push(made.section);
+  });
+  // manifold cannot make a cross-section of no polygons; a square of no size is its empty one
+  const empty = (): { section: CrossSection; warnings: Warning[] } => ({
+    section: scope.keep(csg.CrossSection.square([0, 0])),
+    warnings: [{ code: 'outline.empty', ids: [], spot: [0, 0] }],
+  });
+  if (masks.length === 0) return empty();
+  const union = scope.keep(csg.CrossSection.union(masks));
+  const { padding } = state.plate;
+  const padded = padding > 0 ? scope.keep(union.offset(padding, 'Round', 2, segmentsFor(padding))) : union;
+  const outer = padded.toPolygons().filter((ring) => ringArea(ring.map(([x, y]): [number, number] => [x, y])) > 0);
+  if (outer.length === 0) return empty();
+  const filled = scope.keep(new csg.CrossSection(outer, 'Positive'));
+  // rounding is an opening: more of it than the padding would cut away strokes the padding did not cover
+  const rounding = Math.min(state.plate.rounding, padding);
+  const section = rounding > 0 ? roundCorners(scope, filled, rounding) : filled;
+  const islands = section.toPolygons().filter((ring) => ringArea(ring.map(([x, y]): [number, number] => [x, y])) > 0).length;
+  const { min, max } = section.bounds();
+  const warnings: Warning[] =
+    islands > 1
+      ? [{ code: 'outline.islands', ids: [], params: { count: islands }, spot: [(min[0] + max[0]) / 2, (min[1] + max[1]) / 2] }]
+      : [];
+  return { section, warnings };
+}
+
+/** The plate's outline for any kind, with what it has to say (islands, nothing to crop). */
+export function stateOutline(
+  csg: CsgApi,
+  scope: CsgScope,
+  state: PlateState,
+  rasters: Rasters,
+): { section: CrossSection; warnings: Warning[] } {
+  if (state.plate.kind === 'crop') return cropOutline(csg, scope, state, rasters);
+  return { section: plateOutline(csg, scope, state.plate), warnings: [] };
 }
 
 export function outlineRings(section: CrossSection): Ring[] {
@@ -170,9 +243,16 @@ export function buildSolid(
   quality: Quality,
 ): { solid: Manifold; warnings: Warning[] } {
   const { thickness } = state.plate;
-  const warnings: Warning[] = [];
-  const outline = plateOutline(csg, scope, state.plate);
-  const base = scope.keep(outline.extrude(thickness));
+  const { section: outline, warnings } = stateOutline(csg, scope, state, rasters);
+  const { rim, rimWidth, rimHeight } = state.plate;
+  // the rim (spec §2.3): the base stands up to the rim's top and its inside is cut back down to T, so
+  // the rim's outer walls are the base's own, never two coplanar ones; the inset is simplified, as
+  // offsetting arcs leaves vertices closer than a float32 tells apart
+  const pocket = rim
+    ? scope.keep(scope.keep(outline.offset(-rimWidth, 'Round', 2, segmentsFor(rimWidth))).simplify(CHORD_TOLERANCE / 10))
+    : null;
+  const tall = scope.keep(outline.extrude(thickness + (rim ? rimHeight : 0)));
+  const base = pocket ? scope.keep(tall.subtract(prismOf(scope, pocket, thickness, thickness + rimHeight + 1))) : tall;
   const images = state.images.flatMap((image, i) => {
     const raster = rasters.images[i];
     return image.visible && raster ? [{ image, raster }] : [];
@@ -191,7 +271,8 @@ export function buildSolid(
   const engraved = texts.filter(({ text }) => text.mode === 'engraved');
 
   // the top of everything that stands on the base
-  const top = thickness + Math.max(0, ...images.map(({ image }) => image.height), ...raised.map(({ text }) => text.height));
+  const top =
+    thickness + Math.max(0, rim ? rimHeight : 0, ...images.map(({ image }) => image.height), ...raised.map(({ text }) => text.height));
   let solid = base;
   if (images.length > 0 || raised.length > 0) {
     const reliefs = [

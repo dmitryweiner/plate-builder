@@ -292,7 +292,7 @@ describe('plate card', () => {
   it('offers every primitive outline and shows only the parameters of the chosen one', () => {
     start();
     const kinds = [...$('#plate-kind', HTMLSelectElement).options].map((o) => o.value);
-    expect(kinds).toEqual(['rectangle', 'ellipse', 'triangle', 'polygon', 'star', 'heart', 'shield', 'tag']);
+    expect(kinds).toEqual(['rectangle', 'ellipse', 'triangle', 'polygon', 'star', 'heart', 'shield', 'tag', 'crop']);
     const sidesRow = () => $('#plate-sides', HTMLInputElement).closest('.row');
     expect(sidesRow()?.hasAttribute('hidden')).toBe(true);
     const select = $('#plate-kind', HTMLSelectElement);
@@ -603,5 +603,64 @@ describe('texts', () => {
     csg.last().settle({ result: meshResult({ warnings: [{ code: 'text.thin', ids: ['t1'], spot: [0, 0] }] }), ms: 5 });
     await settle();
     expect(text('#warningList')).toContain('Text 1 has strokes thinner than 0.8 mm');
+  });
+});
+
+const outlineJobs = () => csg.jobs.filter((j) => j.job.kind === 'outline');
+
+describe('crop and rim', () => {
+  it('crops around the elements: the size gives way to the padding, the outline job gets the rasters', async () => {
+    start();
+    $('#addText', HTMLButtonElement).click();
+    await settle();
+    const kind = $('#plate-kind', HTMLSelectElement);
+    kind.value = 'crop';
+    kind.dispatchEvent(new Event('change'));
+    const row = (id: string) => $(`#${id}`, HTMLElement).closest('.row');
+    expect(row('plate-width')?.hasAttribute('hidden')).toBe(true);
+    expect(row('plate-padding')?.hasAttribute('hidden')).toBe(false);
+    const job = outlineJobs().at(-1)?.job;
+    expect(job?.kind === 'outline' && job.textRasters?.[0]?.width).toBe(10 * 8 * 4);
+    expect($('#element-text-inOutline', HTMLInputElement).closest('.row')?.hasAttribute('hidden')).toBe(false);
+  });
+
+  it('asks again when an element of the crop moves, and shows the outline’s warnings', async () => {
+    start();
+    $('#addText', HTMLButtonElement).click();
+    await settle();
+    setInput('#plate-padding-n', '1');
+    const kind = $('#plate-kind', HTMLSelectElement);
+    kind.value = 'crop';
+    kind.dispatchEvent(new Event('change'));
+    const before = outlineJobs().length;
+    setInput('#element-x-n', '10');
+    expect(outlineJobs().length).toBe(before + 1);
+    outlineJobs()
+      .at(-1)
+      ?.settle({
+        result: { kind: 'outline', rings: [], warnings: [{ code: 'outline.islands', ids: [], params: { count: 2 }, spot: [0, 0] }] },
+        ms: 1,
+      });
+    await settle();
+    expect(text('#warningList')).toContain('The outline falls into 2 pieces');
+  });
+
+  it('shows the rim’s sizes only with the rim on', () => {
+    start();
+    const row = (id: string) => $(`#${id}`, HTMLElement).closest('.row');
+    expect(row('plate-rimWidth')?.hasAttribute('hidden')).toBe(true);
+    $('#plate-rim', HTMLInputElement).click();
+    expect(row('plate-rimWidth')?.hasAttribute('hidden')).toBe(false);
+    timers.flush();
+    expect(csg.last().job).toMatchObject({ state: { plate: { rim: true } } });
+  });
+});
+
+describe('cards', () => {
+  it('give every control its own id', () => {
+    start();
+    $('#addText', HTMLButtonElement).click();
+    const ids = [...document.querySelectorAll('[id]')].map((e) => e.id);
+    expect(ids.filter((id, i) => ids.indexOf(id) !== i)).toEqual([]);
   });
 });

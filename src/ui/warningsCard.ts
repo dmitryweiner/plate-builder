@@ -16,6 +16,8 @@ export function warningText(t: Messages, w: Warning, state: PlateState): string 
     'element.overlap': () => t.warning.overlap(names),
     'hole.nearEdge': () => t.warning.nearEdge(names, mm('distance')),
     'keyhole.thin': () => t.warning.keyholeThin(names, mm('needed')),
+    'outline.islands': () => t.warning.islands(mm('count')),
+    'outline.empty': () => t.warning.empty,
     'text.thin': () => t.warning.textThin(names),
     'text.arcLines': () => t.warning.arcLines(names),
     'text.buried': () => t.warning.buried(names),

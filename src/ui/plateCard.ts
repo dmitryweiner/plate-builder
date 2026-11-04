@@ -4,7 +4,9 @@
 import { PRIMITIVE_KINDS, RANGES, type Plate, type PlateState, type PrimitiveKind } from '../geo/state';
 import type { Control, TextKey } from './controls';
 
-const KIND_LABELS: Record<PrimitiveKind, TextKey> = {
+type OfferedKind = PrimitiveKind | 'crop';
+
+const KIND_LABELS: Record<OfferedKind, TextKey> = {
   rectangle: 'kindRectangle',
   ellipse: 'kindEllipse',
   triangle: 'kindTriangle',
@@ -13,20 +15,36 @@ const KIND_LABELS: Record<PrimitiveKind, TextKey> = {
   heart: 'kindHeart',
   shield: 'kindShield',
   tag: 'kindTag',
+  crop: 'kindCrop',
 };
+
+/** The kinds offered so far; vignettes and an own SVG join in M6. */
+const OFFERED: readonly OfferedKind[] = [...PRIMITIVE_KINDS, 'crop'];
 
 const setPlate = (state: PlateState, over: Partial<Plate>): PlateState => ({ ...state, plate: { ...state.plate, ...over } });
 
-const isPrimitive = (value: string): value is PrimitiveKind => PRIMITIVE_KINDS.some((kind) => kind === value);
+const isOffered = (value: string): value is OfferedKind => OFFERED.some((kind) => kind === value);
+const sized = (s: PlateState) => s.plate.kind !== 'crop';
 
 export const plateControls: readonly Control<PlateState>[] = [
   {
     kind: 'select',
     key: 'kind',
     label: 'outline',
-    options: PRIMITIVE_KINDS.map((value) => ({ value, label: KIND_LABELS[value] })),
+    options: OFFERED.map((value) => ({ value, label: KIND_LABELS[value] })),
     get: (s) => s.plate.kind,
-    set: (s, kind) => (isPrimitive(kind) ? setPlate(s, { kind }) : s),
+    set: (s, kind) => (isOffered(kind) ? setPlate(s, { kind }) : s),
+  },
+  {
+    kind: 'range',
+    key: 'padding',
+    label: 'padding',
+    ...RANGES.padding,
+    step: 0.5,
+    unit: 'mm',
+    when: (s) => !sized(s),
+    get: (s) => s.plate.padding,
+    set: (s, padding) => setPlate(s, { padding }),
   },
   {
     kind: 'range',
@@ -34,6 +52,7 @@ export const plateControls: readonly Control<PlateState>[] = [
     label: 'width',
     ...RANGES.plateSize,
     step: 0.5,
+    when: sized,
     unit: 'mm',
     get: (s) => s.plate.width,
     set: (s, width) => setPlate(s, { width }),
@@ -44,6 +63,7 @@ export const plateControls: readonly Control<PlateState>[] = [
     label: 'height',
     ...RANGES.plateSize,
     step: 0.5,
+    when: sized,
     unit: 'mm',
     get: (s) => s.plate.height,
     set: (s, height) => setPlate(s, { height }),
@@ -98,5 +118,28 @@ export const plateControls: readonly Control<PlateState>[] = [
     when: (s) => s.plate.kind === 'star',
     get: (s) => s.plate.innerRatio,
     set: (s, innerRatio) => setPlate(s, { innerRatio }),
+  },
+  { kind: 'check', key: 'rim', label: 'rim', get: (s) => s.plate.rim, set: (s, rim) => setPlate(s, { rim }) },
+  {
+    kind: 'range',
+    key: 'rimWidth',
+    label: 'rimWidth',
+    ...RANGES.rimWidth,
+    step: 0.1,
+    unit: 'mm',
+    when: (s) => s.plate.rim,
+    get: (s) => s.plate.rimWidth,
+    set: (s, rimWidth) => setPlate(s, { rimWidth }),
+  },
+  {
+    kind: 'range',
+    key: 'rimHeight',
+    label: 'rimHeight',
+    ...RANGES.rimHeight,
+    step: 0.1,
+    unit: 'mm',
+    when: (s) => s.plate.rim,
+    get: (s) => s.plate.rimHeight,
+    set: (s, rimHeight) => setPlate(s, { rimHeight }),
   },
 ];

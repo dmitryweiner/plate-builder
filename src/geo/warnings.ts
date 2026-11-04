@@ -15,6 +15,8 @@ export type WarningCode =
   | 'text.arcLines'
   | 'text.buried'
   // found by the worker, which has the contours
+  | 'outline.islands'
+  | 'outline.empty'
   | 'text.thin'
   | 'text.arcTooLong';
 
@@ -114,7 +116,9 @@ export function warnings(state: PlateState, outline: readonly Ring[]): Warning[]
 
   const images = state.images.filter((image) => image.visible);
   const texts = state.texts.filter((text) => text.visible);
-  for (const e of [...images, ...texts]) {
+  // a crop follows its images and texts: their boxes (a picture's transparent corners) may stick out of it
+  const boxed = state.plate.kind === 'crop' ? [] : [...images, ...texts];
+  for (const e of boxed) {
     if (!boxCorners(e).every((p) => pointInRings(p, outline))) out.push({ code: 'element.outside', ids: [e.id], spot: [e.x, e.y] });
   }
   for (const text of texts) {

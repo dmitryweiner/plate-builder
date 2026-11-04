@@ -325,3 +325,16 @@ sheet on a phone, offline reload.
 - **M4**: element boxes moved to `geo/boxes.ts`; text boxes measured from
   their rasters are kept there by the app (`measuredTextBoxes`), the worker
   does not need them.
+- **M5**: the rim is built by construction, not as a union: the base is
+  extruded to the rim's top and the inside (the outline inset by the rim's
+  width, simplified) is cut back down to T, so no wall is shared. The union
+  left slivers on every curved outline.
+- **M5**: on a crop, corner rounding is capped at the padding: rounding is
+  an opening, and more of it than the padding cut away strokes (a text's
+  letters) the padding did not cover.
+- **M5**: on a crop, images and texts are not checked for `element.outside`:
+  the outline follows them, and a picture's transparent corners always
+  stick out of it.
+- **M5**: the outline job carries the rasters when the outline is a crop and
+  returns `outline.islands` / `outline.empty`; the 2D view keeps the last
+  crop outline until the next one arrives and fits the view to it.
