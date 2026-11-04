@@ -8,6 +8,8 @@ export const ru: Messages = {
   source: 'Исходный код',
   mm: 'мм',
 
+  showPanel: 'Настройки',
+  hidePanel: 'Скрыть настройки',
   plateCard: 'Табличка',
   outline: 'Контур',
   kindRectangle: 'Прямоугольник',

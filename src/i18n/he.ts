@@ -8,6 +8,8 @@ export const he: Messages = {
   source: 'קוד מקור',
   mm: 'מ״מ',
 
+  showPanel: 'הגדרות',
+  hidePanel: 'הסתרת ההגדרות',
   plateCard: 'שלט',
   outline: 'מתאר',
   kindRectangle: 'מלבן',

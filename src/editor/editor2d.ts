@@ -31,14 +31,16 @@ export interface EditorOptions {
   outline(): readonly Ring[];
   /** whether snapping is on (a toggle on touch; Alt turns it off for a mouse) */
   snapping(): boolean;
-  /** the plate's size line, drawn under the plate */
-  sizeLabel(): string;
+  /** the plate's size under it: its numbers ("100 × 60", drawn left to right in any language) and unit */
+  sizeLabel(): { size: string; unit: string } | null;
   /** an image's height map as a picture (white high), or null while it is not decoded */
   picture(image: ImageElement): CanvasImageSource | null;
   /** a text's contours in its own frame (mm), or null while its font loads */
   textShape(text: TextElement): readonly Ring[] | null;
   /** a raised frame's contours (plate frame, mm), drawn as a tint; null without one */
   frame(): readonly Ring[] | null;
+  /** how much of the canvas's bottom something covers (a phone's sheet), px: the plate is fitted above it */
+  covered?(): number;
 }
 
 export interface EditorHandle {
@@ -101,10 +103,16 @@ export function createEditor(o: EditorOptions): EditorHandle {
     return rings.length ? bounds(rings) : { minX: -50, maxX: 50, minY: -30, maxY: 30 };
   };
 
+  /** The part of the canvas the plate is fitted into: all of it but what is covered below. */
+  const visible = (s: { width: number; height: number }) => ({
+    width: s.width,
+    height: Math.max(s.height / 3, s.height - (o.covered?.() ?? 0)),
+  });
+
   function fit(): void {
     const s = size();
     if (s.width === 0 || s.height === 0) return;
-    view = fitView(s, plateBox(), MARGIN_PX);
+    view = fitView(visible(s), plateBox(), MARGIN_PX);
     fitted = true;
     viewTouched = false;
     draw();
@@ -262,7 +270,7 @@ export function createEditor(o: EditorOptions): EditorHandle {
       if (!viewTouched) fitted = false;
     }
     if (!fitted) {
-      view = fitView(s, plateBox(), MARGIN_PX);
+      view = fitView(visible(s), plateBox(), MARGIN_PX);
       fitted = true;
     }
     // the transform, for the smoke to see where the view looks
@@ -403,14 +411,25 @@ export function createEditor(o: EditorOptions): EditorHandle {
       ctx.stroke();
     }
 
-    // the size under the plate; numbers stay left-to-right in every language
-    const box = plateBox();
-    const [lx, ly] = toScreen(view, [(box.minX + box.maxX) / 2, box.minY]);
-    ctx.fillStyle = c.muted;
-    ctx.font = '12px system-ui, sans-serif';
-    ctx.textAlign = 'center';
-    ctx.direction = 'ltr';
-    ctx.fillText(o.sizeLabel(), lx, Math.min(s.height - 4, ly + 16));
+    // the size under the plate: the numbers left to right in any language (spec §12), the unit after
+    // them as the page reads; two pieces, as canvas text has no bidi isolation
+    const label = o.sizeLabel();
+    if (label) {
+      const box = plateBox();
+      const [lx, ly] = toScreen(view, [(box.minX + box.maxX) / 2, box.minY]);
+      ctx.fillStyle = c.muted;
+      ctx.font = '12px system-ui, sans-serif';
+      ctx.direction = 'ltr';
+      ctx.textAlign = 'left';
+      const gap = ctx.measureText(' ').width;
+      const sizeWidth = ctx.measureText(label.size).width;
+      const unitWidth = ctx.measureText(label.unit).width;
+      const rtl = document.documentElement.dir === 'rtl';
+      const left = lx - (sizeWidth + gap + unitWidth) / 2;
+      const y = Math.min(s.height - 4, ly + 16);
+      ctx.fillText(label.size, rtl ? left + unitWidth + gap : left, y);
+      ctx.fillText(label.unit, rtl ? left : left + sizeWidth + gap, y);
+    }
   }
 
   /** Lines every 10 mm, every 1 mm when zoomed in enough to see them. */

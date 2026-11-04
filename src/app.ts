@@ -32,6 +32,7 @@ import { renderControls, type ControlsHandle } from './ui/controls';
 import { el } from './ui/dom';
 import { renderElementList } from './ui/elementsCard';
 import { renderPresetList } from './ui/presetList';
+import { setupSheet, type NarrowQuery } from './ui/sheet';
 import { heightPicture, type ImportedImage } from './ui/imageImport';
 import { silhouetteSize, type VignetteEntry } from './ui/svgRaster';
 import { plateControls } from './ui/plateCard';
@@ -63,6 +64,8 @@ export interface AppOptions {
   /** Saves a file for the person (a download in the browser). */
   download: (name: string, data: ArrayBuffer) => void;
   timers: Timers;
+  /** true where the panel is a bottom sheet (a phone); none means never */
+  narrow?: NarrowQuery;
   /** Texts are drawn with the bundled fonts: loading one, and drawing a block once its font is in. */
   texts: {
     fontReady(font: FontId): boolean;
@@ -147,6 +150,7 @@ export function startApp({
   pictures,
   texts,
   silhouettes,
+  narrow = { matches: false, addEventListener: () => {} },
 }: AppOptions): () => void {
   const localeSelect = el('locale', HTMLSelectElement);
   const status = el('status', HTMLOutputElement);
@@ -189,6 +193,15 @@ export function startApp({
   const snapping = el('snapping', HTMLInputElement);
   const views = el('views', HTMLElement);
   const scene = createScene(el('view3d', HTMLCanvasElement));
+  const panel = el('panel', HTMLElement);
+  // the view fits the plate above the sheet: again whenever the sheet comes or goes
+  const sheet = setupSheet({
+    panel,
+    button: el('sheetOpen', HTMLButtonElement),
+    close: el('sheetClose', HTMLButtonElement),
+    narrow,
+    onChange: () => editor.fit(),
+  });
 
   let settings: Settings = loadSettings(storage);
   let locale: Locale = detectLocale(settings.locale, languages);
@@ -237,7 +250,14 @@ export function startApp({
     canvas: el('view2d', HTMLCanvasElement),
     read: state,
     selected: () => selected,
-    select: (id) => select(id),
+    // on a phone, a selected element brings up its card; a tap on empty space clears the view
+    select: (id) => {
+      select(id);
+      if (narrow.matches) {
+        if (id) sheet.open();
+        else sheet.close();
+      }
+    },
     change: (next, final) => update(next, final),
     outline: () => outline,
     snapping: () => snapping.checked,
@@ -245,6 +265,7 @@ export function startApp({
     picture: (image) => picture(image),
     textShape: (text) => textShape(text)?.rings ?? null,
     frame: () => frameRings(),
+    covered: () => (narrow.matches && sheet.isOpen() ? panel.getBoundingClientRect().height : 0),
   });
 
   /** The silhouette's contours for the 2D view's frame tint, traced once per raster. */
@@ -346,12 +367,13 @@ export function startApp({
   }
 
   /** The plate's size under it in the 2D view: a crop's is its outline's. */
-  function sizeLabel(): string {
+  function sizeLabel(): { size: string; unit: string } | null {
     const { plate } = state();
-    if (plate.kind !== 'crop' && !pictured(plate)) return `${mm(plate.width)} × ${mm(plate.height)} ${t().mm}`;
-    if (outline.length === 0) return '';
+    const unit = t().mm;
+    if (plate.kind !== 'crop' && !pictured(plate)) return { size: `${mm(plate.width)} × ${mm(plate.height)}`, unit };
+    if (outline.length === 0) return null;
     const b = bounds(outline);
-    return `${mm(b.maxX - b.minX)} × ${mm(b.maxY - b.minY)} ${t().mm}`;
+    return { size: `${mm(b.maxX - b.minX)} × ${mm(b.maxY - b.minY)}`, unit };
   }
 
   /** Starts decoding the pictures not decoded yet; each, once in, redraws and rebuilds. */

@@ -9,6 +9,8 @@ export const en = {
   source: 'Source code',
   mm: 'mm',
 
+  showPanel: 'Settings',
+  hidePanel: 'Hide the settings',
   plateCard: 'Plate',
   outline: 'Outline',
   kindRectangle: 'Rectangle',
