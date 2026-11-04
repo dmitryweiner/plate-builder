@@ -60,9 +60,10 @@ export const ru: Messages = {
   swapViews: 'Поменять виды местами',
   snapping: 'Привязка',
 
-  elementsCard: 'Элементы',
+  textsCard: 'Надписи',
+  imagesCard: 'Картинки',
+  holesCard: 'Отверстия',
   addHole: 'Добавить отверстие',
-  noElements: 'Элементов пока нет.',
   visible: 'Видимость',
   duplicate: 'Копия',
   remove: 'Удалить',

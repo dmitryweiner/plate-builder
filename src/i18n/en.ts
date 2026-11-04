@@ -61,9 +61,10 @@ export const en = {
   swapViews: 'Swap views',
   snapping: 'Snap',
 
-  elementsCard: 'Elements',
+  textsCard: 'Texts',
+  imagesCard: 'Images',
+  holesCard: 'Holes',
   addHole: 'Add hole',
-  noElements: 'No elements yet.',
   visible: 'Visible',
   duplicate: 'Duplicate',
   remove: 'Delete',

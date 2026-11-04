@@ -60,9 +60,10 @@ export const uk: Messages = {
   swapViews: 'Поміняти вигляди місцями',
   snapping: 'Прив’язка',
 
-  elementsCard: 'Елементи',
+  textsCard: 'Написи',
+  imagesCard: 'Зображення',
+  holesCard: 'Отвори',
   addHole: 'Додати отвір',
-  noElements: 'Елементів поки немає.',
   visible: 'Видимість',
   duplicate: 'Копія',
   remove: 'Видалити',

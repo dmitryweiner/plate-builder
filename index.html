@@ -74,22 +74,29 @@
           </div>
           <p id="plateStatus" class="error" role="alert" hidden></p>
         </section>
-        <section class="card" id="elementsCard">
-          <h2 data-i18n="elementsCard">Elements</h2>
-          <ul id="elementList" class="element-list"></ul>
-          <div class="add-buttons">
-            <button id="addText" type="button" class="secondary" data-i18n="addText">Add text</button>
-            <button id="addImage" type="button" class="secondary" data-i18n="addImage">Add image</button>
-            <button id="addHole" type="button" class="secondary" data-i18n="addHole">Add hole</button>
-            <input id="imageFile" type="file" accept="image/*" hidden />
-          </div>
+        <!-- the elements by kind; the selected one's card is open with its controls -->
+        <section class="card group-card" id="textsCard">
+          <h2><span data-i18n="textsCard">Texts</span> <span id="textsCount" class="group-count"></span></h2>
+          <ul id="textList" class="element-list"></ul>
+          <button id="addText" type="button" class="secondary add-button" data-i18n="addText">Add text</button>
+        </section>
+        <section class="card group-card" id="imagesCard">
+          <h2><span data-i18n="imagesCard">Images</span> <span id="imagesCount" class="group-count"></span></h2>
+          <ul id="imageList" class="element-list"></ul>
+          <button id="addImage" type="button" class="secondary add-button" data-i18n="addImage">Add image</button>
+          <input id="imageFile" type="file" accept="image/*" hidden />
           <p id="elementsStatus" class="error" role="alert" hidden></p>
         </section>
-        <section class="card" id="selectedCard" hidden>
-          <h2 id="selectedTitle"></h2>
+        <section class="card group-card" id="holesCard">
+          <h2><span data-i18n="holesCard">Holes</span> <span id="holesCount" class="group-count"></span></h2>
+          <ul id="holeList" class="element-list"></ul>
+          <button id="addHole" type="button" class="secondary add-button" data-i18n="addHole">Add hole</button>
+        </section>
+        <!-- moved into the selected element's card; parked here while none is -->
+        <div id="selectedBody" class="element-body" hidden>
           <canvas id="selectedThumb" class="thumb" hidden></canvas>
           <div id="selectedControls"></div>
-        </section>
+        </div>
         <section class="card" id="warningsCard" hidden>
           <h2 data-i18n="warningsCard">Warnings</h2>
           <ul id="warningList" class="warning-list"></ul>

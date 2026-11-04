@@ -60,9 +60,10 @@ export const he: Messages = {
   swapViews: 'החלפת התצוגות',
   snapping: 'הצמדה',
 
-  elementsCard: 'רכיבים',
+  textsCard: 'טקסטים',
+  imagesCard: 'תמונות',
+  holesCard: 'חורים',
   addHole: 'הוספת חור',
-  noElements: 'עדיין אין רכיבים.',
   visible: 'גלוי',
   duplicate: 'שכפול',
   remove: 'מחיקה',

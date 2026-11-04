@@ -377,14 +377,27 @@ button.secondary:disabled {
   padding: 0;
   list-style: none;
 }
+.group-count {
+  margin-inline-start: 4px;
+  font-weight: 400;
+  letter-spacing: 0;
+  text-transform: none;
+  font-variant-numeric: tabular-nums;
+}
+/* an element's own card in its group, as Case Constructor's board boxes */
 .element-row {
+  margin-block: 6px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+}
+.element-row.open {
+  border-color: color-mix(in srgb, var(--accent) 60%, var(--line));
+}
+.element-head {
   display: flex;
   align-items: center;
-  gap: 6px;
-  border-radius: 8px;
-}
-.element-row.selected {
-  background: color-mix(in srgb, var(--accent) 14%, transparent);
+  gap: 2px;
+  padding-inline-end: 2px;
 }
 .element-row.hidden-element .element-name {
   opacity: 0.5;
@@ -393,33 +406,76 @@ button.secondary:disabled {
   flex: 1;
   display: flex;
   align-items: center;
-  gap: 8px;
-  min-block-size: 44px;
-  padding-inline: 8px;
+  gap: 6px;
+  min-inline-size: 0;
+  min-block-size: 40px;
+  padding-inline: 8px 4px;
   border: 0;
   background: none;
   color: inherit;
   text-align: start;
   cursor: pointer;
 }
+.element-caret {
+  color: var(--muted);
+  font-size: 12px;
+}
+/* a closed card's caret points along the line: leftwards in RTL */
+[dir='rtl'] .element-caret {
+  scale: -1 1;
+}
 .element-icon {
-  inline-size: 1.75em;
+  inline-size: 1.5em;
   text-align: center;
   color: var(--muted);
 }
+.element-title {
+  flex: none;
+  font-weight: 600;
+}
+.element-hint {
+  flex: 1;
+  min-inline-size: 0;
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.element-row.open .element-title {
+  color: var(--accent);
+}
+.element-body {
+  padding: 0 8px 6px;
+  border-block-start: 1px solid var(--line);
+}
+.element-body[hidden] {
+  display: none;
+}
 .element-visible {
-  inline-size: 20px;
-  block-size: 20px;
+  inline-size: 18px;
+  block-size: 18px;
+  margin-inline: 6px;
   accent-color: var(--accent);
 }
 .icon-button {
-  min-block-size: 40px;
-  min-inline-size: 40px;
+  min-block-size: 36px;
+  min-inline-size: 36px;
   border: 0;
-  border-radius: 8px;
+  border-radius: 6px;
   background: none;
   color: var(--muted);
   cursor: pointer;
+}
+.icon-button:hover {
+  color: var(--text);
+  background: var(--panel);
+}
+.add-button {
+  inline-size: 100%;
+}
+.add-button::before {
+  content: '+ ';
 }
 .warning {
   display: flex;
@@ -565,6 +621,13 @@ footer a {
   .tool-button {
     min-block-size: 34px;
     min-inline-size: 40px;
+  }
+  .element-name {
+    min-block-size: 32px;
+  }
+  .icon-button {
+    min-block-size: 28px;
+    min-inline-size: 28px;
   }
 }
 

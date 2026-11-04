@@ -18,7 +18,7 @@ import {
 import type { Control, SelectControl, TextKey } from './controls';
 import { FONTS } from './fonts';
 
-const HOLE_LABELS: Record<HoleKind, TextKey> = {
+export const HOLE_LABELS: Record<HoleKind, TextKey> = {
   round: 'holeRound',
   slot: 'holeSlot',
   countersunk: 'holeCountersunk',

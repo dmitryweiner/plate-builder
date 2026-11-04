@@ -617,30 +617,41 @@ try {
     await context.close();
   });
 
-  await step('the panel is a sheet on a phone: a tap on empty space hides it, a tap on an element shows its card', async () => {
-    const { page, context } = await app.open({ viewport: VIEWPORTS.phone });
-    await built(page);
-    await page.click('#addHole');
-    check(await page.locator('#panel').evaluate((p) => p.classList.contains('open')), 'the sheet is not open');
-    const tap = async ([x, y]) => {
-      const canvas = page.locator('#view2d');
-      for (const type of ['pointerdown', 'pointerup'])
-        await canvas.dispatchEvent(type, { pointerId: 3, pointerType: 'touch', isPrimary: true, clientX: x, clientY: y, bubbles: true });
-    };
-    await tap(await plateToPage(page, [30, 20]));
-    await page.waitForFunction(() => !document.querySelector('#panel')?.classList.contains('open'));
-    check(await page.locator('#sheetOpen').isVisible(), 'no button to bring the sheet back');
-    // the sheet slides away in 0.2 s
-    await page.waitForTimeout(300);
-    if (shots) await page.screenshot({ path: 'shots/phone-sheet-closed.png' });
-    await tap(await plateToPage(page, [0, 0]));
-    await page.waitForFunction(() => document.querySelector('#panel')?.classList.contains('open'));
-    check((await page.locator('#selectedTitle').textContent()) === 'Hole 1', 'the tapped hole is not selected');
-    await page.click('#sheetClose');
-    await page.click('#sheetOpen');
-    check(await page.locator('#panel').evaluate((p) => p.classList.contains('open')), 'the button did not bring the sheet back');
-    await context.close();
-  });
+  await step(
+    'the panel is a sheet on a phone: a tap on empty space hides it, a tap on an element shows its card in its group',
+    async () => {
+      const { page, context } = await app.open({ viewport: VIEWPORTS.phone });
+      await built(page);
+      await page.click('#addHole');
+      check(await page.locator('#panel').evaluate((p) => p.classList.contains('open')), 'the sheet is not open');
+      const tap = async ([x, y]) => {
+        const canvas = page.locator('#view2d');
+        for (const type of ['pointerdown', 'pointerup'])
+          await canvas.dispatchEvent(type, { pointerId: 3, pointerType: 'touch', isPrimary: true, clientX: x, clientY: y, bubbles: true });
+      };
+      await tap(await plateToPage(page, [30, 20]));
+      await page.waitForFunction(() => !document.querySelector('#panel')?.classList.contains('open'));
+      check(await page.locator('#sheetOpen').isVisible(), 'no button to bring the sheet back');
+      // the sheet slides away in 0.2 s
+      await page.waitForTimeout(300);
+      if (shots) await page.screenshot({ path: 'shots/phone-sheet-closed.png' });
+      await tap(await plateToPage(page, [0, 0]));
+      await page.waitForFunction(() => document.querySelector('#panel')?.classList.contains('open'));
+      check((await page.locator('.element-row.open .element-title').textContent()) === 'Hole 1', 'the tapped hole is not selected');
+      // its card's head in the sheet's visible part, the sheet having slid in
+      await page.waitForTimeout(300);
+      const inSheet = await page.evaluate(() => {
+        const head = document.querySelector('.element-row.open .element-head')?.getBoundingClientRect();
+        const sheet = document.querySelector('#panel')?.getBoundingClientRect();
+        return Boolean(head && sheet && head.top >= sheet.top && head.bottom <= Math.min(sheet.bottom, innerHeight));
+      });
+      check(inSheet, "the tapped hole's card is out of sight in the sheet");
+      await page.click('#sheetClose');
+      await page.click('#sheetOpen');
+      check(await page.locator('#panel').evaluate((p) => p.classList.contains('open')), 'the button did not bring the sheet back');
+      await context.close();
+    },
+  );
 
   await step('Hebrew turns the page right-to-left', async () => {
     const { page, context } = await app.open({ locale: 'he-IL' });

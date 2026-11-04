@@ -392,6 +392,12 @@ describe('3D view', () => {
   });
 });
 
+/** The open element card (the selected element's), its title, the titles of a group's list. */
+const openRow = () => document.querySelector<HTMLElement>('.element-row.open');
+const openTitle = () => openRow()?.querySelector('.element-title')?.textContent ?? null;
+const headHints = () => [...document.querySelectorAll('.element-hint')].map((n) => n.textContent);
+const titles = (list: string) => [...document.querySelectorAll(`#${list} .element-title`)].map((n) => n.textContent);
+
 const press = (key: string, over: KeyboardEventInit = {}) =>
   document.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true, ...over }));
 const holes = () => {
@@ -402,11 +408,11 @@ const holes = () => {
 describe('elements', () => {
   it('adds a hole, selects it and shows its card', () => {
     start();
-    expect(text('#elementList')).toBe('No elements yet.');
+    expect(document.querySelectorAll('.element-row')).toHaveLength(0);
     $('#addHole', HTMLButtonElement).click();
-    expect([...document.querySelectorAll('.element-row')].map((r) => r.textContent)).toEqual(['○Hole 1⧉✕']);
-    expect($('#selectedCard', HTMLElement).hidden).toBe(false);
-    expect(text('#selectedTitle')).toBe('Hole 1');
+    expect(titles('holeList')).toEqual(['Hole 1']);
+    expect(openRow()).not.toBeNull();
+    expect(openTitle()).toBe('Hole 1');
     expect($('#element-diameter-n', HTMLInputElement).value).toBe('4');
     timers.flush();
     expect(holes()).toHaveLength(1);
@@ -429,12 +435,12 @@ describe('elements', () => {
     start();
     $('#addHole', HTMLButtonElement).click();
     $('.element-row [aria-label^="Duplicate"]', HTMLButtonElement).click();
-    expect(text('#selectedTitle')).toBe('Hole 2');
+    expect(openTitle()).toBe('Hole 2');
     const eye = document.querySelectorAll<HTMLInputElement>('.element-visible')[1];
     eye?.click();
     expect(document.querySelectorAll('.hidden-element')).toHaveLength(1);
     $('.element-row [aria-label="Delete: Hole 1"]', HTMLButtonElement).click();
-    expect([...document.querySelectorAll('.element-row')].map((r) => r.textContent)).toEqual(['○Hole 1⧉✕']);
+    expect(titles('holeList')).toEqual(['Hole 1']);
   });
 
   it('selects from the list', () => {
@@ -442,8 +448,77 @@ describe('elements', () => {
     $('#addHole', HTMLButtonElement).click();
     $('#addHole', HTMLButtonElement).click();
     $('.element-row[data-id="h1"] .element-name', HTMLButtonElement).click();
-    expect(text('#selectedTitle')).toBe('Hole 1');
-    expect($('.element-row[data-id="h1"]', HTMLElement).classList.contains('selected')).toBe(true);
+    expect(openTitle()).toBe('Hole 1');
+    expect(openRow()?.dataset.id).toBe('h1');
+  });
+  it('puts each element into the group of its kind, the selected one open with its controls', () => {
+    start();
+    $('#addText', HTMLButtonElement).click();
+    $('#addHole', HTMLButtonElement).click();
+    $('#addHole', HTMLButtonElement).click();
+    expect([titles('textList'), titles('imageList'), titles('holeList')]).toEqual([['Text 1'], [], ['Hole 1', 'Hole 2']]);
+    expect([...document.querySelectorAll('.element-row.open')].map((r) => r instanceof HTMLElement && r.dataset.id)).toEqual(['h2']);
+    expect($('#selectedControls', HTMLElement).closest('.element-row')).toBe(openRow());
+    expect([text('#textsCount'), text('#imagesCount'), text('#holesCount')]).toEqual(['1 / 10', '0 / 8', '2 / 16']);
+  });
+
+  it('opens a closed card by its head and closes the open one, selecting and deselecting', () => {
+    start();
+    $('#addText', HTMLButtonElement).click();
+    $('#addHole', HTMLButtonElement).click();
+    $('.element-row[data-id="t1"] .element-name', HTMLButtonElement).click();
+    expect(openTitle()).toBe('Text 1');
+    expect($('.element-row[data-id="t1"] .element-name', HTMLButtonElement).getAttribute('aria-expanded')).toBe('true');
+    $('.element-row[data-id="t1"] .element-name', HTMLButtonElement).click();
+    expect(openRow()).toBeNull();
+    expect($('#selectedControls', HTMLElement).closest('.element-row')).toBeNull();
+    expect($('.element-row[data-id="t1"] .element-name', HTMLButtonElement).getAttribute('aria-expanded')).toBe('false');
+  });
+
+  it('shows a hint after the name: a text by its first line, a hole by its kind', () => {
+    start();
+    $('#addText', HTMLButtonElement).click();
+    $('#addHole', HTMLButtonElement).click();
+    expect(headHints()).toEqual(['Text', 'Round']);
+    $('.element-row[data-id="t1"] .element-name', HTMLButtonElement).click();
+    const area = $('#element-text', HTMLTextAreaElement);
+    area.focus();
+    area.value = 'Room 12\nKitchen';
+    area.dispatchEvent(new Event('input'));
+    expect(headHints()).toEqual(['Room 12', 'Round']);
+    // typing does not rebuild the list: the field keeps its focus
+    expect(document.activeElement).toBe(area);
+  });
+
+  it("disables a group's add button at its limit and enables it again below", () => {
+    start();
+    for (let i = 0; i < 10; i++) $('#addText', HTMLButtonElement).click();
+    expect($('#addText', HTMLButtonElement).disabled).toBe(true);
+    expect(text('#textsCount')).toBe('10 / 10');
+    press('Delete');
+    expect($('#addText', HTMLButtonElement).disabled).toBe(false);
+  });
+
+  it('brings the head of an element selected elsewhere into view', () => {
+    const scrolled: Element[] = [];
+    Element.prototype.scrollIntoView = function (this: Element) {
+      scrolled.push(this);
+    };
+    start();
+    $('#addHole', HTMLButtonElement).click();
+    press('d', { ctrlKey: true });
+    expect(scrolled.at(-1)).toBe($('.element-row[data-id="h2"] .element-head', HTMLElement));
+    // jsdom has none: the other tests run without it, as before
+    Reflect.deleteProperty(Element.prototype, 'scrollIntoView');
+  });
+
+  it('keeps the open card through a change of language', () => {
+    start();
+    $('#addHole', HTMLButtonElement).click();
+    selectLocale('ru');
+    expect(openTitle()).toBe('Отверстие 1');
+    expect(text('#holesCard h2')).toBe('Отверстия 1 / 16');
+    expect($('#selectedControls', HTMLElement).closest('.element-row')).toBe(openRow());
   });
 });
 
@@ -468,8 +543,8 @@ describe('history', () => {
     start();
     $('#addHole', HTMLButtonElement).click();
     press('z', { ctrlKey: true });
-    expect(text('#elementList')).toBe('No elements yet.');
-    expect($('#selectedCard', HTMLElement).hidden).toBe(true);
+    expect(document.querySelectorAll('.element-row')).toHaveLength(0);
+    expect(openRow()).toBeNull();
   });
 });
 
@@ -487,7 +562,7 @@ describe('keyboard', () => {
     expect(document.querySelectorAll('.element-row')).toHaveLength(1);
     $('.element-name', HTMLButtonElement).click();
     press('Escape');
-    expect($('#selectedCard', HTMLElement).hidden).toBe(true);
+    expect(openRow()).toBeNull();
   });
 
   it('leaves keys typed into a field alone', () => {
@@ -540,7 +615,7 @@ describe('images', () => {
     start();
     chooseFile('logo.png');
     await settle();
-    expect(text('#selectedTitle')).toBe('Image 1');
+    expect(openTitle()).toBe('Image 1');
     expect($('#element-size-n', HTMLInputElement).value).toBe('60');
     expect($('#element-height-n', HTMLInputElement).value).toBe('1.5');
     // the crop's own rows wait for the crop outline
@@ -586,7 +661,7 @@ describe('texts', () => {
   it('adds a text, waits for its font, then sends its raster with the preview', async () => {
     start();
     $('#addText', HTMLButtonElement).click();
-    expect(text('#selectedTitle')).toBe('Text 1');
+    expect(openTitle()).toBe('Text 1');
     expect($('#element-text', HTMLTextAreaElement).value).toBe('Text');
     expect([...$('#element-text-font', HTMLSelectElement).options].map((o) => o.textContent)).toEqual([
       'Rubik',
