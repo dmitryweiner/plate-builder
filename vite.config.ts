@@ -17,6 +17,13 @@ export default defineConfig({
   base: './',
   define: { __APP_ID__: JSON.stringify(APP_ID) },
   plugins: [serviceWorkerPlugin({ appId: APP_ID, publicDir: resolve(import.meta.dirname, 'public') })],
+  // Three.js is most of the main chunk, and it changes twice a year while our
+  // code changes with every deploy: a chunk of its own keeps it in the cache.
+  build: {
+    rolldownOptions: { output: { codeSplitting: { groups: [{ name: 'three', test: /node_modules[\\/]three[\\/]/ }] } } },
+    // above the vendor chunk: we know Three weighs half a megabyte, but our own code doing so would be news
+    chunkSizeWarningLimit: 600,
+  },
   // CSG lives in a module worker: the manifold glue finds its .wasm through
   // import.meta.url, which an iife worker does not have.
   worker: { format: 'es' },

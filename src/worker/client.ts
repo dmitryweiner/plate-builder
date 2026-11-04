@@ -133,8 +133,8 @@ export const csgWorker: WorkerFactory<Job> = (receive, broke) => {
   return { post: (message, transfer) => worker.postMessage(message, transfer), terminate: () => worker.terminate() };
 };
 
-/** How the app's jobs share the queue: one lane per kind, nothing kept yet. */
-export const csgPolicy: JobPolicy<Job> = { lane: (job) => job.kind, kept: () => false };
+/** How the app's jobs share the queue: one lane per kind; an export is kept. */
+export const csgPolicy: JobPolicy<Job> = { lane: (job) => job.kind, kept: (job) => job.kind === 'mesh' && job.quality === 'export' };
 
 export function csgClient(factory: WorkerFactory<Job> = csgWorker): WorkerClient<Job, JobResult> {
   return new WorkerClient(factory, csgPolicy);

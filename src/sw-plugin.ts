@@ -65,7 +65,7 @@ export function serviceWorkerPlugin({ appId, publicDir }: { appId: string; publi
       const publicFiles = listFiles(publicDir);
       const hash = createHash('sha256');
       for (const name of Object.keys(bundle).toSorted()) {
-        const item = bundle[name]!;
+        const item = bundle[name];
         hash.update(name).update(item.type === 'chunk' ? item.code : item.source);
       }
       for (const name of publicFiles) hash.update(name).update(readFileSync(join(publicDir, name)));

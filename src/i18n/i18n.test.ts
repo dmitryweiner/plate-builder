@@ -59,7 +59,8 @@ describe('messages', () => {
 
   it('do not have static texts for unknown keys or functions', () => {
     expect(staticText(messages.en, 'missing')).toBeUndefined();
-    expect(staticText(messages.en, 'engineReady')).toBeUndefined();
+    expect(staticText(messages.en, 'triangles')).toBeUndefined();
+    expect(staticText(messages.en, 'meshProblem')).toBeUndefined();
   });
 
   it('match the English defaults in index.html', () => {
@@ -75,12 +76,26 @@ describe('messages', () => {
     expect(LOCALES).toEqual(['en', 'ru', 'uk', 'he']);
   });
 
-  it('format the engine status in every language', () => {
-    expect(messages.en.engineReady(123.4)).toBe('Geometry engine ready in 123 ms');
+  it('format numbers with plural forms in every language', () => {
+    expect([1, 2, 5].map((n) => messages.en.triangles(n))).toEqual(['1 triangle', '2 triangles', '5 triangles']);
+    expect([1, 3, 5, 21].map((n) => messages.ru.triangles(n))).toEqual([
+      '1 треугольник',
+      '3 треугольника',
+      '5 треугольников',
+      '21 треугольник',
+    ]);
+    expect([1, 3, 5].map((n) => messages.uk.triangles(n))).toEqual(['1 трикутник', '3 трикутники', '5 трикутників']);
+    expect([1, 5].map((n) => messages.he.triangles(n))).toEqual(['משולש אחד', '5 משולשים']);
     for (const locale of LOCALES) {
-      expect(messages[locale].engineReady(7)).toContain('7');
+      expect(messages[locale].builtIn(7.4)).toContain('7');
       expect(messages[locale].engineFailed('boom')).toContain('boom');
+      expect(messages[locale].meshBlocked('x')).toContain('x');
     }
+  });
+
+  it('name every mesh problem in every language', () => {
+    for (const locale of LOCALES)
+      expect(Object.keys(messages[locale].meshProblem).toSorted()).toEqual(Object.keys(messages.en.meshProblem).toSorted());
   });
 });
 

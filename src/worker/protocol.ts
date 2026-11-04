@@ -4,16 +4,34 @@
 // The worker boundary is an outer boundary of the core, like a file or
 // localStorage: whatever state comes in is sanitised by the worker itself.
 
+import type { Ring } from '../geo/outline';
+import type { PlateState } from '../geo/state';
+import type { MeshProblem, MeshReport } from '../geo/validate';
+
 /**
- * A job. `ping` loads the geometry engine and answers; the outline and mesh
- * jobs of spec §8.4 join this union as the milestones bring them.
+ * A job (spec §8.4). `ping` loads the geometry engine and answers;
+ * `outline` returns the plate's outline for the 2D view; `mesh` builds the
+ * solid, at preview or export quality (an export also returns the STL).
  */
-export type Job = { kind: 'ping' };
+export type Job =
+  { kind: 'ping' } | { kind: 'outline'; state: PlateState } | { kind: 'mesh'; quality: 'preview' | 'export'; state: PlateState };
 
 export type JobKind = Job['kind'];
 
+export interface MeshResult {
+  kind: 'mesh';
+  quality: 'preview' | 'export';
+  positions: Float32Array;
+  indices: Uint32Array;
+  report: MeshReport;
+  /** what blocks the export; empty when the mesh is fine */
+  problems: MeshProblem[];
+  /** the binary STL of an export; null for a preview */
+  stl: ArrayBuffer | null;
+}
+
 /** What a finished job returns, by kind. */
-export type JobResult = { kind: 'ping'; volume: number };
+export type JobResult = { kind: 'ping'; volume: number } | { kind: 'outline'; rings: Ring[] } | MeshResult;
 
 /**
  * Progress by stages. Manifold says nothing about itself inside one boolean:
@@ -42,4 +60,13 @@ export function isWorkerOut<R>(data: unknown): data is WorkerOut<R> {
   if (!('jobId' in data) || typeof data.jobId !== 'number') return false;
   if (!('type' in data)) return false;
   return data.type === 'progress' || data.type === 'done' || data.type === 'error';
+}
+
+/** Checks a job's shape; its state is sanitised by the worker anyway. */
+export function isJob(job: unknown): job is Job {
+  if (typeof job !== 'object' || job === null || !('kind' in job)) return false;
+  if (job.kind === 'ping') return true;
+  if (!('state' in job)) return false;
+  if (job.kind === 'outline') return true;
+  return job.kind === 'mesh' && 'quality' in job && (job.quality === 'preview' || job.quality === 'export');
 }

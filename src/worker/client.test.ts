@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { WorkerClient, type JobPolicy, type WorkerFactory } from './client';
+import { defaultState } from '../geo/state';
+import { csgPolicy, WorkerClient, type JobPolicy, type WorkerFactory } from './client';
 
 /** Test jobs: two lanes, one of them with an export that must survive previews. */
 type TestJob = { kind: 'outline'; n: number } | { kind: 'mesh'; n: number; export?: boolean; buffer?: ArrayBuffer };
@@ -167,5 +168,14 @@ describe('WorkerClient', () => {
     const buffer = new ArrayBuffer(8);
     void client.run({ kind: 'mesh', n: 1, buffer });
     expect(fake.current().transfer).toEqual([buffer]);
+  });
+});
+
+describe('csgPolicy', () => {
+  it('keeps an export and gives each job kind its lane', () => {
+    const state = defaultState();
+    expect(csgPolicy.kept({ kind: 'mesh', quality: 'export', state })).toBe(true);
+    expect(csgPolicy.kept({ kind: 'mesh', quality: 'preview', state })).toBe(false);
+    expect(csgPolicy.lane({ kind: 'outline', state })).not.toBe(csgPolicy.lane({ kind: 'mesh', quality: 'preview', state }));
   });
 });
