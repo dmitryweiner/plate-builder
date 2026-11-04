@@ -32,5 +32,7 @@ export default defineConfig({
   test: {
     environment: 'node',
     include: ['src/**/*.test.ts'],
+    // the fuzz and the CSG tests take seconds on a CI runner
+    testTimeout: 30000,
   },
 });
