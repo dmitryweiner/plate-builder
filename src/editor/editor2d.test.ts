@@ -57,6 +57,7 @@ beforeEach(() => {
     snapping: () => snapping,
     sizeLabel: () => '100 × 60 mm',
     picture: () => null,
+    textShape: () => null,
   });
   editor.fit();
 });

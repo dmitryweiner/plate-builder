@@ -430,3 +430,15 @@ footer a {
 .thumb[hidden] {
   display: none;
 }
+
+.text-row textarea {
+  grid-column: 1 / -1;
+  inline-size: 100%;
+  padding: 6px 8px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--bg);
+  color: var(--fg);
+  font: inherit;
+  resize: vertical;
+}

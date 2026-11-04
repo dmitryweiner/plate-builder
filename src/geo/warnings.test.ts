@@ -1,6 +1,15 @@
 import { describe, expect, it } from 'vitest';
 import { primitiveOutline } from './outline';
-import { defaultHole, defaultState, type HoleElement, type PlateState } from './state';
+import {
+  defaultHole,
+  defaultImage,
+  defaultState,
+  defaultText,
+  type HoleElement,
+  type ImageElement,
+  type PlateState,
+  type TextElement,
+} from './state';
 import { pointInRings, ringsDistance, ringsOverlap, warnings } from './warnings';
 
 /** A 100 × 60 rectangle, 3 mm thick, with the given holes. */
@@ -80,5 +89,41 @@ describe('warnings', () => {
     // 20 long, 4 wide: along x its end is 10 from the centre, turned 90° only 2
     expect(codes(plate([{ kind: 'slot', length: 20, width: 4, x: 41 }]))).toEqual(['element.outside']);
     expect(codes(plate([{ kind: 'slot', length: 20, width: 4, x: 41, rotation: 90 }]))).toEqual([]);
+  });
+});
+
+const withText = (text: Partial<TextElement>, extra: Partial<PlateState> = {}): PlateState => {
+  const state = plate([]);
+  return { ...state, texts: [{ ...defaultText(state), id: 't1', ...text }], ...extra };
+};
+const image = (over: Partial<ImageElement>): ImageElement => ({
+  ...defaultImage(defaultState(), 'data:image/png;base64,', 10, 10),
+  id: 'i1',
+  size: 20,
+  ...over,
+});
+
+describe('warnings of texts and images', () => {
+  it('text.arcLines: an arc text of several lines, not one line or a straight block', () => {
+    expect(codes(withText({ arc: true, text: 'a\nb' }))).toEqual(['text.arcLines']);
+    expect(codes(withText({ arc: true, text: 'ab' }))).toEqual([]);
+    expect(codes(withText({ arc: false, text: 'a\nb' }))).toEqual([]);
+  });
+
+  it('text.buried: a raised text lower than an image under it', () => {
+    expect(codes(withText({ height: 1 }, { images: [image({ height: 2 })] }))).toEqual(['text.buried']);
+    expect(codes(withText({ height: 2.5 }, { images: [image({ height: 2 })] }))).toEqual([]);
+    expect(codes(withText({ height: 1, mode: 'engraved' }, { images: [image({ height: 2 })] }))).toEqual([]);
+    expect(codes(withText({ height: 1 }, { images: [image({ height: 2, x: 35 })] }))).toEqual([]);
+  });
+
+  it('element.overlap: a hole that crosses a text', () => {
+    const state = withText({}, { holes: [{ ...defaultHole('round'), id: 'h1', x: 2 }] });
+    expect(warnings(state, outline)).toEqual([expect.objectContaining({ code: 'element.overlap', ids: ['h1', 't1'] })]);
+  });
+
+  it('element.outside: a text or an image poking out of the outline', () => {
+    expect(codes(withText({ x: 48 }))).toEqual(['element.outside']);
+    expect(codes({ ...plate([]), images: [image({ y: 25 })] })).toEqual(['element.outside']);
   });
 });

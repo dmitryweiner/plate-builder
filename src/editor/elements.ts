@@ -1,10 +1,13 @@
 // Elements as the 2D editor sees them: a box in the element's own frame,
 // hit testing, and uniform scaling of its size parameters. Pure: no DOM.
 
-import { holeBox, holeFootprint, placePoint } from '../geo/holes';
-import type { Bounds, Point } from '../geo/outline';
+import { boxCorners, elementBox, toLocal } from '../geo/boxes';
+import { holeFootprint } from '../geo/holes';
+import type { Point } from '../geo/outline';
 import { RANGES, type HoleKind, type PlateElement, type PlateState, type Range } from '../geo/state';
 import { pointInRings } from '../geo/warnings';
+
+export { boxCorners, elementBox, toLocal };
 
 /** Every element of the state in drawing order: images under texts under holes. */
 export function allElements(state: PlateState): PlateElement[] {
@@ -20,44 +23,6 @@ export function replaceElement(state: PlateState, next: PlateElement): PlateStat
   if (next.type === 'image') return { ...state, images: state.images.map((e) => (e.id === next.id ? next : e)) };
   if (next.type === 'text') return { ...state, texts: state.texts.map((e) => (e.id === next.id ? next : e)) };
   return { ...state, holes: state.holes.map((e) => (e.id === next.id ? next : e)) };
-}
-
-/**
- * The element's box in its own frame (before rotation, around its
- * position). A text's box is estimated from its size until its raster is
- * measured (M4).
- */
-export function elementBox(e: PlateElement): Bounds {
-  if (e.type === 'hole') return holeBox(e);
-  if (e.type === 'image') {
-    const long = Math.max(e.pixelWidth, e.pixelHeight);
-    const w = (e.size * e.pixelWidth) / long;
-    const h = (e.size * e.pixelHeight) / long;
-    return { minX: -w / 2, maxX: w / 2, minY: -h / 2, maxY: h / 2 };
-  }
-  const lines = e.text.split('\n');
-  const w = 0.7 * e.size * Math.max(1, ...lines.map((line) => line.length));
-  const h = e.size * (1 + (lines.length - 1) * e.lineSpacing);
-  return { minX: -w / 2, maxX: w / 2, minY: -h / 2, maxY: h / 2 };
-}
-
-/** The box's corners in the plate frame, counter-clockwise from the bottom left of the element's frame. */
-export function boxCorners(e: PlateElement): [Point, Point, Point, Point] {
-  const b = elementBox(e);
-  return [
-    placePoint(e, [b.minX, b.minY]),
-    placePoint(e, [b.maxX, b.minY]),
-    placePoint(e, [b.maxX, b.maxY]),
-    placePoint(e, [b.minX, b.maxY]),
-  ];
-}
-
-/** The plate point in the element's own frame. */
-export function toLocal(e: { x: number; y: number; rotation: number }, [x, y]: Readonly<Point>): Point {
-  const a = (-e.rotation * Math.PI) / 180;
-  const dx = x - e.x;
-  const dy = y - e.y;
-  return [dx * Math.cos(a) - dy * Math.sin(a), dx * Math.sin(a) + dy * Math.cos(a)];
 }
 
 /** Whether a plate point hits the element: a hole by its shape, the rest by their box; `slop` mm of tolerance around a box. */

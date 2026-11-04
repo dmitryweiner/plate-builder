@@ -32,7 +32,8 @@ export interface RangeControl<T> extends Base<T> {
 
 export interface SelectControl<T> extends Base<T> {
   kind: 'select';
-  options: readonly { value: string; label: TextKey }[];
+  /** a message key, or a text shown as it is (a font's own name) */
+  options: readonly ({ value: string; label: TextKey } | { value: string; text: string })[];
   get(state: T): string;
   set(state: T, value: string): T;
 }
@@ -43,7 +44,15 @@ export interface CheckControl<T> extends Base<T> {
   set(state: T, value: boolean): T;
 }
 
-export type Control<T> = RangeControl<T> | SelectControl<T> | CheckControl<T>;
+export interface TextAreaControl<T> extends Base<T> {
+  kind: 'textarea';
+  rows: number;
+  maxLength: number;
+  get(state: T): string;
+  set(state: T, value: string): T;
+}
+
+export type Control<T> = RangeControl<T> | SelectControl<T> | CheckControl<T> | TextAreaControl<T>;
 
 export interface ControlsOptions<T> {
   read: () => T;
@@ -95,7 +104,7 @@ export function renderControls<T>(container: HTMLElement, controls: readonly Con
       const select = make('select');
       select.id = id;
       for (const option of control.options) {
-        const node = make('option', undefined, o.t[option.label]);
+        const node = make('option', undefined, 'text' in option ? option.text : o.t[option.label]);
         node.value = option.value;
         select.append(node);
       }
@@ -103,6 +112,20 @@ export function renderControls<T>(container: HTMLElement, controls: readonly Con
       row.append(select);
       syncers.push((state) => {
         select.value = control.get(state);
+      });
+    } else if (control.kind === 'textarea') {
+      const area = make('textarea');
+      area.id = id;
+      area.rows = control.rows;
+      area.maxLength = control.maxLength;
+      area.addEventListener('input', () => o.change(control.set(o.read(), area.value), false));
+      area.addEventListener('change', () => o.change(control.set(o.read(), area.value), true));
+      row.classList.add('text-row');
+      row.append(area);
+      syncers.push((state) => {
+        const value = control.get(state);
+        // while typing, the field is the truth: rewriting it would move the caret
+        if (area.value !== value && document.activeElement !== area) area.value = value;
       });
     } else {
       const slider = make('input');

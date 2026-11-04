@@ -7,6 +7,7 @@ interface Demo {
   kind: string;
   size: number;
   on: boolean;
+  note: string;
 }
 
 const controls: Control<Demo>[] = [
@@ -33,6 +34,8 @@ const controls: Control<Demo>[] = [
     set: (s, size) => ({ ...s, size }),
   },
   { kind: 'check', key: 'on', label: 'points', when: (s) => s.kind === 'b', get: (s) => s.on, set: (s, on) => ({ ...s, on }) },
+  { kind: 'textarea', key: 'note', label: 'outline', rows: 2, maxLength: 20, get: (s) => s.note, set: (s, note) => ({ ...s, note }) },
+  { kind: 'select', key: 'font', label: 'outline', options: [{ value: 'x', text: 'Marck Script' }], get: () => 'x', set: (s) => s },
 ];
 
 let state: Demo;
@@ -61,15 +64,21 @@ function input(id: string): HTMLInputElement {
 
 beforeEach(() => {
   document.body.innerHTML = '';
-  state = { kind: 'a', size: 50, on: false };
+  state = { kind: 'a', size: 50, on: false, note: 'hi' };
   changes = [];
 });
 
 describe('renderControls', () => {
   it('labels every row in the given language and translates the options', () => {
     const { container } = render('ru');
-    expect([...container.querySelectorAll('.row-name')].map((n) => n.textContent)).toEqual(['Контур', 'Ширина', 'Лучи']);
-    expect([...container.querySelectorAll('option')].map((o) => o.textContent)).toEqual(['Прямоугольник', 'Звезда']);
+    expect([...container.querySelectorAll('.row-name')].map((n) => n.textContent)).toEqual([
+      'Контур',
+      'Ширина',
+      'Лучи',
+      'Контур',
+      'Контур',
+    ]);
+    expect([...container.querySelectorAll('option')].map((o) => o.textContent)).toEqual(['Прямоугольник', 'Звезда', 'Marck Script']);
     expect(container.querySelector('.unit')?.textContent).toBe('мм');
   });
 
@@ -123,5 +132,22 @@ describe('renderControls', () => {
     handle.sync(state);
     expect(state.on).toBe(true);
     expect(input('demo-size').max).toBe('300');
+  });
+});
+
+describe('textarea', () => {
+  it('reports typing as it goes and once more when the field is left', () => {
+    render();
+    const area = document.getElementById('demo-note');
+    if (!(area instanceof HTMLTextAreaElement)) throw new Error('no textarea');
+    expect(area.value).toBe('hi');
+    expect(area.maxLength).toBe(20);
+    area.value = 'hi\nthere';
+    area.dispatchEvent(new Event('input'));
+    area.dispatchEvent(new Event('change'));
+    expect(changes.map((c) => [c.next.note, c.final])).toEqual([
+      ['hi\nthere', false],
+      ['hi\nthere', true],
+    ]);
   });
 });

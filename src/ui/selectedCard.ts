@@ -2,8 +2,21 @@
 // the element's own parameters.
 
 import { findElement, replaceElement } from '../editor/elements';
-import { HOLE_KINDS, RANGES, type HoleElement, type HoleKind, type ImageElement, type PlateState } from '../geo/state';
-import type { Control, TextKey } from './controls';
+import {
+  ALIGNS,
+  FONT_IDS,
+  HOLE_KINDS,
+  LIMITS,
+  maxEngraveDepth,
+  RANGES,
+  type HoleElement,
+  type HoleKind,
+  type ImageElement,
+  type PlateState,
+  type TextElement,
+} from '../geo/state';
+import type { Control, SelectControl, TextKey } from './controls';
+import { FONTS } from './fonts';
 
 const HOLE_LABELS: Record<HoleKind, TextKey> = {
   round: 'holeRound',
@@ -88,7 +101,137 @@ export function elementControls(id: string): Control<PlateState>[] {
     set: (s, value) => setImage(s, { [key]: value }),
   });
 
+  const text = (s: PlateState): TextElement | null => {
+    const e = get(s);
+    return e?.type === 'text' ? e : null;
+  };
+  const setText = (s: PlateState, over: Partial<TextElement>): PlateState => {
+    const x = text(s);
+    return x ? replaceElement(s, { ...x, ...over }) : s;
+  };
+  const isText = (s: PlateState) => text(s) !== null;
+  const textRange = (
+    key: 'size' | 'lineSpacing' | 'height' | 'depth' | 'arcRadius',
+    label: TextKey,
+    range: { min: number; max: number | ((s: PlateState) => number); def: number },
+    step: number,
+    unit: TextKey,
+    when: (s: PlateState) => boolean,
+  ): Control<PlateState> => ({
+    kind: 'range',
+    key: `text-${key}`,
+    label,
+    min: range.min,
+    max: range.max,
+    step,
+    unit,
+    when,
+    get: (s) => text(s)?.[key] ?? range.def,
+    set: (s, value) => setText(s, { [key]: value }),
+  });
+  const textChoice = <K extends 'font' | 'align' | 'mode' | 'arcSide'>(
+    key: K,
+    label: TextKey,
+    options: SelectControl<PlateState>['options'],
+    values: readonly TextElement[K][],
+    when: (s: PlateState) => boolean,
+  ): Control<PlateState> => ({
+    kind: 'select',
+    key: `text-${key}`,
+    label,
+    options,
+    when,
+    get: (s) => `${text(s)?.[key] ?? ''}`,
+    set: (s, value) => {
+      const picked = values.find((v) => v === value);
+      return picked === undefined ? s : setText(s, { [key]: picked });
+    },
+  });
+
   return [
+    {
+      kind: 'textarea',
+      key: 'text',
+      label: 'textContent',
+      rows: 3,
+      maxLength: LIMITS.textChars,
+      when: isText,
+      get: (s) => text(s)?.text ?? '',
+      set: (s, value) => setText(s, { text: value }),
+    },
+    textChoice(
+      'font',
+      'font',
+      FONT_IDS.map((value) => ({ value, text: FONTS[value].label })),
+      FONT_IDS,
+      isText,
+    ),
+    textRange('size', 'textSize', RANGES.textSize, 0.5, 'mm', isText),
+    textRange(
+      'lineSpacing',
+      'lineSpacing',
+      RANGES.lineSpacing,
+      0.05,
+      'times',
+      (s) => isText(s) && !text(s)?.arc && (text(s)?.text.includes('\n') ?? false),
+    ),
+    textChoice(
+      'align',
+      'align',
+      [
+        { value: 'left', label: 'alignLeft' },
+        { value: 'center', label: 'alignCenter' },
+        { value: 'right', label: 'alignRight' },
+      ],
+      ALIGNS,
+      (s) => isText(s) && !text(s)?.arc,
+    ),
+    textChoice(
+      'mode',
+      'textMode',
+      [
+        { value: 'raised', label: 'raised' },
+        { value: 'engraved', label: 'engraved' },
+      ],
+      ['raised', 'engraved'],
+      isText,
+    ),
+    textRange('height', 'textHeight', RANGES.textHeight, 0.1, 'mm', (s) => text(s)?.mode === 'raised'),
+    textRange(
+      'depth',
+      'engraveDepth',
+      { ...RANGES.engraveDepth, max: (s) => maxEngraveDepth(s.plate.thickness) },
+      0.1,
+      'mm',
+      (s) => text(s)?.mode === 'engraved',
+    ),
+    {
+      kind: 'check',
+      key: 'text-arc',
+      label: 'onArc',
+      when: isText,
+      get: (s) => text(s)?.arc ?? false,
+      set: (s, arc) => setText(s, { arc }),
+    },
+    textRange('arcRadius', 'arcRadius', RANGES.arcRadius, 0.5, 'mm', (s) => text(s)?.arc === true),
+    textChoice(
+      'arcSide',
+      'arcSide',
+      [
+        { value: 'outside', label: 'arcOutside' },
+        { value: 'inside', label: 'arcInside' },
+      ],
+      ['outside', 'inside'],
+      (s) => text(s)?.arc === true,
+    ),
+    {
+      kind: 'check',
+      key: 'text-inOutline',
+      label: 'inOutline',
+      when: (s) => isText(s) && s.plate.kind === 'crop',
+      get: (s) => text(s)?.inOutline ?? true,
+      set: (s, inOutline) => setText(s, { inOutline }),
+    },
     imageRange('size', 'imageSize', RANGES.imageSize, 0.5, 'mm'),
     {
       kind: 'select',

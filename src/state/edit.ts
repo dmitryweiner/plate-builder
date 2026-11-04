@@ -3,7 +3,7 @@
 // app can select it.
 
 import { allElements, findElement, replaceElement } from '../editor/elements';
-import { defaultHole, LIMITS, sanitizeState, type HoleKind, type PlateElement, type PlateState } from '../geo/state';
+import { defaultHole, defaultText, LIMITS, sanitizeState, type HoleKind, type PlateElement, type PlateState } from '../geo/state';
 
 /** How far a copy lands from its original, mm: right and down, visibly apart. */
 const DUPLICATE_OFFSET = 5;
@@ -12,6 +12,12 @@ export function addHole(state: PlateState, kind: HoleKind = 'round'): { state: P
   if (state.holes.length >= LIMITS.holes) return { state, id: null };
   const next = sanitizeState({ ...state, holes: [...state.holes, defaultHole(kind)] });
   return { state: next, id: next.holes.at(-1)?.id ?? null };
+}
+
+export function addText(state: PlateState): { state: PlateState; id: string | null } {
+  if (state.texts.length >= LIMITS.texts) return { state, id: null };
+  const next = sanitizeState({ ...state, texts: [...state.texts, defaultText(state)] });
+  return { state: next, id: next.texts.at(-1)?.id ?? null };
 }
 
 const listOf = (state: PlateState, e: PlateElement): readonly PlateElement[] =>

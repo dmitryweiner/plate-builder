@@ -86,7 +86,9 @@ browser (service worker, layout, workers) → a step in `scripts/smoke.mjs`.
 - `src/geo/` — the pure core: `state.ts` (schema, ranges, defaults,
   `sanitizeState`), `outline.ts` (primitive outlines as polygons),
   `heightmap.ts` (an image's height function), `grid.ts` (its heightfield
-  solid),
+  solid), `contour.ts` (marching squares), `textLayout.ts` (line alignment,
+  arc bending), `textShape.ts` (a text raster's contours), `boxes.ts`
+  (element boxes; measured text boxes),
   `holes.ts` (footprints, boxes and cutters of the hole kinds),
   `warnings.ts` (the warnings that need no CSG), `mesh.ts`
   (`SurfaceMesh`, normals), `stl.ts` (binary STL, file names), `validate.ts`
@@ -107,7 +109,9 @@ browser (service worker, layout, workers) → a step in `scripts/smoke.mjs`.
   rows), `plateCard.ts`, `selectedCard.ts` (the cards' controls),
   `elementsCard.ts` (the element list), `warningsCard.ts`,
   `imageImport.ts` (files → grayscale + alpha PNG, decoding, height
-  pictures), `dom.ts`.
+  pictures), `fonts.ts` (bundled fonts, loaded on first use),
+  `textRaster.ts` (a text block drawn at 10 px/mm), `dom.ts`.
+- `public/fonts/` — woff2 subsets with their OFL licences.
 - `src/i18n/` — `en.ts` defines the messages, `ru.ts`, `uk.ts`, `he.ts` follow
   its type; `index.ts` — locales, detection, text direction, `staticText`;
   `plural.ts` — `Intl.PluralRules` helper.
