@@ -5,7 +5,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { startApp, PREVIEW_DELAY_MS, type AppOptions, type Timers } from './app';
 import { LOCALE_NAMES, LOCALES } from './i18n';
 import type { CameraPreset, SceneHandle, ViewMesh } from './render/view';
-import { loadSettings, type KeyValueStorage } from './storage';
+import { DEFAULT_SETTINGS, loadSettings, saveSettings, type KeyValueStorage } from './storage';
+import { defaultImage, defaultState } from './geo/state';
+import { BUILT_IN_PRESETS } from './state/presets';
 import type { Raster } from './geo/heightmap';
 import type { JobDone } from './worker/client';
 import type { Job, JobResult, MeshResult } from './worker/protocol';
@@ -208,7 +210,9 @@ beforeEach(() => {
   vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(null);
   document.head.innerHTML = head;
   document.body.innerHTML = body;
+  // a returning visitor with the default plate: the premise of most tests here
   storage = new MemoryStorage();
+  saveSettings(storage, { ...DEFAULT_SETTINGS, project: defaultState() });
   csg = new FakeCsg();
   scene = new FakeScene();
   timers = new ManualTimers();
@@ -290,8 +294,8 @@ describe('preview', () => {
     timers.flush();
     const before = csg.meshJobs().length;
     for (const value of ['110', '120', '130']) setInput('#plate-width', value, 'input');
-    expect(timers.pending.size).toBe(1);
-    expect([...timers.pending.values()][0]?.ms).toBe(PREVIEW_DELAY_MS);
+    // one preview waits (the project's save waits beside it)
+    expect([...timers.pending.values()].filter((p) => p.ms === PREVIEW_DELAY_MS)).toHaveLength(1);
     timers.flush();
     expect(csg.meshJobs().length).toBe(before + 1);
     expect(csg.last().job).toMatchObject({ state: { plate: { width: 130 } } });
@@ -803,5 +807,127 @@ describe('export card and warnings', () => {
     expect($('#buildProgress', HTMLElement).hidden).toBe(true);
     $('#downloadStl', HTMLButtonElement).click();
     expect($('#exportProgress', HTMLElement).hidden).toBe(false);
+  });
+});
+
+class RefusingStorage extends MemoryStorage {
+  refuse = true;
+  override setItem(key: string, value: string) {
+    if (this.refuse) throw new DOMException('quota', 'QuotaExceededError');
+    super.setItem(key, value);
+  }
+}
+
+describe('projects, presets, storage', () => {
+  it('opens the first preset on a first visit', () => {
+    storage = new MemoryStorage();
+    start();
+    expect($('#projectName', HTMLInputElement).value).toBe('Door sign');
+    expect(document.querySelectorAll('.element-row')).toHaveLength(3);
+  });
+
+  it('keeps the project across a reload, saved after a pause', () => {
+    start();
+    setInput('#plate-width-n', '140');
+    expect(loadSettings(storage).project?.plate.width).toBe(100);
+    timers.flush();
+    expect(loadSettings(storage).project?.plate.width).toBe(140);
+    stop();
+    document.body.innerHTML = body;
+    start();
+    expect($('#plate-width-n', HTMLInputElement).value).toBe('140');
+  });
+
+  it('says when the browser does not keep the project, until a save works', () => {
+    const refusing = new RefusingStorage();
+    storage = refusing;
+    start();
+    setInput('#plate-width-n', '120');
+    timers.flush();
+    expect($('#storageBanner', HTMLElement).hidden).toBe(false);
+    refusing.refuse = false;
+    setInput('#plate-width-n', '130');
+    timers.flush();
+    expect($('#storageBanner', HTMLElement).hidden).toBe(true);
+  });
+
+  it('saves the project file named after the project and reads one back', async () => {
+    start();
+    setInput('#projectName', 'Front door');
+    $('#saveProject', HTMLButtonElement).click();
+    expect(downloads.at(-1)?.name).toBe('front-door.plate.json');
+    const file = new File(
+      [
+        JSON.stringify({
+          app: 'plate-builder',
+          version: 1,
+          state: { ...defaultState(), name: 'Gate', plate: { ...defaultState().plate, width: 77 } },
+        }),
+      ],
+      'gate.plate.json',
+    );
+    const input = $('#projectFile', HTMLInputElement);
+    Object.defineProperty(input, 'files', { value: [file], configurable: true });
+    input.dispatchEvent(new Event('change'));
+    await settle();
+    expect($('#projectName', HTMLInputElement).value).toBe('Gate');
+    expect($('#plate-width-n', HTMLInputElement).value).toBe('77');
+    // undo brings the project back that was open before
+    $('#undo', HTMLButtonElement).click();
+    expect($('#projectName', HTMLInputElement).value).toBe('Front door');
+  });
+
+  it('refuses a foreign or broken file with a message', async () => {
+    start();
+    const input = $('#projectFile', HTMLInputElement);
+    const tryFile = async (content: string) => {
+      Object.defineProperty(input, 'files', { value: [new File([content], 'x.json')], configurable: true });
+      input.dispatchEvent(new Event('change'));
+      await settle();
+      return text('#projectStatus');
+    };
+    expect(await tryFile('{"app":"other"}')).toBe('This file is not a Plate Builder project.');
+    expect(await tryFile('{broken')).toBe('This file is not a readable project.');
+    expect($('#plate-width-n', HTMLInputElement).value).toBe('100');
+  });
+
+  it('opens a built-in preset and marks it changed once edited', () => {
+    start();
+    expect([...document.querySelectorAll('.preset-row')].map((r) => r.textContent)).toEqual(BUILT_IN_PRESETS.map((p) => p.names.en));
+    $('.preset-row[data-id="medal"] button', HTMLButtonElement).click();
+    expect($('#projectName', HTMLInputElement).value).toBe('Medal');
+    expect(document.querySelector('.preset-changed')).toBeNull();
+    setInput('#plate-thickness-n', '4');
+    expect($('.preset-row[data-id="medal"] .preset-changed', HTMLElement).textContent).toBe('changed');
+  });
+
+  it('saves, renames, opens and deletes a user preset, kept in storage', () => {
+    start();
+    setInput('#plate-width-n', '111');
+    $('#savePreset', HTMLButtonElement).click();
+    expect(loadSettings(storage).presets.map((p) => [p.id, p.name, p.state.plate.width])).toEqual([['u1', 'plate', 111]]);
+    const name = $('.preset-row[data-id="u1"] input', HTMLInputElement);
+    name.value = 'Wide';
+    name.dispatchEvent(new Event('change'));
+    expect(loadSettings(storage).presets[0]?.name).toBe('Wide');
+    setInput('#plate-width-n', '50');
+    $('.preset-row[data-id="u1"] .link-button', HTMLButtonElement).click();
+    expect($('#plate-width-n', HTMLInputElement).value).toBe('111');
+    $('.preset-row[data-id="u1"] [aria-label^="Delete"]', HTMLButtonElement).click();
+    expect(loadSettings(storage).presets).toEqual([]);
+  });
+
+  it('decodes the pictures of a stored project before building them, and builds again once in', async () => {
+    const state = defaultState();
+    saveSettings(storage, { ...DEFAULT_SETTINGS, project: { ...state, images: [{ ...defaultImage(state, PNG, 2, 1), id: 'i1' }] } });
+    start();
+    timers.flush();
+    const first = csg.last().job;
+    expect(first.kind === 'mesh' && first.rasters).toEqual([null]);
+    decodes.get(PNG)?.(raster2x1);
+    await settle();
+    timers.flush();
+    const second = csg.last().job;
+    expect(second.kind === 'mesh' && second.rasters).toEqual([raster2x1]);
   });
 });

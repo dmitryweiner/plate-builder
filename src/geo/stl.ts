@@ -54,11 +54,13 @@ export function encodeSTL(mesh: Pick<SurfaceMesh, 'positions' | 'indices'>, o: S
   return buf;
 }
 
-/** `door-sign.stl` from "Door sign": lower case, letters and digits of any script, dashes between words. */
-export function stlFileName(projectName: string): string {
+/** `door-sign` from "Door sign": lower case, letters and digits of any script, dashes between words. */
+export function fileSlug(projectName: string): string {
   const slug = projectName
     .toLowerCase()
     .replace(/[^\p{L}\p{N}]+/gu, '-')
     .replace(/^-+|-+$/g, '');
-  return `${slug || 'plate'}.stl`;
+  return slug || 'plate';
 }
+
+export const stlFileName = (projectName: string): string => `${fileSlug(projectName)}.stl`;

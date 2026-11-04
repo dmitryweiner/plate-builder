@@ -93,7 +93,26 @@ export function ringsOverlap(a: Ring, b: Ring): boolean {
 
 const round1 = (value: number) => Math.round(value * 10) / 10;
 
-export function warnings(state: PlateState, outline: readonly Ring[]): Warning[] {
+/** Whether a ring shares area with a shape of several rings (even-odd: a letter's counter is no ink). */
+function overlapsShape(ring: Ring, shape: readonly Ring[]): boolean {
+  for (const other of shape) {
+    for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+      for (let k = 0, l = other.length - 1; k < other.length; l = k++) if (segmentsCross(ring[j], ring[i], other[l], other[k])) return true;
+    }
+  }
+  return pointInRings(ring[0], shape) || shape.some((other) => other.length > 0 && pointInRings(other[0], [ring]));
+}
+
+/**
+ * The warnings of the state on this outline. `textInk`: texts' contours in
+ * their own frames, where they are known (the main thread traces them); a
+ * text without them is taken by its box.
+ */
+export function warnings(
+  state: PlateState,
+  outline: readonly Ring[],
+  textInk: ReadonlyMap<string, readonly Ring[]> = new Map(),
+): Warning[] {
   const out: Warning[] = [];
   const holes = state.holes.filter((hole) => hole.visible);
   const footprints = new Map<HoleElement, Ring>(holes.map((hole) => [hole, placeRing(hole, holeFootprint(hole))]));
@@ -135,9 +154,12 @@ export function warnings(state: PlateState, outline: readonly Ring[]): Warning[]
     if (text.mode === 'raised' && images.some((image) => image.height > text.height && ringsOverlap(box, boxCorners(image)))) {
       out.push({ code: 'text.buried', ids: [text.id], spot });
     }
+    const ink = textInk.get(text.id)?.map((r) => placeRing(text, r));
     for (const hole of holes) {
-      if (ringsOverlap(footprints.get(hole) ?? [], box))
+      const footprint = footprints.get(hole) ?? [];
+      if (ink ? overlapsShape(footprint, ink) : ringsOverlap(footprint, box)) {
         out.push({ code: 'element.overlap', ids: [hole.id, text.id], spot: [(hole.x + text.x) / 2, (hole.y + text.y) / 2] });
+      }
     }
   }
   const { plate } = state;

@@ -77,8 +77,19 @@ export async function launch({ preview = false } = {}) {
   const errors = [];
   let step = 'start';
 
-  async function open({ locale = 'en-US', viewport = VIEWPORTS.desktop } = {}) {
+  /**
+   * `storage`: localStorage entries to start with (set only where nothing is
+   * stored yet, so a reload keeps what the page saved); `script`: a function
+   * run in every page before its own scripts.
+   */
+  async function open({ locale = 'en-US', viewport = VIEWPORTS.desktop, storage = null, script = null } = {}) {
     const context = await browser.newContext({ locale, viewport });
+    if (storage) {
+      await context.addInitScript((entries) => {
+        for (const [key, value] of Object.entries(entries)) if (localStorage.getItem(key) === null) localStorage.setItem(key, value);
+      }, storage);
+    }
+    if (script) await context.addInitScript(script);
     const page = await context.newPage();
     page.on('pageerror', (e) => errors.push(`[${step}] ${String(e)}`));
     page.on('console', (m) => {

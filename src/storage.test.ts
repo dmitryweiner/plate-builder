@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { DEFAULT_SETTINGS, loadSettings, saveSettings, STORAGE_KEY, type KeyValueStorage } from './storage';
+import { defaultHole, defaultState, sanitizeState } from './geo/state';
+import { DEFAULT_SETTINGS, loadSettings, saveSettings, STORAGE_KEY, type KeyValueStorage, type Settings } from './storage';
 
 class MemoryStorage implements KeyValueStorage {
   data = new Map<string, string>();
@@ -8,6 +9,13 @@ class MemoryStorage implements KeyValueStorage {
   }
   setItem(key: string, value: string) {
     this.data.set(key, value);
+  }
+}
+
+/** A storage that is full: reading works, writing throws as a quota error does. */
+class FullStorage extends MemoryStorage {
+  override setItem(): void {
+    throw new DOMException('quota', 'QuotaExceededError');
   }
 }
 
@@ -20,6 +28,8 @@ const broken: KeyValueStorage = {
   },
 };
 
+const project = () => sanitizeState({ ...defaultState(), name: 'door', holes: [defaultHole('round')] });
+
 describe('settings storage', () => {
   it('uses the package name as the key', () => {
     expect(STORAGE_KEY).toBe('plate-builder');
@@ -31,27 +41,41 @@ describe('settings storage', () => {
     expect(loadSettings(broken)).toEqual(DEFAULT_SETTINGS);
   });
 
-  it('saves and loads settings', () => {
+  it('round-trips the language, the project and the user presets', () => {
     const storage = new MemoryStorage();
-    const settings = { locale: 'uk' } as const;
-    saveSettings(storage, settings);
+    const settings: Settings = { locale: 'uk', project: project(), presets: [{ id: 'u1', name: 'Mine', state: project() }] };
+    expect(saveSettings(storage, settings)).toBe(true);
     expect(loadSettings(storage)).toEqual(settings);
   });
 
-  it('ignores write errors', () => {
-    expect(() => saveSettings(broken, DEFAULT_SETTINGS)).not.toThrow();
-    expect(() => saveSettings(null, DEFAULT_SETTINGS)).not.toThrow();
+  it('says when it could not save: quota, private mode, no storage', () => {
+    expect(saveSettings(new FullStorage(), DEFAULT_SETTINGS)).toBe(false);
+    expect(saveSettings(broken, DEFAULT_SETTINGS)).toBe(false);
+    expect(saveSettings(null, DEFAULT_SETTINGS)).toBe(false);
   });
 
-  it.each(['not json', '[]', '{"version":2,"settings":{"locale":"ru"}}', '{"version":1}'])('resets unreadable data: %s', (raw) => {
+  it.each(['not json', '[]', '{"version":9,"settings":{"locale":"ru"}}', '{"version":2}'])('resets unreadable data: %s', (raw) => {
     const storage = new MemoryStorage();
     storage.setItem(STORAGE_KEY, raw);
     expect(loadSettings(storage)).toEqual(DEFAULT_SETTINGS);
   });
 
-  it('replaces bad fields with defaults', () => {
+  it('keeps the language of a version 1 save', () => {
     const storage = new MemoryStorage();
-    storage.setItem(STORAGE_KEY, JSON.stringify({ version: 1, settings: { locale: 'xx' } }));
-    expect(loadSettings(storage)).toEqual({ locale: null });
+    storage.setItem(STORAGE_KEY, JSON.stringify({ version: 1, settings: { locale: 'he', count: 3 } }));
+    expect(loadSettings(storage)).toEqual({ ...DEFAULT_SETTINGS, locale: 'he' });
+  });
+
+  it('sanitises what it reads, field by field', () => {
+    const storage = new MemoryStorage();
+    const raw = {
+      version: 2,
+      settings: { locale: 'xx', project: { plate: { width: 1e6 } }, presets: [{ id: 'u1', name: '', state: {} }, 'junk', { id: 7 }] },
+    };
+    storage.setItem(STORAGE_KEY, JSON.stringify(raw));
+    const loaded = loadSettings(storage);
+    expect(loaded.locale).toBeNull();
+    expect(loaded.project?.plate.width).toBe(300);
+    expect(loaded.presets).toEqual([{ id: 'u1', name: 'Preset', state: defaultState() }]);
   });
 });

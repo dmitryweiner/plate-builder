@@ -103,7 +103,9 @@ browser (service worker, layout, workers) → a step in `scripts/smoke.mjs`.
   corner scale, rotate, pinch, snapping), `editor2d.ts` (pointer events and
   drawing on the canvas).
 - `src/state/` — `history.ts` (undo/redo, a gesture is one step), `edit.ts`
-  (add, duplicate, delete, show/hide, nudge, element names).
+  (add, duplicate, delete, show/hide, nudge, element names),
+  `projectFile.ts` (`*.plate.json`), `presets.ts` (the built-in presets),
+  `presetPictures.ts` (their pictures, generated).
 - `src/render/` — `view.ts` (what the app needs from the 3D view, types
   only), `scene.ts` (Three.js; checked by the smoke, not vitest).
 - `src/ui/` — `controls.ts` (declarative slider / number / select / check
@@ -119,7 +121,8 @@ browser (service worker, layout, workers) → a step in `scripts/smoke.mjs`.
 - `src/i18n/` — `en.ts` defines the messages, `ru.ts`, `uk.ts`, `he.ts` follow
   its type; `index.ts` — locales, detection, text direction, `staticText`;
   `plural.ts` — `Intl.PluralRules` helper.
-- `src/storage.ts` — versioned, validated settings in localStorage.
+- `src/storage.ts` — one versioned key: the language, the current project,
+  the user presets; every field sanitised, a refused write reported.
 - `src/sw-plugin.ts` — Vite plugin emitting `sw.js` that precaches the build;
   `src/pwa.ts` — its registration.
 - `src/style.css` — mobile first, logical properties, light and dark.
@@ -130,7 +133,10 @@ browser (service worker, layout, workers) → a step in `scripts/smoke.mjs`.
 
 - `scripts/smoke.mjs` — the browser smoke (grows with each milestone);
   `--preview` (build + offline), `--shots` (screenshots), `--measure` (image
-  timings for "what costs what").
+  timings for "what costs what"). Each step starts from a blank project
+  (seeded storage); `app.first()` opens a first visit.
+- `scripts/preset-pictures.mjs` — draws the built-in presets' pictures into
+  `src/state/presetPictures.ts`.
 - `scripts/lib/harness.mjs` — flags, vite on 5373/4373, console errors.
 - `scripts/icons.mjs` — PWA icons from `public/icon.svg`.
 - `scripts/vignettes.mjs` — the vignette catalog: `--check` (one piece with
