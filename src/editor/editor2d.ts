@@ -265,6 +265,8 @@ export function createEditor(o: EditorOptions): EditorHandle {
       view = fitView(s, plateBox(), MARGIN_PX);
       fitted = true;
     }
+    // the transform, for the smoke to see where the view looks
+    canvas.dataset.view = `${view.scale.toFixed(3)} ${view.cx.toFixed(1)} ${view.cy.toFixed(1)}`;
     const c = colors(canvas);
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.fillStyle = c.background;

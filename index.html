@@ -41,6 +41,7 @@
             <button type="button" data-camera="iso" data-i18n="cameraIso">Angle</button>
             <button type="button" data-camera="back" data-i18n="cameraBack">Back</button>
           </div>
+          <progress id="buildProgress" class="progress view-progress" hidden></progress>
           <output id="status" class="status" aria-live="polite"></output>
         </div>
         <button id="swapViews" type="button" class="swap-views" title="Swap views" aria-label="Swap views" data-i18n-label="swapViews">
@@ -83,7 +84,10 @@
           <p id="meshInfo" class="note"></p>
           <p id="meshBlocked" class="error" role="alert" hidden></p>
           <button id="downloadStl" type="button" class="primary" data-i18n="downloadStl">Download STL</button>
+          <progress id="exportProgress" class="progress" hidden></progress>
           <output id="exportStatus" class="note" aria-live="polite"></output>
+          <h3 data-i18n="printHints">Printing</h3>
+          <ul id="printHints" class="hints"></ul>
         </section>
         <footer>
           <a href="https://github.com/dmitryweiner/plate-builder" data-i18n="source">Source code</a>

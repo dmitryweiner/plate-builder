@@ -115,6 +115,9 @@ export const he: Messages = {
   arcOutside: 'בחוץ, לאורך החלק העליון',
   arcInside: 'בפנים, לאורך החלק התחתון',
 
+  printHints: 'הדפסה',
+  printBack: 'הדפיסו כשהצד האחורי על המשטח; אין צורך בתמיכות.',
+  gradientNote: 'תמונות הן מעבר הדרגתי: החלפת צבע עליהן תיתן פסים, לא תמונה.',
   warningsCard: 'אזהרות',
   show: 'הצגה',
 
@@ -126,12 +129,14 @@ export const he: Messages = {
   meshBlocked: (problems: string) => `הרשת פגומה (${problems}); אי אפשר לייצא STL.`,
   imageFailed: (reason: string) => `לא ניתן לקרוא את התמונה: ${reason}`,
   svgFailed: (reason: string) => `לא ניתן לקרוא את קובץ ה־SVG: ${reason}`,
+  colourChange: (z: string) => `החלפת חוט ב־Z = ${z} מ״מ (השכבה הראשונה מעל גובה זה).`,
   elementName: (type: 'image' | 'text' | 'hole', n: number) => `${{ image: 'תמונה', text: 'טקסט', hole: 'חור' }[type]} ${n}`,
   warning: {
     outside: (names: string) => `${names} בולט מחוץ למתאר ונחתך.`,
     overlap: (names: string) => `${names} חופפים.`,
     nearEdge: (names: string, mm: number) => `${names}: רק ${mm} מ״מ חומר עד הקצה; 2 מ״מ ומעלה מחזיקים טוב יותר.`,
     keyholeThin: (names: string, mm: number) => `${names}: נדרש שלט בעובי ${mm} מ״מ לפחות.`,
+    reliefTall: (times: number) => `התבליט גבוה פי ${times} מעובי השלט; מעל פי 3 בסיס דק נוטה להתעקם.`,
     frameThin: 'במסגרת יש קווים דקים מ־0.8 מ״מ; ייתכן שלא יודפסו היטב.',
     islands: (count: number) => `המתאר התפרק ל־${count} חלקים; השלט יודפס בחתיכות. ריווח גדול יותר יחבר אותם.`,
     empty: 'אין סביב מה לחתוך: הוסיפו תמונה או טקסט, או הפעילו „בתוך המתאר”.',

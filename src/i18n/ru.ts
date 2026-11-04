@@ -115,6 +115,9 @@ export const ru: Messages = {
   arcOutside: 'Снаружи, по верху',
   arcInside: 'Внутри, по низу',
 
+  printHints: 'Печать',
+  printBack: 'Печатайте задней стороной на столе; поддержки не нужны.',
+  gradientNote: 'Картинки — это градиент: смена цвета на них даст полосы, а не изображение.',
   warningsCard: 'Предупреждения',
   show: 'Показать',
 
@@ -127,12 +130,14 @@ export const ru: Messages = {
   meshBlocked: (problems: string) => `Сетка испорчена (${problems}); STL не экспортировать.`,
   imageFailed: (reason: string) => `Не удалось прочитать картинку: ${reason}`,
   svgFailed: (reason: string) => `Не удалось прочитать SVG: ${reason}`,
+  colourChange: (z: string) => `Смена филамента на Z = ${z} мм (первый слой над этой высотой).`,
   elementName: (type: 'image' | 'text' | 'hole', n: number) => `${{ image: 'Картинка', text: 'Надпись', hole: 'Отверстие' }[type]} ${n}`,
   warning: {
     outside: (names: string) => `${names} выходит за контур и обрезается.`,
     overlap: (names: string) => `${names} пересекаются.`,
     nearEdge: (names: string, mm: number) => `${names}: до края всего ${mm} мм материала; 2 мм и больше держат лучше.`,
     keyholeThin: (names: string, mm: number) => `${names}: нужна табличка толщиной не меньше ${mm} мм.`,
+    reliefTall: (times: number) => `Рельеф в ${times} раза выше толщины таблички; больше 3 раз тонкое основание ведёт.`,
     frameThin: 'В рамке есть штрихи тоньше 0,8 мм; они могут плохо напечататься.',
     islands: (count: number) => `Контур распался на ${count} части; табличка напечатается кусками. Больший отступ их соединит.`,
     empty: 'Обрезать не вокруг чего: добавьте картинку или надпись или включите «В контуре».',

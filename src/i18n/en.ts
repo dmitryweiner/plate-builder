@@ -116,6 +116,9 @@ export const en = {
   arcOutside: 'Outside, along the top',
   arcInside: 'Inside, along the bottom',
 
+  printHints: 'Printing',
+  printBack: 'Print with the back on the bed; no supports needed.',
+  gradientNote: 'Images are a gradient: a colour change across them gives bands, not a picture.',
   warningsCard: 'Warnings',
   show: 'Show',
 
@@ -127,12 +130,14 @@ export const en = {
   meshBlocked: (problems: string) => `The mesh is broken (${problems}); the STL cannot be exported.`,
   imageFailed: (reason: string) => `The picture could not be read: ${reason}`,
   svgFailed: (reason: string) => `The SVG could not be read: ${reason}`,
+  colourChange: (z: string) => `Change filament at Z = ${z} mm (the first layer above it).`,
   elementName: (type: 'image' | 'text' | 'hole', n: number) => `${{ image: 'Image', text: 'Text', hole: 'Hole' }[type]} ${n}`,
   warning: {
     outside: (names: string) => `${names} pokes out of the outline and is clipped.`,
     overlap: (names: string) => `${names} overlap.`,
     nearEdge: (names: string, mm: number) => `${names}: only ${mm} mm of material to the edge; 2 mm or more holds better.`,
     keyholeThin: (names: string, mm: number) => `${names} needs a plate at least ${mm} mm thick.`,
+    reliefTall: (times: number) => `The relief is ${times} × the plate’s thickness; over 3 × a thin base tends to warp.`,
     frameThin: 'The frame has strokes thinner than 0.8 mm; they may not print well.',
     islands: (count: number) => `The outline falls into ${count} pieces; the plate would print as separate parts. More padding joins them.`,
     empty: 'There is nothing to crop around: add an image or a text, or switch on “In the outline”.',

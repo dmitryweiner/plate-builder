@@ -1,5 +1,5 @@
 import { createEditor, type EditorHandle } from './editor/editor2d';
-import { findElement } from './editor/elements';
+import { allElements, findElement } from './editor/elements';
 import { measuredTextBoxes } from './geo/boxes';
 import { bounds, primitiveOutline, type Ring } from './geo/outline';
 import {
@@ -18,6 +18,7 @@ import {
 import { maskRings, textRings, type TextRaster } from './geo/textShape';
 import type { Raster } from './geo/heightmap';
 import { processPixels } from './geo/heightmap';
+import { colourChanges } from './geo/printHints';
 import { stlFileName } from './geo/stl';
 import { warnings as findWarnings, type Warning } from './geo/warnings';
 import { detectLocale, direction, isLocale, messages, staticText, type Locale, type Messages } from './i18n';
@@ -155,6 +156,9 @@ export function startApp({
   const meshBlocked = el('meshBlocked', HTMLElement);
   const downloadButton = el('downloadStl', HTMLButtonElement);
   const exportStatus = el('exportStatus', HTMLOutputElement);
+  const exportProgress = el('exportProgress', HTMLProgressElement);
+  const buildProgress = el('buildProgress', HTMLProgressElement);
+  const printHints = el('printHints', HTMLElement);
   const undoButton = el('undo', HTMLButtonElement);
   const redoButton = el('redo', HTMLButtonElement);
   const addHoleButton = el('addHole', HTMLButtonElement);
@@ -193,6 +197,9 @@ export function startApp({
   const textShapes = new Map<string, { raster: TextRaster; rings: Ring[] } | null>();
   /** warnings from the last build: what only the contours tell */
   let workerWarnings: Warning[] = [];
+  /** what the element list and the warnings last showed, so they are made again only when it changes */
+  let elementListKey = '';
+  let warningsKey = '';
   /** the vignette catalog, once fetched */
   let catalog: VignetteEntry[] = [];
   /** SVG proportions by URL, once loaded; a failed load stays NaN */
@@ -380,6 +387,9 @@ export function startApp({
     meshBlocked.textContent = problems.length ? m.meshBlocked(problems.map((p) => m.meshProblem[p]).join(', ')) : '';
     downloadButton.disabled = exporting.state === 'building' || problems.length > 0;
 
+    // manifold says nothing from inside a boolean: the bars run until the job is done
+    buildProgress.hidden = build.state !== 'building';
+    exportProgress.hidden = exporting.state !== 'building';
     if (exporting.state === 'building') exportStatus.textContent = m.exporting;
     else if (exporting.state === 'saved') exportStatus.textContent = m.exported(exporting.name, exporting.ms);
     else if (exporting.state === 'failed') exportStatus.textContent = m.engineFailed(exporting.reason);
@@ -393,12 +403,22 @@ export function startApp({
     measureTexts();
     plateCard?.sync(s);
     renderPicker();
-    renderElementList(elementList, s, selected, m, {
-      select: (id) => select(id),
-      toggle: (id) => update(toggleVisible(state(), id), true),
-      duplicate: (id) => duplicate(id),
-      remove: (id) => remove(id),
-    });
+    // lists are made again only when they change: a click that blurs a field (whose change re-renders)
+    // must find its button still there on mouseup
+    const listKey = JSON.stringify([
+      locale,
+      selected,
+      allElements(s).map((e) => [e.id, e.type, e.type === 'hole' ? e.kind : '', e.visible]),
+    ]);
+    if (listKey !== elementListKey) {
+      elementListKey = listKey;
+      renderElementList(elementList, s, selected, m, {
+        select: (id) => select(id),
+        toggle: (id) => update(toggleVisible(state(), id), true),
+        duplicate: (id) => duplicate(id),
+        remove: (id) => remove(id),
+      });
+    }
 
     const element = findElement(s, selected);
     selectedCard.hidden = element === null;
@@ -425,10 +445,28 @@ export function startApp({
     // the worker's warnings belong to the build they came from: kept only for elements still there
     const fromBuild = workerWarnings.filter((w) => !w.code.startsWith('outline.') && w.ids.every((id) => findElement(s, id)));
     warnings = [...outlineWarnings, ...findWarnings(s, outline), ...fromBuild];
-    renderWarnings(warningsCard, warningList, warnings, s, m, (spot) => {
-      views.dataset.show = '2d';
-      editor.frame(spot);
-    });
+    // the last build's mesh check: a warning that blocks the export
+    const problems = build.state === 'done' ? build.mesh.problems : [];
+    if (problems.length) warnings.push({ code: 'mesh.invalid', ids: [], spot: [0, 0] });
+    const shownKey = JSON.stringify([locale, warnings.map((w) => ({ ...w, spot: null })), problems, allElements(s).map((e) => e.id)]);
+    if (shownKey !== warningsKey) {
+      warningsKey = shownKey;
+      renderWarnings(
+        warningsCard,
+        warningList,
+        warnings,
+        s,
+        m,
+        (index) => {
+          const spot = warnings[index]?.spot;
+          if (!spot) return;
+          views.dataset.show = '2d';
+          editor.frame(spot);
+        },
+        problems,
+      );
+    }
+    renderHints();
     undoButton.disabled = !history.canUndo;
     redoButton.disabled = !history.canRedo;
     editor.draw();
@@ -446,6 +484,19 @@ export function startApp({
     selectedThumb.title = t().heightPreview;
     ctx.clearRect(0, 0, selectedThumb.width, selectedThumb.height);
     ctx.drawImage(source, 0, 0, selectedThumb.width, selectedThumb.height);
+  }
+
+  /** The print hints (spec §9): the back on the bed, and where a colour change makes sense. */
+  function renderHints(): void {
+    const m = t();
+    const { heights, gradient } = colourChanges(state());
+    const lines = [
+      m.printBack,
+      ...(heights.length > 1 ? heights.map((z) => m.colourChange(mm(z))) : []),
+      ...(gradient ? [m.gradientNote] : []),
+    ];
+    printHints.textContent = '';
+    for (const line of lines) printHints.append(Object.assign(document.createElement('li'), { textContent: line }));
   }
 
   const renderCards = () => {

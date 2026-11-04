@@ -88,7 +88,8 @@ browser (service worker, layout, workers) → a step in `scripts/smoke.mjs`.
   `heightmap.ts` (an image's height function), `grid.ts` (its heightfield
   solid), `contour.ts` (marching squares), `textLayout.ts` (line alignment,
   arc bending), `textShape.ts` (a text raster's contours), `boxes.ts`
-  (element boxes; measured text boxes),
+  (element boxes; measured text boxes), `printHints.ts` (colour-change
+  heights),
   `holes.ts` (footprints, boxes and cutters of the hole kinds),
   `warnings.ts` (the warnings that need no CSG), `mesh.ts`
   (`SurfaceMesh`, normals), `stl.ts` (binary STL, file names), `validate.ts`

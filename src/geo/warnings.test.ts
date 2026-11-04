@@ -132,3 +132,13 @@ describe('warnings of texts and images', () => {
     expect(codes({ ...state, plate: { ...state.plate, kind: 'crop' } })).toEqual([]);
   });
 });
+
+describe('relief.tall', () => {
+  it('fires when the relief is more than 3 × T, not at exactly 3 × T', () => {
+    const tall = (height: number) => codes({ ...plate([], 2), texts: [{ ...defaultText(defaultState()), id: 't1', height }] });
+    expect(tall(6.1)).toEqual(['relief.tall']);
+    expect(tall(6)).toEqual([]);
+    const rim = plate([], 1);
+    expect(codes({ ...rim, plate: { ...rim.plate, rim: true, rimHeight: 3.5 } })).toEqual(['relief.tall']);
+  });
+});
