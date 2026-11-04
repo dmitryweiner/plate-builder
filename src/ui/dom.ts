@@ -12,3 +12,15 @@ export function make<K extends keyof HTMLElementTagNameMap>(tag: K, className?: 
   if (text !== undefined) node.textContent = text;
   return node;
 }
+
+/**
+ * Scrolls `container`, and nothing around it, the least that shows `target`
+ * — as `scrollIntoView({ block: 'nearest' })`, which also scrolls the page:
+ * a phone's closed sheet lies below the window, and the page jumped.
+ */
+export function scrollIntoContainer(container: HTMLElement, target: Element): void {
+  const view = container.getBoundingClientRect();
+  const item = target.getBoundingClientRect();
+  if (item.top < view.top) container.scrollTop -= view.top - item.top;
+  else if (item.bottom > view.bottom) container.scrollTop += Math.min(item.bottom - view.bottom, item.top - view.top);
+}

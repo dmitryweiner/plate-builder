@@ -678,16 +678,19 @@ try {
       await page.waitForTimeout(300);
       if (shots) await page.screenshot({ path: 'shots/phone-sheet-closed.png' });
       await tap(await plateToPage(page, [0, 0]));
+      // only the panel scrolls to the card: the page and its top bar stay put
+      check((await page.evaluate(() => document.scrollingElement?.scrollTop)) === 0, 'the tap scrolled the page');
       await page.waitForFunction(() => document.querySelector('#panel')?.classList.contains('open'));
       check((await page.locator('.element-row.open .element-title').textContent()) === 'Hole 1', 'the tapped hole is not selected');
-      // its card's head in the sheet's visible part, the sheet having slid in
-      await page.waitForTimeout(300);
+      // its card's head in the sheet's visible part, once the sheet has slid in (however slow the machine)
+      await page.waitForFunction(() => document.querySelector('#panel')?.getAnimations().length === 0);
       const inSheet = await page.evaluate(() => {
         const head = document.querySelector('.element-row.open .element-head')?.getBoundingClientRect();
         const sheet = document.querySelector('#panel')?.getBoundingClientRect();
         return Boolean(head && sheet && head.top >= sheet.top && head.bottom <= Math.min(sheet.bottom, innerHeight));
       });
       check(inSheet, "the tapped hole's card is out of sight in the sheet");
+      check((await page.evaluate(() => document.scrollingElement?.scrollTop)) === 0, 'the page stayed scrolled');
       await page.click('#sheetClose');
       await page.click('#sheetOpen');
       check(await page.locator('#panel').evaluate((p) => p.classList.contains('open')), 'the button did not bring the sheet back');

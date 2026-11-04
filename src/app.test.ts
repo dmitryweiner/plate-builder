@@ -499,17 +499,20 @@ describe('elements', () => {
     expect($('#addText', HTMLButtonElement).disabled).toBe(false);
   });
 
-  it('brings the head of an element selected elsewhere into view', () => {
-    const scrolled: Element[] = [];
-    Element.prototype.scrollIntoView = function (this: Element) {
-      scrolled.push(this);
-    };
+  it('scrolls the panel alone to the head of an element selected elsewhere', () => {
     start();
     $('#addHole', HTMLButtonElement).click();
+    // jsdom lays nothing out: the panel ends at 844 px and every element head lies below it
+    const panel = $('#panel', HTMLElement);
+    Object.defineProperty(panel, 'scrollTop', { value: 0, writable: true });
+    const rects = vi.spyOn(Element.prototype, 'getBoundingClientRect').mockImplementation(function (this: Element) {
+      if (this === panel) return DOMRect.fromRect({ x: 0, y: 300, width: 360, height: 544 });
+      if (this.classList.contains('element-head')) return DOMRect.fromRect({ x: 0, y: 900, width: 360, height: 40 });
+      return DOMRect.fromRect();
+    });
     press('d', { ctrlKey: true });
-    expect(scrolled.at(-1)).toBe($('.element-row[data-id="h2"] .element-head', HTMLElement));
-    // jsdom has none: the other tests run without it, as before
-    Reflect.deleteProperty(Element.prototype, 'scrollIntoView');
+    expect(panel.scrollTop).toBe(96);
+    rects.mockRestore();
   });
 
   it('keeps the open card through a change of language', () => {

@@ -29,7 +29,7 @@ import { BUILT_IN_PRESETS } from './state/presets';
 import { projectFileName, projectFileText, readProjectFile } from './state/projectFile';
 import { loadSettings, saveSettings, type KeyValueStorage, type Settings } from './storage';
 import { renderControls, type ControlsHandle } from './ui/controls';
-import { el } from './ui/dom';
+import { el, scrollIntoContainer } from './ui/dom';
 import { elementsOf, renderElementGroup, syncHints, type ElementActions, type ElementType } from './ui/elementsCard';
 import { renderPresetList } from './ui/presetList';
 import { setupSheet, type NarrowQuery } from './ui/sheet';
@@ -498,7 +498,7 @@ export function startApp({
       if (selected !== shownSelected) {
         shownSelected = selected;
         const head = selectedBody.closest('.element-row')?.querySelector('.element-head');
-        if (head && typeof head.scrollIntoView === 'function') head.scrollIntoView({ block: 'nearest' });
+        if (head) scrollIntoContainer(panel, head);
       }
     }
     for (const group of groups) {
