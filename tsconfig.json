@@ -6,7 +6,10 @@
     "lib": ["ES2023", "DOM", "DOM.Iterable"],
     "types": ["vite/client", "node"],
     "strict": true,
-    "noUncheckedIndexedAccess": true,
+    // Off: the geometry core indexes typed arrays in every inner loop, and
+    // `number | undefined` on each read would bury it in checks that cannot
+    // fail (indices come from the loop bounds). As in cast-builder.
+    "noUncheckedIndexedAccess": false,
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "noFallthroughCasesInSwitch": true,

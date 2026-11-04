@@ -4,8 +4,8 @@
 // in jobs.ts, tested in Node.
 
 import { initCSG } from './csg';
-import { runJob } from './jobs';
-import type { Job, WorkerIn, WorkerOut } from './protocol';
+import { resultTransfer, runJob } from './jobs';
+import { isJob, type WorkerIn, type WorkerOut } from './protocol';
 
 /** WASM starts loading as soon as the worker exists: the client creates it lazily, when there is work. */
 const ready = initCSG();
@@ -20,18 +20,15 @@ async function handle({ jobId, job }: WorkerIn): Promise<void> {
   try {
     const csg = await ready;
     const result = runJob(csg, job);
-    send({ type: 'done', jobId, result, ms: performance.now() - started });
+    // Buffers are transferred, not copied.
+    send({ type: 'done', jobId, result, ms: performance.now() - started }, resultTransfer(result));
   } catch (error) {
     send({ type: 'error', jobId, message: error instanceof Error ? error.message : String(error) });
   }
 }
 
-function send(message: WorkerOut): void {
-  postMessage(message);
-}
-
-function isJob(job: unknown): job is Job {
-  return typeof job === 'object' && job !== null && 'kind' in job && job.kind === 'ping';
+function send(message: WorkerOut, transfer: Transferable[] = []): void {
+  postMessage(message, { transfer });
 }
 
 function isWorkerIn(data: unknown): data is WorkerIn {

@@ -12,7 +12,7 @@
     <script type="module" src="./src/main.ts"></script>
   </head>
   <body>
-    <header>
+    <header class="topbar">
       <span class="brand" data-i18n="title">Plate Builder</span>
       <select id="locale" aria-label="Language" data-i18n-label="languageLabel">
         <option value="en" lang="en">English</option>
@@ -21,14 +21,33 @@
         <option value="he" lang="he">עברית</option>
       </select>
     </header>
-    <main>
-      <h1 data-i18n="heading">Plate Builder</h1>
-      <p data-i18n="intro">A plate for 3D printing: an outline, images, texts and holes.</p>
-      <output id="engine" aria-live="polite">Loading the geometry engine…</output>
+    <main class="workspace">
+      <section class="view" aria-label="3D view" data-i18n-label="view3d">
+        <canvas id="view3d"></canvas>
+        <div class="cameras">
+          <button type="button" data-camera="front" data-i18n="cameraFront">Front</button>
+          <button type="button" data-camera="iso" data-i18n="cameraIso">Angle</button>
+          <button type="button" data-camera="back" data-i18n="cameraBack">Back</button>
+        </div>
+        <output id="status" class="status" aria-live="polite"></output>
+      </section>
+      <div class="panel">
+        <section class="card" id="plateCard">
+          <h2 data-i18n="plateCard">Plate</h2>
+          <div id="plateControls"></div>
+        </section>
+        <section class="card" id="exportCard">
+          <h2 data-i18n="exportCard">Export</h2>
+          <p id="meshInfo" class="note"></p>
+          <p id="meshBlocked" class="error" role="alert" hidden></p>
+          <button id="downloadStl" type="button" class="primary" data-i18n="downloadStl">Download STL</button>
+          <output id="exportStatus" class="note" aria-live="polite"></output>
+        </section>
+        <footer>
+          <a href="https://github.com/dmitryweiner/plate-builder" data-i18n="source">Source code</a>
+          · GPL-3.0-or-later
+        </footer>
+      </div>
     </main>
-    <footer>
-      <a href="https://github.com/dmitryweiner/plate-builder" data-i18n="source">Source code</a>
-      · GPL-3.0-or-later
-    </footer>
   </body>
 </html>

@@ -55,11 +55,13 @@ publishes `dist/` to GitHub Pages.
 
 ## What costs what
 
-Measured on an M1 Mac; to be filled as the milestones measure.
+Measured on an M1 Mac, Chromium, worker time (`ms` of the job), from the smoke.
 
-| Operation                                                              | Time   |
-| ---------------------------------------------------------------------- | ------ |
-| first ping in the worker, WASM load included (preview build, Chromium) | 6–7 ms |
+| Operation                                                                                  | Time    |
+| ------------------------------------------------------------------------------------------ | ------- |
+| first preview of the default plate (100 × 60 rectangle, 204 triangles), WASM load included | 6–13 ms |
+| export of the same, STL encoding included                                                  | 1 ms    |
+| export click → file saved (main thread, download included)                                 | ~110 ms |
 
 ## Test-driven development is mandatory
 
@@ -76,12 +78,23 @@ browser (service worker, layout, workers) → a step in `scripts/smoke.mjs`.
 
 ## Layout
 
-- `src/main.ts` — entry: starts the app with browser storage, languages and
-  the CSG worker client; registers the service worker in production.
-- `src/app.ts` — DOM wiring: translation of the page, events, rendering.
+- `src/main.ts` — entry: starts the app with browser storage, languages, the
+  CSG worker client, the 3D view and the download; registers the service
+  worker in production.
+- `src/app.ts` — DOM wiring: translation of the page, the cards, the preview
+  after a pause in the edits, the export.
+- `src/geo/` — the pure core: `state.ts` (schema, ranges, defaults,
+  `sanitizeState`), `outline.ts` (primitive outlines as polygons), `mesh.ts`
+  (`SurfaceMesh`, normals), `stl.ts` (binary STL, file names), `validate.ts`
+  (watertightness, volume, what blocks an export).
 - `src/worker/` — `protocol.ts` (typed messages), `client.ts` (lazy worker,
   one-deep queue per lane), `csg.worker.ts` (thin adapter), `jobs.ts` (what
-  each job does, tested in Node), `csg.ts` (manifold loading, `CsgScope`).
+  each job does), `build.ts` (the recipe of the solid), `csg.ts` (manifold
+  loading, `CsgScope`); all but the adapter tested in Node with real WASM.
+- `src/render/` — `view.ts` (what the app needs from the 3D view, types
+  only), `scene.ts` (Three.js; checked by the smoke, not vitest).
+- `src/ui/` — `controls.ts` (declarative slider / number / select / check
+  rows), `plateCard.ts` (the Plate card's controls), `dom.ts`.
 - `src/i18n/` — `en.ts` defines the messages, `ru.ts`, `uk.ts`, `he.ts` follow
   its type; `index.ts` — locales, detection, text direction, `staticText`;
   `plural.ts` — `Intl.PluralRules` helper.

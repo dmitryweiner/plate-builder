@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { CsgScope, initCSG } from './csg';
-import { runJob } from './jobs';
+import { defaultState } from '../geo/state';
+import { resultTransfer, runJob } from './jobs';
 
 describe('initCSG', () => {
   it('loads manifold once and builds solids', async () => {
@@ -32,5 +33,36 @@ describe('runJob', () => {
   it('answers a ping after building a test solid', async () => {
     const csg = await initCSG();
     expect(runJob(csg, { kind: 'ping' })).toEqual({ kind: 'ping', volume: 1 });
+  });
+
+  it('sanitises the state it gets: the worker boundary is an outer one', async () => {
+    const csg = await initCSG();
+    const result = runJob(csg, { kind: 'outline', state: JSON.parse('{"plate":{"width":1e9,"height":"x","rounding":0}}') });
+    if (result.kind !== 'outline') throw new Error(result.kind);
+    const xs = result.rings.flat().map((p) => p[0]);
+    expect(Math.max(...xs) - Math.min(...xs)).toBeCloseTo(300);
+  });
+
+  it('builds a preview mesh without a file and an export with the STL', async () => {
+    const csg = await initCSG();
+    const state = defaultState();
+    const preview = runJob(csg, { kind: 'mesh', quality: 'preview', state });
+    if (preview.kind !== 'mesh') throw new Error(preview.kind);
+    expect(preview.stl).toBeNull();
+    expect(preview.problems).toEqual([]);
+    expect(preview.report.watertight).toBe(true);
+    const exported = runJob(csg, { kind: 'mesh', quality: 'export', state });
+    if (exported.kind !== 'mesh') throw new Error(exported.kind);
+    expect(exported.stl?.byteLength).toBe(84 + 50 * exported.report.triangleCount);
+  });
+});
+
+describe('resultTransfer', () => {
+  it('moves the mesh and file buffers instead of copying them', async () => {
+    const csg = await initCSG();
+    const result = runJob(csg, { kind: 'mesh', quality: 'export', state: defaultState() });
+    if (result.kind !== 'mesh') throw new Error(result.kind);
+    expect(resultTransfer(result)).toEqual([result.positions.buffer, result.indices.buffer, result.stl]);
+    expect(resultTransfer({ kind: 'ping', volume: 1 })).toEqual([]);
   });
 });

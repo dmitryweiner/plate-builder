@@ -279,4 +279,15 @@ sheet on a phone, offline reload.
 
 ## Deviations
 
-(none yet)
+- **M0**: the GitHub repository was created after M0 was done, so M0 went to
+  `main` as a direct push rather than a PR; from M1 on, a PR per milestone.
+- **M0**: the worker client is generic over the job type with a small policy
+  (lane, kept, transfer), so its queue is tested with fake jobs; the app's
+  lanes are one per job kind.
+- **M1**: `noUncheckedIndexedAccess` is off, as in cast-builder: the geometry
+  indexes typed arrays in every inner loop.
+- **M1**: a rounded primitive is stretched back to its width × height
+  (rounding pulls a triangle's apex in), so the typed size is the printed
+  size.
+- **M1**: the vignette, own SVG and crop kinds are in the schema but build as
+  a rectangle until M5–M6; the Plate card offers primitives only.
