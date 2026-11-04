@@ -156,6 +156,21 @@ unit` in one grid line; the label column ~96 px (Russian and Ukrainian
   an element's controls in its group); every picture in `docs/images/`
   re-shot with `scripts/snap.mjs` (`--select` opens the element's card in
   its group; `--panel` scrolls to it).
+- The pictures, repeatable:
+
+  ```sh
+  node scripts/snap.mjs --out docs/images/door-sign.png --preset door-sign
+  node scripts/snap.mjs --out docs/images/export.png --preset door-sign --panel '#exportCard'
+  node scripts/snap.mjs --out docs/images/hebrew.png --preset door-sign --lang he
+  node scripts/snap.mjs --out docs/images/house-number.png --preset house-number
+  node scripts/snap.mjs --out docs/images/house-number-back.png --preset house-number --swap --camera back
+  node scripts/snap.mjs --out docs/images/keychain.png --preset keychain
+  node scripts/snap.mjs --out docs/images/medal.png --preset medal
+  node scripts/snap.mjs --out docs/images/medal-image.png --preset medal --select i1 --panel '.element-row.open'
+  node scripts/snap.mjs --out docs/images/name-plate-text.png --preset name-plate --select t1 --panel '.element-row.open'
+  node scripts/snap.mjs --out docs/images/pet-tag-phone.png --preset pet-tag --width 390 --height 844
+  ```
+
 - `AGENTS.md`: the layout lines for `elementsCard.ts`, `selectedCard.ts`,
   `presetList.ts`; this plan in the plans table. `plans/PLAN.md`:
   a line under Deviations pointing here.
@@ -170,3 +185,19 @@ unit` in one grid line; the label column ~96 px (Russian and Ukrainian
   drops − / + (the exact field already gives precision).
 - **Docs pictures** (D6): about ten shots; `snap.mjs` makes them
   repeatable, but each one is looked at.
+
+## Deviations
+
+- **D2**: on a phone the row's name stays above the slider, as the risk
+  foresaw — in one line the slider was ~40 px wide; the panel on a desktop
+  went back to 360 px so the slider keeps ~80 px. − and + do not repeat
+  while held (Case Constructor's do): the slider covers big moves.
+- **D4**: on a phone the top bar's first line is the brand and the
+  language, the second the project's name and the buttons — the long
+  Russian and Ukrainian brands left the name a letter wide otherwise. The
+  icon buttons' tooltips come from `data-i18n-label`, which already sets a
+  `title` it finds; no new attribute was needed.
+- **D5**: the catalog's black vignette silhouettes are shown inverted on
+  the dark tiles.
+- Not changed, found on the way: on a phone with the sheet closed the view
+  keeps 52 % of the height and leaves the rest empty, as before this work.

@@ -2,7 +2,7 @@
 
 ![A text's card](images/name-plate-text.png)
 
-**Add text** puts a block of up to 10 lines and 300 characters on the plate.
+**+ Add text** in the Texts card puts a block of up to 10 lines and 300 characters on the plate.
 
 - **Font** — Rubik (Latin, Cyrillic, Hebrew), Oswald, PT Serif, Comfortaa,
   Marck Script (Latin, Cyrillic) and Frank Ruhl Libre (Latin, Hebrew). They

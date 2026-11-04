@@ -248,6 +248,14 @@ from the base, keyhole channels are bridges).
 
 ### 7.1 Layout
 
+Case Constructor's look: a dark theme only, with an emerald accent; dense
+cards with uppercase titles.
+
+- **Top bar**: the brand; the project's name, which opens the **presets**
+  dialog (built-in and own presets; closed by ✕, Esc or a click beside
+  it; a pick closes it); 💾 save as preset, 📂 open a project file, ⬇️ save
+  it, ↶ ↷ undo and redo; 🌐 the language. On a phone it takes two lines:
+  the brand and the language, then the name and the buttons.
 - **Phone (mobile first)**: the view fills the screen; the panel is a
   bottom sheet that can be pulled up, as in Case Constructor. A switch
   above the view toggles **2D / 3D**.
@@ -261,16 +269,24 @@ Cards, top to bottom:
 
 1. **Plate** — outline kind and its parameters, thickness, corner rounding,
    rim, vignette frame, crop padding.
-2. **Elements** — a list of images, texts and holes (an icon, a name, a
-   visibility toggle, duplicate, delete), buttons "Add image", "Add text",
-   "Add hole". Selecting in the list selects in the 2D view and the other
-   way round.
-3. **Selected element** — its parameters, with exact numeric fields for
-   position, size and rotation.
-4. **Warnings** — each with a "show" action that frames its spot in the 2D
+2. **Texts**, **Images**, **Holes** — a card per kind, as Case
+   Constructor's labels sit in their card. Its title shows the count and
+   the limit ("Texts 2 / 10"); in it a foldable card per element (an icon,
+   a name, a hint — a text's first line, a hole's kind —, a visibility
+   toggle, duplicate, delete) and "+ Add …" at the end, disabled at the
+   limit. The open card is the selected element's and holds its
+   parameters, with exact numeric fields for position, size and rotation.
+   A click on a closed card's head selects the element, on the open one
+   deselects it; selecting in the 2D view opens its card and brings it
+   into view.
+3. **Warnings** — each with a "show" action that frames its spot in the 2D
    view.
-5. **Export** — STL download, the print hints (§9), project file,
-   presets.
+4. **Export** — the project's name (it names the files), STL download, the
+   print hints (§9).
+
+A slider row is, from 1024 px, one line: the name, − slider +, the exact
+number and its unit; on a phone the name stands above. − and + move by the
+slider's step, one undo step a click.
 
 ### 7.3 2D view
 

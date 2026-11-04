@@ -8,9 +8,11 @@ millimetre grid and the plate's size. The 3D view shows the solid as it will
 print. On a phone one shows at a time (the 2D / 3D switch); on a wider screen
 both, side by side, and ⇄ swaps their sizes.
 
-- **Select** an element with a tap or click; on a phone its card comes up.
-  A tap on empty space deselects (and on a phone hides the panel; **Settings**
-  brings it back).
+- **Select** an element with a tap or click: its card opens in its group
+  (Texts, Images, Holes) and comes into view; on a phone the panel comes up.
+  A click on a card's head in the panel selects too; on the open card's head
+  it deselects. A tap on empty space deselects (and on a phone hides the
+  panel; **⚙ Settings** brings it back).
 - **Drag** an element to move it; drag empty space to pan; the wheel or a
   pinch zooms.
 - The selected element's **corner handles** scale it (the opposite corner

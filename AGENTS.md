@@ -36,6 +36,7 @@ publishes `dist/` to GitHub Pages.
 | ----------------------- | ---------------------------------------- |
 | `plans/INITIAL-IDEA.md` | the idea as first written                |
 | `plans/PLAN.md`         | milestones M0…M10, decisions, deviations |
+| `plans/PLAN-DESIGN.md`  | Case Constructor's look, element groups  |
 
 ## Architectural invariants
 
@@ -126,8 +127,10 @@ browser (service worker, layout, workers) → a step in `scripts/smoke.mjs`.
 - `src/render/` — `view.ts` (what the app needs from the 3D view, types
   only), `scene.ts` (Three.js; checked by the smoke, not vitest).
 - `src/ui/` — `controls.ts` (declarative slider / number / select / check
-  rows), `plateCard.ts`, `selectedCard.ts` (the cards' controls),
-  `elementsCard.ts` (the element list), `warningsCard.ts`,
+  rows; − / + beside a slider), `plateCard.ts`, `selectedCard.ts` (the
+  cards' controls), `elementsCard.ts` (the element groups: a foldable card
+  per element, the selected one open), `presetList.ts` (the presets
+  dialog's list), `warningsCard.ts`,
   `imageImport.ts` (files → grayscale + alpha PNG, decoding, height
   pictures), `sheet.ts` (the panel as a bottom sheet on a phone), `fonts.ts` (bundled fonts, loaded on first use),
   `textRaster.ts` (a text block drawn at 10 px/mm), `svgRaster.ts`
@@ -142,7 +145,9 @@ browser (service worker, layout, workers) → a step in `scripts/smoke.mjs`.
   the user presets; every field sanitised, a refused write reported.
 - `src/sw-plugin.ts` — Vite plugin emitting `sw.js` that precaches the build;
   `src/pwa.ts` — its registration.
-- `src/style.css` — mobile first, logical properties, light and dark.
+- `src/style.css` — mobile first, logical properties; Case Constructor's dark
+  palette with an emerald accent (`--panel` is the theme colour, a test
+  keeps `index.html` and the manifest equal to it).
 - `public/` — manifest, icons (`icon.svg` is the source).
 - `docs/` — the spec, user and design docs.
 
