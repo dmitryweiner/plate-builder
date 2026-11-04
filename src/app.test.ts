@@ -135,6 +135,38 @@ const texts: AppOptions['texts'] = {
   },
 };
 
+const vignette = (id: string) => ({
+  id,
+  file: `${id}.svg`,
+  names: { en: `${id} en`, ru: id, uk: id, he: id },
+  source: 'x',
+  author: 'x',
+  licence: 'CC0-1.0' as const,
+});
+/** SVGs the test has "loaded", with their proportions */
+let loadedSvgs: Map<string, number>;
+const silhouettes: AppOptions['silhouettes'] = {
+  catalog: () => Promise.resolve([vignette('cartouche'), vignette('oval')]),
+  load: (url) => {
+    loadedSvgs.set(url, 2);
+    return Promise.resolve(2);
+  },
+  raster: (url, w, h) =>
+    loadedSvgs.has(url)
+      ? {
+          width: Math.round(w),
+          height: Math.round(h),
+          data: new Uint8Array(Math.round(w) * Math.round(h)),
+          pxPerMm: 1,
+          originX: w / 2,
+          originY: h / 2,
+          cap: 0,
+        }
+      : null,
+  readFile: (file) =>
+    file.name.endsWith('.svg') ? Promise.resolve('data:image/svg+xml;base64,PHN2Zy8+') : Promise.reject(new Error('not an SVG')),
+};
+
 let stop: () => void = () => {};
 let storage: MemoryStorage;
 let csg: FakeCsg;
@@ -163,6 +195,7 @@ function start(languages: readonly string[] = ['en-US'], over: Partial<AppOption
     timers,
     pictures,
     texts,
+    silhouettes,
     ...over,
   });
 }
@@ -182,6 +215,7 @@ beforeEach(() => {
   downloads = [];
   decodes = new Map();
   loadedFonts = new Set();
+  loadedSvgs = new Map();
 });
 afterEach(() => {
   stop();
@@ -292,7 +326,7 @@ describe('plate card', () => {
   it('offers every primitive outline and shows only the parameters of the chosen one', () => {
     start();
     const kinds = [...$('#plate-kind', HTMLSelectElement).options].map((o) => o.value);
-    expect(kinds).toEqual(['rectangle', 'ellipse', 'triangle', 'polygon', 'star', 'heart', 'shield', 'tag', 'crop']);
+    expect(kinds).toEqual(['rectangle', 'ellipse', 'triangle', 'polygon', 'star', 'heart', 'shield', 'tag', 'vignette', 'svg', 'crop']);
     const sidesRow = () => $('#plate-sides', HTMLInputElement).closest('.row');
     expect(sidesRow()?.hasAttribute('hidden')).toBe(true);
     const select = $('#plate-kind', HTMLSelectElement);
@@ -662,5 +696,58 @@ describe('cards', () => {
     $('#addText', HTMLButtonElement).click();
     const ids = [...document.querySelectorAll('[id]')].map((e) => e.id);
     expect(ids.filter((id, i) => ids.indexOf(id) !== i)).toEqual([]);
+  });
+});
+
+function chooseKind(kind: string) {
+  const select = $('#plate-kind', HTMLSelectElement);
+  select.value = kind;
+  select.dispatchEvent(new Event('change'));
+}
+
+describe('vignettes and own SVG', () => {
+  it('shows the catalog, takes its first entry, and sends the silhouette once the SVG is in', async () => {
+    start();
+    await settle();
+    chooseKind('vignette');
+    expect($('#vignettePicker', HTMLElement).hidden).toBe(false);
+    expect([...document.querySelectorAll('.vignette')].map((b) => b.getAttribute('aria-label'))).toEqual(['cartouche en', 'oval en']);
+    expect($('.vignette[data-id="cartouche"]', HTMLElement).getAttribute('aria-selected')).toBe('true');
+    await settle();
+    const job = outlineJobs().at(-1)?.job;
+    // 2:1 kept inside 100 × 60: 100 × 50
+    expect(job?.kind === 'outline' && [job.silhouette?.width, job.silhouette?.height]).toEqual([100, 50]);
+    $('.vignette[data-id="oval"]', HTMLButtonElement).click();
+    expect($('.vignette[data-id="oval"]', HTMLElement).getAttribute('aria-selected')).toBe('true');
+    timers.flush();
+    expect(csg.last().job).toMatchObject({ state: { plate: { kind: 'vignette', vignette: 'oval' } } });
+  });
+
+  it('stretches the silhouette when proportions are not kept, and shows the frame rows', async () => {
+    start();
+    await settle();
+    chooseKind('vignette');
+    await settle();
+    $('#plate-keepProportions', HTMLInputElement).click();
+    await settle();
+    const job = outlineJobs().at(-1)?.job;
+    expect(job?.kind === 'outline' && [job.silhouette?.width, job.silhouette?.height]).toEqual([100, 60]);
+    expect($('#plate-frameHeight', HTMLElement).closest('.row')?.hasAttribute('hidden')).toBe(false);
+  });
+
+  it('reads an own SVG into the plate, or says why not', async () => {
+    start();
+    const input = $('#svgFile', HTMLInputElement);
+    const choose = (name: string) => {
+      Object.defineProperty(input, 'files', { value: [new File(['<svg/>'], name)], configurable: true });
+      input.dispatchEvent(new Event('change'));
+    };
+    choose('frame.svg');
+    await settle();
+    expect($('#plate-kind', HTMLSelectElement).value).toBe('svg');
+    expect($('#svgChooser', HTMLElement).hidden).toBe(false);
+    choose('frame.png');
+    await settle();
+    expect(text('#plateStatus')).toBe('The SVG could not be read: not an SVG');
   });
 });

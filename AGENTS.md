@@ -110,8 +110,11 @@ browser (service worker, layout, workers) → a step in `scripts/smoke.mjs`.
   `elementsCard.ts` (the element list), `warningsCard.ts`,
   `imageImport.ts` (files → grayscale + alpha PNG, decoding, height
   pictures), `fonts.ts` (bundled fonts, loaded on first use),
-  `textRaster.ts` (a text block drawn at 10 px/mm), `dom.ts`.
+  `textRaster.ts` (a text block drawn at 10 px/mm), `svgRaster.ts`
+  (vignette catalog schema, SVG silhouettes, own SVG files), `dom.ts`.
 - `public/fonts/` — woff2 subsets with their OFL licences.
+- `public/vignettes/` — the catalog: `index.json` (id, names in four
+  languages, source, author, licence) and one `<id>.svg` each.
 - `src/i18n/` — `en.ts` defines the messages, `ru.ts`, `uk.ts`, `he.ts` follow
   its type; `index.ts` — locales, detection, text direction, `staticText`;
   `plural.ts` — `Intl.PluralRules` helper.
@@ -129,6 +132,10 @@ browser (service worker, layout, workers) → a step in `scripts/smoke.mjs`.
   timings for "what costs what").
 - `scripts/lib/harness.mjs` — flags, vite on 5373/4373, console errors.
 - `scripts/icons.mjs` — PWA icons from `public/icon.svg`.
+- `scripts/vignettes.mjs` — the vignette catalog: `--check` (one piece with
+  a window, the index complete, licences allowed), `--sheet <dir>` (a
+  contact sheet: each frame and its outline) for review before a new one is
+  committed.
 
 ## Conventions
 

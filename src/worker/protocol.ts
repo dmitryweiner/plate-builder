@@ -18,7 +18,14 @@ import type { MeshProblem, MeshReport } from '../geo/validate';
  */
 export type Job =
   | { kind: 'ping' }
-  | { kind: 'outline'; state: PlateState; rasters?: (Raster | null)[]; textRasters?: (TextRaster | null)[] }
+  | {
+      kind: 'outline';
+      state: PlateState;
+      rasters?: (Raster | null)[];
+      textRasters?: (TextRaster | null)[];
+      /** a vignette's or own SVG's silhouette, drawn by the main thread at the plate's size */
+      silhouette?: TextRaster | null;
+    }
   | {
       kind: 'mesh';
       quality: 'preview' | 'export';
@@ -32,6 +39,7 @@ export type Job =
       rasters?: (Raster | null)[];
       /** the texts drawn by the main thread with their fonts, one per `state.texts` (null: the font is not in yet) */
       textRasters?: (TextRaster | null)[];
+      silhouette?: TextRaster | null;
     };
 
 export type JobKind = Job['kind'];

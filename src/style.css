@@ -442,3 +442,30 @@ footer a {
   font: inherit;
   resize: vertical;
 }
+
+.vignette-picker {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(84px, 1fr));
+  gap: 6px;
+  margin-block: 8px;
+}
+.vignette-picker[hidden],
+#svgChooser[hidden] {
+  display: none;
+}
+.vignette {
+  padding: 4px;
+  border: 2px solid var(--line);
+  border-radius: 8px;
+  background: var(--bg);
+  cursor: pointer;
+}
+.vignette[aria-selected='true'] {
+  border-color: var(--accent);
+}
+.vignette img {
+  display: block;
+  inline-size: 100%;
+  aspect-ratio: 3 / 2;
+  object-fit: contain;
+}

@@ -109,6 +109,13 @@ async function testPicture(page, kind, width = 512, height = 512) {
   };
 }
 
+/** An SVG file of the given body, 200 × 100 units. */
+const svgFile = (body) => ({
+  name: 'frame.svg',
+  mimeType: 'image/svg+xml',
+  buffer: Buffer.from(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 100" width="200" height="100">${body}</svg>`),
+});
+
 /** Clicks the download and returns the worker's time of the export. */
 async function exportMs(page) {
   const before = await page.locator('#exportStatus').textContent();
@@ -383,6 +390,36 @@ try {
       ({ info } = await built(page, info));
       check(info.includes('× 4 mm') && (await page.locator('#meshBlocked').isHidden()), `${kind} with a rim: ${info}`);
     }
+    await context.close();
+  });
+
+  await step('every catalog vignette with and without its frame, an own SVG, one with two islands', async () => {
+    const { page, context } = await app.open();
+    let { info } = await built(page);
+    await page.selectOption('#plate-kind', 'vignette');
+    const ids = await page.locator('.vignette').evaluateAll((nodes) => nodes.map((n) => n.dataset.id));
+    check(ids.length > 0, 'the catalog is empty');
+    for (const id of ids) {
+      await page.click(`.vignette[data-id="${id}"]`);
+      ({ info } = await built(page, info));
+      check(info.includes('× 4 mm') && (await page.locator('#meshBlocked').isHidden()), `${id} with its frame: ${info}`);
+      await page.uncheck('#plate-frame');
+      ({ info } = await built(page, info));
+      check(info.includes('× 3 mm') && (await page.locator('#meshBlocked').isHidden()), `${id} without its frame: ${info}`);
+      await page.check('#plate-frame');
+      ({ info } = await built(page, info));
+    }
+    if (shots) await page.screenshot({ path: 'shots/vignette-desktop.png' });
+    await page.setInputFiles('#svgFile', svgFile('<path fill-rule="evenodd" d="M0 0H200V100H0Z M20 20V80H180V20Z"/>'));
+    ({ info } = await built(page, info));
+    check(
+      (await page.locator('#plate-kind').inputValue()) === 'svg' && (await page.locator('#meshBlocked').isHidden()),
+      `own SVG: ${info}`,
+    );
+    await page.setInputFiles('#svgFile', svgFile('<rect width="80" height="100"/><rect x="120" width="80" height="100"/>'));
+    ({ info } = await built(page, info));
+    const warnings = await page.locator('#warningList').textContent();
+    check(/2 pieces/.test(warnings), `two islands not warned: ${warnings}`);
     await context.close();
   });
 

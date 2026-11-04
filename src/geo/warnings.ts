@@ -18,6 +18,7 @@ export type WarningCode =
   | 'outline.islands'
   | 'outline.empty'
   | 'text.thin'
+  | 'frame.thin'
   | 'text.arcTooLong';
 
 export interface Warning {

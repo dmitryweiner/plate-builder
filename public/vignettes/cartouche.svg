@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 180" width="300" height="180">
+  <!-- A cartouche: a rectangle with concave corner notches, a band 14 units wide around the window. Drawn for Plate Builder, CC0. -->
+  <path fill="#000" fill-rule="evenodd" d="
+    M 30 0 H 270 A 30 30 0 0 0 300 30 V 150 A 30 30 0 0 0 270 180 H 30 A 30 30 0 0 0 0 150 V 30 A 30 30 0 0 0 30 0 Z
+    M 38 14 A 30 30 0 0 1 14 38 V 142 A 30 30 0 0 1 38 166 H 262 A 30 30 0 0 1 286 142 V 38 A 30 30 0 0 1 262 14 Z"/>
+</svg>

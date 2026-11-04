@@ -4,7 +4,7 @@
 import { PRIMITIVE_KINDS, RANGES, type Plate, type PlateState, type PrimitiveKind } from '../geo/state';
 import type { Control, TextKey } from './controls';
 
-type OfferedKind = PrimitiveKind | 'crop';
+type OfferedKind = PrimitiveKind | 'vignette' | 'svg' | 'crop';
 
 const KIND_LABELS: Record<OfferedKind, TextKey> = {
   rectangle: 'kindRectangle',
@@ -15,16 +15,18 @@ const KIND_LABELS: Record<OfferedKind, TextKey> = {
   heart: 'kindHeart',
   shield: 'kindShield',
   tag: 'kindTag',
+  vignette: 'kindVignette',
+  svg: 'kindSvg',
   crop: 'kindCrop',
 };
 
-/** The kinds offered so far; vignettes and an own SVG join in M6. */
-const OFFERED: readonly OfferedKind[] = [...PRIMITIVE_KINDS, 'crop'];
+const OFFERED: readonly OfferedKind[] = [...PRIMITIVE_KINDS, 'vignette', 'svg', 'crop'];
 
 const setPlate = (state: PlateState, over: Partial<Plate>): PlateState => ({ ...state, plate: { ...state.plate, ...over } });
 
 const isOffered = (value: string): value is OfferedKind => OFFERED.some((kind) => kind === value);
 const sized = (s: PlateState) => s.plate.kind !== 'crop';
+const pictured = (s: PlateState) => s.plate.kind === 'vignette' || s.plate.kind === 'svg';
 
 export const plateControls: readonly Control<PlateState>[] = [
   {
@@ -141,5 +143,25 @@ export const plateControls: readonly Control<PlateState>[] = [
     when: (s) => s.plate.rim,
     get: (s) => s.plate.rimHeight,
     set: (s, rimHeight) => setPlate(s, { rimHeight }),
+  },
+  {
+    kind: 'check',
+    key: 'keepProportions',
+    label: 'keepProportions',
+    when: pictured,
+    get: (s) => s.plate.keepProportions,
+    set: (s, keepProportions) => setPlate(s, { keepProportions }),
+  },
+  { kind: 'check', key: 'frame', label: 'frame', when: pictured, get: (s) => s.plate.frame, set: (s, frame) => setPlate(s, { frame }) },
+  {
+    kind: 'range',
+    key: 'frameHeight',
+    label: 'frameHeight',
+    ...RANGES.frameHeight,
+    step: 0.1,
+    unit: 'mm',
+    when: (s) => pictured(s) && s.plate.frame,
+    get: (s) => s.plate.frameHeight,
+    set: (s, frameHeight) => setPlate(s, { frameHeight }),
   },
 ];

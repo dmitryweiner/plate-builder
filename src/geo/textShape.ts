@@ -47,6 +47,14 @@ export function isTextRaster(value: unknown): value is TextRaster {
   );
 }
 
+/** A mask's contours in mm around its origin (y up): a silhouette's, or a straight text's. */
+export function maskRings(raster: TextRaster): Ring[] {
+  const up = raster.height - raster.originY;
+  return traceContours(raster).map((ring) =>
+    ring.map(([x, y]): [number, number] => [(x - raster.originX) / raster.pxPerMm, (y - up) / raster.pxPerMm]),
+  );
+}
+
 export function textRings(
   raster: TextRaster,
   text: Pick<TextElement, 'arc' | 'arcRadius' | 'arcSide'>,

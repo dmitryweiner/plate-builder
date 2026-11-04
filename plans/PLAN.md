@@ -338,3 +338,14 @@ sheet on a phone, offline reload.
 - **M5**: the outline job carries the rasters when the outline is a crop and
   returns `outline.islands` / `outline.empty`; the 2D view keeps the last
   crop outline until the next one arrives and fits the view to it.
+- **M6**: the catalog starts with three frames drawn for the project
+  (cartouche, scalloped oval, double line; CC0). Frames sourced from
+  OpenClipart, publicdomainvectors.org and Wikimedia Commons join after the
+  user reviews their contact sheet (`scripts/vignettes.mjs --sheet`).
+- **M6**: the frame relief and the rim are one construction
+  (`raisedBase`): the outline extruded to the higher of the two, cut back to
+  T in the windows and inside the rim, and to the lower height where only
+  the lower one stands.
+- **M6**: the silhouette travels to the worker as a mask raster with its
+  origin in the middle (the text raster's shape), drawn by the main thread at
+  the plate's size, the SVG's proportions kept or stretched.

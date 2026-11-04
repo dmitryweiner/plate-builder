@@ -15,7 +15,7 @@ import {
   type PrimitiveKind,
   type TextElement,
 } from './geo/state';
-import { textRings, type TextRaster } from './geo/textShape';
+import { maskRings, textRings, type TextRaster } from './geo/textShape';
 import type { Raster } from './geo/heightmap';
 import { processPixels } from './geo/heightmap';
 import { stlFileName } from './geo/stl';
@@ -29,6 +29,7 @@ import { renderControls, type ControlsHandle } from './ui/controls';
 import { el } from './ui/dom';
 import { renderElementList } from './ui/elementsCard';
 import { heightPicture, type ImportedImage } from './ui/imageImport';
+import { silhouetteSize, type VignetteEntry } from './ui/svgRaster';
 import { plateControls } from './ui/plateCard';
 import { elementControls } from './ui/selectedCard';
 import { renderWarnings } from './ui/warningsCard';
@@ -61,6 +62,13 @@ export interface AppOptions {
     fontReady(font: FontId): boolean;
     loadFont(font: FontId): Promise<void>;
     rasterize(text: TextElement): TextRaster | null;
+  };
+  /** Vignettes and own SVG outlines: the catalog, an SVG loaded (its proportions), drawn at a size, a file read. */
+  silhouettes: {
+    catalog(): Promise<VignetteEntry[]>;
+    load(url: string): Promise<number>;
+    raster(url: string, widthMm: number, heightMm: number): TextRaster | null;
+    readFile(file: File): Promise<string>;
   };
   /** Reading pictures needs the browser's decoders: a file into the stored picture, a stored one back into pixels. */
   pictures: {
@@ -97,6 +105,11 @@ const isPrimitive = (kind: Plate['kind']): kind is PrimitiveKind => PRIMITIVE_KI
 /** The outline the 2D view can draw at once, before the worker's (with rounding) arrives. */
 const instantOutline = (plate: Plate): Ring[] => [primitiveOutline({ ...plate, kind: isPrimitive(plate.kind) ? plate.kind : 'rectangle' })];
 
+const pictured = (plate: Plate) => plate.kind === 'vignette' || plate.kind === 'svg';
+/** The SVG the outline comes from: an uploaded one, or a catalog file (relative to the app). */
+const silhouetteUrl = (plate: Plate): string =>
+  plate.kind === 'svg' ? plate.svg : plate.kind === 'vignette' && plate.vignette ? `vignettes/${plate.vignette}.svg` : '';
+
 /** What shapes a text's raster and contours: its cache key. */
 const textKey = (x: TextElement) =>
   JSON.stringify([x.text, x.font, x.size, x.lineSpacing, x.align, x.arc, x.arc ? x.arcRadius : 0, x.arc ? x.arcSide : '']);
@@ -118,7 +131,17 @@ type Exporting =
   { state: 'idle' } | { state: 'building' } | { state: 'saved'; name: string; ms: number } | { state: 'failed'; reason: string };
 
 /** Starts the app on the current page; returns a function that removes its listeners. */
-export function startApp({ storage = null, languages = [], csg, createScene, download, timers, pictures, texts }: AppOptions): () => void {
+export function startApp({
+  storage = null,
+  languages = [],
+  csg,
+  createScene,
+  download,
+  timers,
+  pictures,
+  texts,
+  silhouettes,
+}: AppOptions): () => void {
   const localeSelect = el('locale', HTMLSelectElement);
   const status = el('status', HTMLOutputElement);
   const plateBox = el('plateControls', HTMLElement);
@@ -137,6 +160,11 @@ export function startApp({ storage = null, languages = [], csg, createScene, dow
   const addHoleButton = el('addHole', HTMLButtonElement);
   const addImageButton = el('addImage', HTMLButtonElement);
   const addTextButton = el('addText', HTMLButtonElement);
+  const vignettePicker = el('vignettePicker', HTMLElement);
+  const svgChooser = el('svgChooser', HTMLElement);
+  const svgUpload = el('svgUpload', HTMLButtonElement);
+  const svgFile = el('svgFile', HTMLInputElement);
+  const plateStatus = el('plateStatus', HTMLElement);
   const imageFile = el('imageFile', HTMLInputElement);
   const elementsStatus = el('elementsStatus', HTMLElement);
   const selectedThumb = el('selectedThumb', HTMLCanvasElement);
@@ -165,6 +193,10 @@ export function startApp({ storage = null, languages = [], csg, createScene, dow
   const textShapes = new Map<string, { raster: TextRaster; rings: Ring[] } | null>();
   /** warnings from the last build: what only the contours tell */
   let workerWarnings: Warning[] = [];
+  /** the vignette catalog, once fetched */
+  let catalog: VignetteEntry[] = [];
+  /** SVG proportions by URL, once loaded; a failed load stays NaN */
+  const aspects = new Map<string, number>();
   /** warnings from the last outline (islands, nothing to crop): fresher than a build's */
   let outlineWarnings: Warning[] = [];
   /** processed height pictures for the 2D view, by picture and levels */
@@ -184,7 +216,19 @@ export function startApp({ storage = null, languages = [], csg, createScene, dow
     sizeLabel: () => sizeLabel(),
     picture: (image) => picture(image),
     textShape: (text) => textShape(text)?.rings ?? null,
+    frame: () => frameRings(),
   });
+
+  /** The silhouette's contours for the 2D view's frame tint, traced once per raster. */
+  let frameCache: { raster: TextRaster; rings: Ring[] } | null = null;
+  function frameRings(): Ring[] | null {
+    const plate = state().plate;
+    if (!pictured(plate) || !plate.frame) return null;
+    const raster = silhouette();
+    if (!raster) return null;
+    if (frameCache?.raster !== raster) frameCache = { raster, rings: maskRings(raster) };
+    return frameCache.rings;
+  }
 
   /**
    * A text's raster and contours, once its font is in. A missing font starts
@@ -223,10 +267,60 @@ export function startApp({ storage = null, languages = [], csg, createScene, dow
 
   const textRasterList = () => state().texts.map((text) => textShape(text)?.raster ?? null);
 
+  /** The silhouette at the plate's size, once its SVG is loaded; a missing one starts loading. */
+  function silhouette(): TextRaster | null {
+    const { plate } = state();
+    const url = silhouetteUrl(plate);
+    if (!pictured(plate) || !url) return null;
+    const aspect = aspects.get(url);
+    if (aspect === undefined) {
+      aspects.set(url, Number.NaN);
+      silhouettes.load(url).then(
+        (loaded) => {
+          aspects.set(url, loaded);
+          if (stopped) return;
+          requestOutline();
+          renderState();
+          schedulePreview(PREVIEW_DELAY_MS);
+        },
+        () => {},
+      );
+      return null;
+    }
+    if (!Number.isFinite(aspect)) return null;
+    const [w, h] = silhouetteSize(plate.width, plate.height, aspect, plate.keepProportions);
+    return silhouettes.raster(url, w, h);
+  }
+
+  /** The catalog's thumbnails, the chosen one pressed. */
+  function renderPicker(): void {
+    const { plate } = state();
+    vignettePicker.hidden = plate.kind !== 'vignette';
+    svgChooser.hidden = plate.kind !== 'svg';
+    if (vignettePicker.hidden) return;
+    vignettePicker.textContent = '';
+    for (const entry of catalog) {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'vignette';
+      button.dataset.id = entry.id;
+      button.setAttribute('role', 'option');
+      button.setAttribute('aria-selected', String(entry.id === plate.vignette));
+      button.setAttribute('aria-label', entry.names[locale]);
+      button.title = entry.names[locale];
+      const img = document.createElement('img');
+      img.src = `vignettes/${entry.file}`;
+      img.alt = '';
+      button.append(img);
+      button.addEventListener('click', () => update({ ...state(), plate: { ...state().plate, vignette: entry.id } }, true));
+      vignettePicker.append(button);
+    }
+  }
+
   /** The plate's size under it in the 2D view: a crop's is its outline's. */
   function sizeLabel(): string {
     const { plate } = state();
-    if (plate.kind !== 'crop') return `${mm(plate.width)} × ${mm(plate.height)} ${t().mm}`;
+    if (plate.kind !== 'crop' && !pictured(plate)) return `${mm(plate.width)} × ${mm(plate.height)} ${t().mm}`;
     if (outline.length === 0) return '';
     const b = bounds(outline);
     return `${mm(b.maxX - b.minX)} × ${mm(b.maxY - b.minY)} ${t().mm}`;
@@ -298,6 +392,7 @@ export function startApp({ storage = null, languages = [], csg, createScene, dow
     const m = t();
     measureTexts();
     plateCard?.sync(s);
+    renderPicker();
     renderElementList(elementList, s, selected, m, {
       select: (id) => select(id),
       toggle: (id) => update(toggleVisible(state(), id), true),
@@ -375,22 +470,31 @@ export function startApp({ storage = null, languages = [], csg, createScene, dow
     previewTimer = null;
     build = { state: 'building' };
     renderStatus();
-    csg.run({ kind: 'mesh', quality: 'preview', state: state(), rasters: rasterList(), textRasters: textRasterList() }).then(
-      (done) => {
-        // null: a fresher preview replaced this one and will answer instead
-        if (stopped || !done || done.result.kind !== 'mesh') return;
-        build = { state: 'done', mesh: done.result, ms: done.ms };
-        workerWarnings = done.result.warnings;
-        renderState();
-        scene?.setMesh({ positions: done.result.positions, indices: done.result.indices });
-        renderStatus();
-      },
-      (error: unknown) => {
-        if (stopped) return;
-        build = { state: 'failed', reason: errorText(error) };
-        renderStatus();
-      },
-    );
+    csg
+      .run({
+        kind: 'mesh',
+        quality: 'preview',
+        state: state(),
+        rasters: rasterList(),
+        textRasters: textRasterList(),
+        silhouette: silhouette(),
+      })
+      .then(
+        (done) => {
+          // null: a fresher preview replaced this one and will answer instead
+          if (stopped || !done || done.result.kind !== 'mesh') return;
+          build = { state: 'done', mesh: done.result, ms: done.ms };
+          workerWarnings = done.result.warnings;
+          renderState();
+          scene?.setMesh({ positions: done.result.positions, indices: done.result.indices });
+          renderStatus();
+        },
+        (error: unknown) => {
+          if (stopped) return;
+          build = { state: 'failed', reason: errorText(error) };
+          renderStatus();
+        },
+      );
   };
 
   const schedulePreview = (ms: number) => {
@@ -404,6 +508,10 @@ export function startApp({ storage = null, languages = [], csg, createScene, dow
    * it is in its key, a picture by whether it is decoded yet.
    */
   const outlineKey = (s: PlateState): string => {
+    if (pictured(s.plate)) {
+      const url = silhouetteUrl(s.plate);
+      return JSON.stringify([{ ...s.plate, svg: s.plate.svg.length }, url.slice(-64), Number.isFinite(aspects.get(url) ?? Number.NaN)]);
+    }
     if (s.plate.kind !== 'crop') return JSON.stringify(s.plate);
     const images = s.images.map((image) => [image.src.length, image.src.slice(-32), rasters.get(image.src) ? 1 : 0, { ...image, src: '' }]);
     const shaped = s.texts.map((text) => [text, textShape(text) ? 1 : 0]);
@@ -415,27 +523,39 @@ export function startApp({ storage = null, languages = [], csg, createScene, dow
     const key = outlineKey(s);
     if (key === outlineFor) return;
     outlineFor = key;
-    // a crop keeps its last outline until the new one comes; a primitive's is known at once
-    if (s.plate.kind !== 'crop') {
+    // a crop or a silhouette keeps its last outline until the new one comes; a primitive's is known at once
+    if (s.plate.kind !== 'crop' && !pictured(s.plate)) {
       outline = instantOutline(s.plate);
       outlineWarnings = [];
     }
     const crop = s.plate.kind === 'crop';
-    csg.run({ kind: 'outline', state: s, ...(crop ? { rasters: rasterList(), textRasters: textRasterList() } : {}) }).then(
-      (done) => {
-        if (stopped || !done || done.result.kind !== 'outline' || key !== outlineFor) return;
-        outline = done.result.rings;
-        outlineWarnings = done.result.warnings;
-        renderState();
-        if (crop) editor.fit();
-      },
-      // a failed outline leaves the instant one; the mesh job reports the failure
-      () => {},
-    );
+    const followed = crop || pictured(s.plate);
+    csg
+      .run({
+        kind: 'outline',
+        state: s,
+        ...(crop ? { rasters: rasterList(), textRasters: textRasterList() } : {}),
+        ...(pictured(s.plate) ? { silhouette: silhouette() } : {}),
+      })
+      .then(
+        (done) => {
+          if (stopped || !done || done.result.kind !== 'outline' || key !== outlineFor) return;
+          outline = done.result.rings;
+          outlineWarnings = done.result.warnings;
+          renderState();
+          if (followed) editor.fit();
+        },
+        // a failed outline leaves the instant one; the mesh job reports the failure
+        () => {},
+      );
   };
 
   function update(next: PlateState, final: boolean) {
-    const clean = sanitizeState(next);
+    let clean = sanitizeState(next);
+    // a vignette outline without a vignette takes the catalog's first
+    const first = catalog[0];
+    if (clean.plate.kind === 'vignette' && !clean.plate.vignette && first)
+      clean = { ...clean, plate: { ...clean.plate, vignette: first.id } };
     if (final) history.commit(clean);
     else history.live(clean);
     afterChange();
@@ -477,6 +597,25 @@ export function startApp({ storage = null, languages = [], csg, createScene, dow
     );
   };
   const pickImage = () => imageFile.click();
+
+  const pickSvg = () => svgFile.click();
+  const onSvgFile = () => {
+    const file = svgFile.files?.[0];
+    svgFile.value = '';
+    if (!file) return;
+    plateStatus.hidden = true;
+    silhouettes.readFile(file).then(
+      (svg) => {
+        if (stopped) return;
+        update({ ...state(), plate: { ...state().plate, kind: 'svg', svg } }, true);
+      },
+      (error: unknown) => {
+        if (stopped) return;
+        plateStatus.hidden = false;
+        plateStatus.textContent = t().svgFailed(errorText(error));
+      },
+    );
+  };
 
   const addTextNow = () => {
     const { state: next, id } = addText(state());
@@ -562,7 +701,16 @@ export function startApp({ storage = null, languages = [], csg, createScene, dow
     // every picture decoded and every font in first: an export never leaves an element out
     ensureRasters();
     Promise.all([...decoding.values(), ...state().texts.map((text) => texts.loadFont(text.font))])
-      .then(() => csg.run({ kind: 'mesh', quality: 'export', state: state(), rasters: rasterList(), textRasters: textRasterList() }))
+      .then(() =>
+        csg.run({
+          kind: 'mesh',
+          quality: 'export',
+          state: state(),
+          rasters: rasterList(),
+          textRasters: textRasterList(),
+          silhouette: silhouette(),
+        }),
+      )
       .then(
         (done) => {
           if (stopped || !done || done.result.kind !== 'mesh') return;
@@ -607,6 +755,15 @@ export function startApp({ storage = null, languages = [], csg, createScene, dow
   addHoleButton.addEventListener('click', addHoleNow);
   addImageButton.addEventListener('click', pickImage);
   addTextButton.addEventListener('click', addTextNow);
+  svgUpload.addEventListener('click', pickSvg);
+  svgFile.addEventListener('change', onSvgFile);
+  silhouettes.catalog().then(
+    (entries) => {
+      catalog = entries;
+      if (!stopped) renderPicker();
+    },
+    () => {},
+  );
   imageFile.addEventListener('change', onImageFile);
   document.addEventListener('keydown', onKey);
   ensureRasters();
@@ -626,6 +783,8 @@ export function startApp({ storage = null, languages = [], csg, createScene, dow
     addHoleButton.removeEventListener('click', addHoleNow);
     addImageButton.removeEventListener('click', pickImage);
     addTextButton.removeEventListener('click', addTextNow);
+    svgUpload.removeEventListener('click', pickSvg);
+    svgFile.removeEventListener('change', onSvgFile);
     imageFile.removeEventListener('change', onImageFile);
     document.removeEventListener('keydown', onKey);
     editor.dispose();

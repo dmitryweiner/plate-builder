@@ -13,7 +13,7 @@ import { heightField, processPixels, sampleField, type Raster } from '../geo/hei
 import { holeCutters, type Cutter } from '../geo/holes';
 import { CHORD_TOLERANCE, primitiveOutline, ringArea, segmentsFor, type Ring } from '../geo/outline';
 import { PRIMITIVE_KINDS, type ImageElement, type Plate, type PlateState, type PrimitiveKind, type TextElement } from '../geo/state';
-import { textRings, type TextRaster } from '../geo/textShape';
+import { maskRings, textRings, type TextRaster } from '../geo/textShape';
 import type { Warning } from '../geo/warnings';
 import type { CsgApi, CsgScope } from './csg';
 
@@ -80,6 +80,31 @@ function imageMask(csg: CsgApi, scope: CsgScope, image: ImageElement, raster: Ra
   return scope.keep(turned.translate([image.x, image.y]));
 }
 
+/** Only the outer contours: holes filled (spec §2.4, §2.5). */
+function fillHoles(csg: CsgApi, scope: CsgScope, section: CrossSection): CrossSection | null {
+  const outer = section.toPolygons().filter((ring) => ringArea(ring.map(([x, y]): [number, number] => [x, y])) > 0);
+  return outer.length ? scope.keep(new csg.CrossSection(outer, 'Positive')) : null;
+}
+
+function islandWarnings(section: CrossSection): Warning[] {
+  const islands = section.toPolygons().filter((ring) => ringArea(ring.map(([x, y]): [number, number] => [x, y])) > 0).length;
+  if (islands <= 1) return [];
+  const { min, max } = section.bounds();
+  return [{ code: 'outline.islands', ids: [], params: { count: islands }, spot: [(min[0] + max[0]) / 2, (min[1] + max[1]) / 2] }];
+}
+
+// manifold cannot make a cross-section of no polygons; a square of no size is its empty one
+const emptyOutline = (csg: CsgApi, scope: CsgScope): { section: CrossSection; warnings: Warning[] } => ({
+  section: scope.keep(csg.CrossSection.square([0, 0])),
+  warnings: [{ code: 'outline.empty', ids: [], spot: [0, 0] }],
+});
+
+/** A silhouette's contours around its middle, mm (spec §2.5); null without ink. */
+function maskSection(csg: CsgApi, scope: CsgScope, mask: TextRaster): CrossSection | null {
+  const rings = maskRings(mask);
+  return rings.length ? scope.keep(new csg.CrossSection(rings, 'Positive')) : null;
+}
+
 /**
  * The crop outline (spec §2.4): the elements' masks unioned, grown by the
  * padding with round joins, their holes filled (outer contours only), then
@@ -97,28 +122,30 @@ function cropOutline(csg: CsgApi, scope: CsgScope, state: PlateState, rasters: R
     const made = text.visible && text.inOutline && raster ? textSection(csg, scope, text, raster) : null;
     if (made) masks.push(made.section);
   });
-  // manifold cannot make a cross-section of no polygons; a square of no size is its empty one
-  const empty = (): { section: CrossSection; warnings: Warning[] } => ({
-    section: scope.keep(csg.CrossSection.square([0, 0])),
-    warnings: [{ code: 'outline.empty', ids: [], spot: [0, 0] }],
-  });
-  if (masks.length === 0) return empty();
+  if (masks.length === 0) return emptyOutline(csg, scope);
   const union = scope.keep(csg.CrossSection.union(masks));
   const { padding } = state.plate;
   const padded = padding > 0 ? scope.keep(union.offset(padding, 'Round', 2, segmentsFor(padding))) : union;
-  const outer = padded.toPolygons().filter((ring) => ringArea(ring.map(([x, y]): [number, number] => [x, y])) > 0);
-  if (outer.length === 0) return empty();
-  const filled = scope.keep(new csg.CrossSection(outer, 'Positive'));
+  const filled = fillHoles(csg, scope, padded);
+  if (!filled) return emptyOutline(csg, scope);
   // rounding is an opening: more of it than the padding would cut away strokes the padding did not cover
   const rounding = Math.min(state.plate.rounding, padding);
   const section = rounding > 0 ? roundCorners(scope, filled, rounding) : filled;
-  const islands = section.toPolygons().filter((ring) => ringArea(ring.map(([x, y]): [number, number] => [x, y])) > 0).length;
-  const { min, max } = section.bounds();
-  const warnings: Warning[] =
-    islands > 1
-      ? [{ code: 'outline.islands', ids: [], params: { count: islands }, spot: [(min[0] + max[0]) / 2, (min[1] + max[1]) / 2] }]
-      : [];
-  return { section, warnings };
+  return { section, warnings: islandWarnings(section) };
+}
+
+/** A vignette's or own SVG's outline: the silhouette's outer contours, then corner rounding. */
+function silhouetteOutline(
+  csg: CsgApi,
+  scope: CsgScope,
+  state: PlateState,
+  rasters: Rasters,
+): { section: CrossSection; warnings: Warning[]; silhouette?: CrossSection } {
+  const silhouette = rasters.silhouette ? maskSection(csg, scope, rasters.silhouette) : null;
+  const filled = silhouette ? fillHoles(csg, scope, silhouette) : null;
+  if (!silhouette || !filled) return emptyOutline(csg, scope);
+  const section = state.plate.rounding > 0 ? roundCorners(scope, filled, state.plate.rounding) : filled;
+  return { section, warnings: islandWarnings(section), silhouette };
 }
 
 /** The plate's outline for any kind, with what it has to say (islands, nothing to crop). */
@@ -127,8 +154,9 @@ export function stateOutline(
   scope: CsgScope,
   state: PlateState,
   rasters: Rasters,
-): { section: CrossSection; warnings: Warning[] } {
+): { section: CrossSection; warnings: Warning[]; silhouette?: CrossSection } {
   if (state.plate.kind === 'crop') return cropOutline(csg, scope, state, rasters);
+  if (state.plate.kind === 'vignette' || state.plate.kind === 'svg') return silhouetteOutline(csg, scope, state, rasters);
   return { section: plateOutline(csg, scope, state.plate), warnings: [] };
 }
 
@@ -223,11 +251,61 @@ function prismOf(scope: CsgScope, section: CrossSection, z0: number, z1: number)
   return scope.keep(prism.translate([0, 0, z0]));
 }
 
+/** How far a cut reaches into what an earlier cut emptied, so the two never share a wall, mm. */
+const CUT_OVERLAP = 0.01;
+
+/**
+ * The base with the rim and the frame (spec §2.3, §2.5) standing on it, by
+ * construction: the outline extruded to the highest of them, then cut back
+ * down to T wherever nothing is raised, and to the lower height where only
+ * the lower one is. No two walls are shared: a union of the base with a rim
+ * whose outer wall is the base's left slivers on every curve.
+ */
+function raisedBase(
+  csg: CsgApi,
+  scope: CsgScope,
+  outline: CrossSection,
+  thickness: number,
+  rim: { width: number; height: number } | null,
+  frame: { section: CrossSection; height: number } | null,
+): Manifold {
+  const high = Math.max(rim?.height ?? 0, frame?.height ?? 0);
+  const tall = scope.keep(outline.extrude(thickness + high));
+  if (!rim && !frame) return tall;
+  // offsetting arcs leaves vertices closer than a float32 tells apart: simplified
+  const inset = rim
+    ? scope.keep(scope.keep(outline.offset(-rim.width, 'Round', 2, segmentsFor(rim.width))).simplify(CHORD_TOLERANCE / 10))
+    : null;
+  // the silhouette's windows: inside its outer contour, not in it
+  const filled = frame ? fillHoles(csg, scope, frame.section) : null;
+  const windows = frame && filled ? scope.keep(filled.subtract(frame.section)) : null;
+  const flat = inset && windows ? scope.keep(inset.intersect(windows)) : (inset ?? windows);
+  let base = tall;
+  const cut = (region: CrossSection, from: number) => {
+    // an empty region's prism is no harmless nothing in manifold: it empties the solid
+    if (region.isEmpty()) return;
+    base = scope.keep(base.subtract(prismOf(scope, region, from, thickness + high + 1)));
+  };
+  if (flat) cut(flat, thickness);
+  if (rim && frame && inset && windows && rim.height !== frame.height) {
+    if (frame.height > rim.height) {
+      // the rim's ring where it crosses the windows stops at the rim's height
+      cut(scope.keep(windows.subtract(scope.keep(inset.offset(-CUT_OVERLAP, 'Miter')))), thickness + rim.height);
+    } else {
+      // the frame inside the rim stops at the frame's height
+      cut(scope.keep(scope.keep(frame.section.offset(CUT_OVERLAP, 'Miter')).intersect(inset)), thickness + frame.height);
+    }
+  }
+  return base;
+}
+
 export interface Rasters {
   /** one per `state.images` (null: not decoded) */
   images: readonly (Raster | null)[];
   /** one per `state.texts` (null: not drawn yet) */
   texts: readonly (TextRaster | null)[];
+  /** a vignette's or an own SVG's silhouette, drawn by the main thread (null: not drawn yet) */
+  silhouette?: TextRaster | null;
 }
 
 /**
@@ -243,16 +321,21 @@ export function buildSolid(
   quality: Quality,
 ): { solid: Manifold; warnings: Warning[] } {
   const { thickness } = state.plate;
-  const { section: outline, warnings } = stateOutline(csg, scope, state, rasters);
-  const { rim, rimWidth, rimHeight } = state.plate;
-  // the rim (spec §2.3): the base stands up to the rim's top and its inside is cut back down to T, so
-  // the rim's outer walls are the base's own, never two coplanar ones; the inset is simplified, as
-  // offsetting arcs leaves vertices closer than a float32 tells apart
-  const pocket = rim
-    ? scope.keep(scope.keep(outline.offset(-rimWidth, 'Round', 2, segmentsFor(rimWidth))).simplify(CHORD_TOLERANCE / 10))
-    : null;
-  const tall = scope.keep(outline.extrude(thickness + (rim ? rimHeight : 0)));
-  const base = pocket ? scope.keep(tall.subtract(prismOf(scope, pocket, thickness, thickness + rimHeight + 1))) : tall;
+  const { section: outline, warnings, silhouette } = stateOutline(csg, scope, state, rasters);
+  const { rim, rimWidth, rimHeight, frameHeight } = state.plate;
+  const frame = state.plate.frame && silhouette ? silhouette : null;
+  if (frame && isThin(scope, frame)) {
+    const { min, max } = frame.bounds();
+    warnings.push({ code: 'frame.thin', ids: [], spot: [(min[0] + max[0]) / 2, (min[1] + max[1]) / 2] });
+  }
+  const base = raisedBase(
+    csg,
+    scope,
+    outline,
+    thickness,
+    rim ? { width: rimWidth, height: rimHeight } : null,
+    frame ? { section: frame, height: frameHeight } : null,
+  );
   const images = state.images.flatMap((image, i) => {
     const raster = rasters.images[i];
     return image.visible && raster ? [{ image, raster }] : [];
@@ -272,7 +355,14 @@ export function buildSolid(
 
   // the top of everything that stands on the base
   const top =
-    thickness + Math.max(0, rim ? rimHeight : 0, ...images.map(({ image }) => image.height), ...raised.map(({ text }) => text.height));
+    thickness +
+    Math.max(
+      0,
+      rim ? rimHeight : 0,
+      frame ? frameHeight : 0,
+      ...images.map(({ image }) => image.height),
+      ...raised.map(({ text }) => text.height),
+    );
   let solid = base;
   if (images.length > 0 || raised.length > 0) {
     const reliefs = [

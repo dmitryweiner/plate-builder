@@ -58,6 +58,7 @@ beforeEach(() => {
     sizeLabel: () => '100 × 60 mm',
     picture: () => null,
     textShape: () => null,
+    frame: () => null,
   });
   editor.fit();
 });
