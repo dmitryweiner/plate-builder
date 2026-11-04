@@ -55,13 +55,30 @@ publishes `dist/` to GitHub Pages.
 
 ## What costs what
 
-Measured on an M1 Mac, Chromium, worker time (`ms` of the job), from the smoke.
+Measured on an M1 Mac, Chromium, worker time (`ms` of the job), with
+`npm run smoke -- --measure` (last full pass at M10).
 
-| Operation                                                                                  | Time    |
-| ------------------------------------------------------------------------------------------ | ------- |
-| first preview of the default plate (100 × 60 rectangle, 204 triangles), WASM load included | 6–13 ms |
-| export of the same, STL encoding included                                                  | 1 ms    |
-| export click → file saved (main thread, download included)                                 | ~110 ms |
+| Operation                                                                                  | Time                                                    |
+| ------------------------------------------------------------------------------------------ | ------------------------------------------------------- |
+| first preview of the default plate (100 × 60 rectangle, 204 triangles), WASM load included | 4–13 ms                                                 |
+| export of the same, STL encoding included                                                  | 1 ms                                                    |
+| export click → file saved (main thread, download included)                                 | ~75 ms                                                  |
+| preview with four holes, one of each kind (100 × 60 × 6, 1300 triangles)                   | ~15 ms                                                  |
+| one raised text "PLATE BUILDER" on an arc, 8 mm (7.8k triangles) — preview                 | ~60 ms                                                  |
+| crop around a 36 mm picture and a text, padding 3, with its outline job                    | ~200 ms                                                 |
+| **reference plate** (spec §8.4: 100 × 60, a 512 px image, two texts) — preview             | 150 ms (target 500)                                     |
+| the same — export                                                                          | 2.1 s (target 5)                                        |
+| 100 × 60 plate, one 512 px image of 55 mm — preview (0.5 mm grid, 25k triangles)           | 120 ms                                                  |
+| the same — export (0.107 mm grid, the pixel size; ~530k triangles)                         | 1.6 s                                                   |
+| 300 × 300 plate, one 512 px image of 290 mm — preview (675k triangles)                     | 2.0 s                                                   |
+| the same — export (0.2 mm grid, ~4.2M triangles)                                           | 14.5 s                                                  |
+| **worst case**: eight 100 mm photos tiling 300 × 300 — export                              | 22.6 s in the worker, 26.5 s from the click (target 60) |
+
+Decided at M3: 512 px stays (at 150 mm a pixel is 0.29 mm, under a 0.4 mm
+nozzle's line), and flat-run merging is not built: the reference plate is
+well within its targets, and on a 300 mm plate the preview, not the export,
+is what waits; if that matters, the first step is a coarser preview grid for
+huge images.
 
 ## Test-driven development is mandatory
 
@@ -135,6 +152,9 @@ browser (service worker, layout, workers) → a step in `scripts/smoke.mjs`.
   `--preview` (build + offline), `--shots` (screenshots), `--measure` (image
   timings for "what costs what"). Each step starts from a blank project
   (seeded storage); `app.first()` opens a first visit.
+- `scripts/snap.mjs` — a screenshot in a given state (`--preset`, `--lang`,
+  `--width/--height`, `--view`, `--camera`, `--swap`, `--select`, `--panel`,
+  `--eval`); the docs' pictures come from it.
 - `scripts/preset-pictures.mjs` — draws the built-in presets' pictures into
   `src/state/presetPictures.ts`.
 - `scripts/lib/harness.mjs` — flags, vite on 5373/4373, console errors.

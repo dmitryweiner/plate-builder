@@ -45,9 +45,9 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle | null {
   const fill = new THREE.DirectionalLight(0xc6d2ff, 0.35);
   fill.position.set(1, 0.3, -0.8);
   scene.add(fill);
-  // from below, for the back preset (keyholes)
-  const under = new THREE.DirectionalLight(0xffffff, 0.6);
-  under.position.set(0.3, -1, 0.2);
+  // from below and aside, for the back preset: keyhole pockets shade
+  const under = new THREE.DirectionalLight(0xffffff, 1.5);
+  under.position.set(-0.8, -0.6, 0.5);
   scene.add(under);
 
   // z-up (model) → y-up (screen)
@@ -98,6 +98,8 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle | null {
     if (disposed) return;
     resize();
     controls.update();
+    // from under the bed the grid would lie over the back face (keyholes): it shows from above only
+    if (grid) grid.visible = camera.position.y > controls.target.y;
     renderer.render(scene, camera);
     requestAnimationFrame(frame);
   }

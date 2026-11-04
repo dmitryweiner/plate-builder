@@ -127,7 +127,7 @@ const svgFile = (body) => ({
 /** Clicks the download and returns the worker's time of the export. */
 async function exportMs(page) {
   const before = await page.locator('#exportStatus').textContent();
-  const [download] = await Promise.all([page.waitForEvent('download', { timeout: 120000 }), page.click('#downloadStl')]);
+  const [download] = await Promise.all([page.waitForEvent('download', { timeout: 180000 }), page.click('#downloadStl')]);
   await download.path();
   await page.waitForFunction(
     (old) =>
@@ -336,6 +336,38 @@ try {
         const ms = await exportMs(page);
         console.log(`    ${w} × ${h}, image ${size} mm: preview ${result.ms} ms (${info}); export ${ms} ms`);
       }
+      await context.close();
+    });
+
+    await step('measure: the reference plate (100 × 60, an image, two texts) and the worst case (8 images on 300 × 300)', async () => {
+      const { page, context } = await app.open();
+      let { info } = await built(page);
+      await page.setInputFiles('#imageFile', await testPicture(page, 'jpeg'));
+      ({ info } = await built(page, info));
+      await page.click('.element-name');
+      await setNumber(page, 'element-size', 50);
+      for (const y of [22, -22]) {
+        await page.click('#addText');
+        await setNumber(page, 'element-y', y);
+        ({ info } = await built(page, info));
+      }
+      const reference = await built(page, '').catch(() => ({ info, ms: NaN }));
+      console.log(`    reference: preview ${reference.ms} ms (${info}); export ${await exportMs(page)} ms`);
+      // eight 100 mm photos tiling a 300 × 300 plate
+      await setNumber(page, 'plate-width', 300);
+      await setNumber(page, 'plate-height', 300);
+      for (let k = 0; k < 7; k++) await page.setInputFiles('#imageFile', await testPicture(page, 'jpeg'));
+      const images = page.locator('.element-row[data-id^="i"] .element-name');
+      for (let k = 0; k < 8; k++) {
+        await images.nth(k).click();
+        await setNumber(page, 'element-size', 100);
+        await setNumber(page, 'element-x', -100 + 100 * (k % 3));
+        await setNumber(page, 'element-y', 100 - 100 * Math.floor(k / 3));
+      }
+      info = await builtAs(page, '300 × 300');
+      const started = Date.now();
+      const ms = await exportMs(page);
+      console.log(`    8 images on 300 × 300: ${info}; export ${ms} ms in the worker, ${Date.now() - started} ms from the click`);
       await context.close();
     });
   }
