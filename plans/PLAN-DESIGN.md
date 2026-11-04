@@ -199,5 +199,9 @@ unit` in one grid line; the label column ~96 px (Russian and Ukrainian
   `title` it finds; no new attribute was needed.
 - **D5**: the catalog's black vignette silhouettes are shown inverted on
   the dark tiles.
-- Not changed, found on the way: on a phone with the sheet closed the view
-  keeps 52 % of the height and leaves the rest empty, as before this work.
+- **Added (asked for after D6)**: on a phone the view fills the screen
+  under the top bar, the sheet lies over it, as in Case Constructor (it
+  kept 52 % of the height before, the rest empty with the sheet closed).
+  The 3D view, hidden while it was fitted, now fits again when it first
+  shows at its real shape, until the camera is turned by hand; the smoke
+  checks a wide plate stays inside a phone's tall 3D view.

@@ -65,6 +65,11 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle | null {
   let mesh: THREE.Mesh | null = null;
   let radius = 60;
   let fitted = false;
+  /** whether the person turned or zoomed since the last fit: until then a new size fits again */
+  let touched = false;
+  controls.addEventListener('start', () => {
+    touched = true;
+  });
   let disposed = false;
 
   function setGrid(size: number): void {
@@ -91,6 +96,8 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle | null {
       renderer.setSize(w, h, false);
       camera.aspect = w / h;
       camera.updateProjectionMatrix();
+      // a view hidden while fitted (a phone's 2D tab) had another shape: fit to the one it shows in
+      if (fitted && !touched) place(camera.position.clone().sub(controls.target));
     }
   }
 
@@ -110,6 +117,7 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle | null {
     const vFov = (camera.fov * Math.PI) / 180;
     const hFov = 2 * Math.atan(Math.tan(vFov / 2) * (camera.aspect || 1));
     const distance = (radius / Math.sin(Math.min(vFov, hFov) / 2)) * 1.1;
+    touched = false;
     controls.target.set(0, 0, 0);
     camera.position.copy(direction).setLength(distance);
     camera.near = Math.max(0.1, distance / 200);

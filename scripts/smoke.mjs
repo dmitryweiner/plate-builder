@@ -177,6 +177,40 @@ try {
     });
   }
 
+  await step('the 3D view on a phone fits a wide plate to its width, the first time it shows', async () => {
+    const { page, context } = await app.open({ viewport: VIEWPORTS.phone });
+    let { info } = await built(page);
+    // the keychain: much wider than high, in a view much higher than wide
+    await page.click('#presetsOpen');
+    await page.click('.preset-row[data-id="keychain"] button');
+    ({ info } = await built(page, info));
+    await page.click('#sheetClose');
+    await page.click('.view-tabs [data-show="3d"]');
+    // two frames for the renderer to take the new size
+    await page.waitForTimeout(300);
+    const shot = (await page.locator('#view3d').screenshot()).toString('base64');
+    // the plate is light, the page and the grid dark: no light pixel in the outer columns
+    const touches = await page.evaluate(async (png) => {
+      const image = new Image();
+      image.src = `data:image/png;base64,${png}`;
+      await image.decode();
+      const canvas = document.createElement('canvas');
+      canvas.width = image.width;
+      canvas.height = image.height;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(image, 0, 0);
+      const light = (x) => {
+        const { data } = ctx.getImageData(x, 0, 3, image.height);
+        for (let i = 0; i < data.length; i += 4) if (data[i] + data[i + 1] + data[i + 2] > 450) return true;
+        return false;
+      };
+      return { left: light(0), right: light(image.width - 3) };
+    }, shot);
+    check(!touches.left && !touches.right, `the plate runs off the 3D view: ${JSON.stringify(touches)}`);
+    if (shots) await page.screenshot({ path: 'shots/phone-3d-keychain.png' });
+    await context.close();
+  });
+
   await step('every primitive outline builds a valid mesh', async () => {
     const { page, context } = await app.open();
     let { info } = await built(page);
@@ -637,6 +671,9 @@ try {
       await tap(await plateToPage(page, [30, 20]));
       await page.waitForFunction(() => !document.querySelector('#panel')?.classList.contains('open'));
       check(await page.locator('#sheetOpen').isVisible(), 'no button to bring the sheet back');
+      // as in Case Constructor, the view fills the screen under the top bar; the sheet lies over it
+      const viewBottom = await page.locator('#views').evaluate((node) => node.getBoundingClientRect().bottom);
+      check(Math.abs(viewBottom - VIEWPORTS.phone.height) <= 1, `the view ends at ${viewBottom}px, not at the bottom of the screen`);
       // the sheet slides away in 0.2 s
       await page.waitForTimeout(300);
       if (shots) await page.screenshot({ path: 'shots/phone-sheet-closed.png' });

@@ -1,7 +1,8 @@
 /* Mobile first: base rules are for a phone, min-width queries add room.
    Logical properties (inline/block) mirror the layout for RTL by themselves.
-   A phone: the view on top, the panel's cards below it. From 1024 px: the
-   panel on the start side, the view filling the rest. */
+   A phone: the view fills the screen, the panel a bottom sheet over it, as
+   in Case Constructor. From 1024 px: the panel on the start side, the view
+   filling the rest. */
 
 /* Case Constructor's dark palette with an emerald accent; dark only.
    --panel is also the theme colour (index.html, the manifest; a test
@@ -222,11 +223,12 @@ select {
   min-block-size: 0;
 }
 
+/* a phone: the view fills the screen under the top bar, the sheet lies over it */
 .views {
   position: relative;
+  flex: 1;
   display: grid;
-  block-size: 52dvh;
-  min-block-size: 280px;
+  min-block-size: 0;
   background: var(--bg);
   color: var(--text);
   overflow: hidden;
