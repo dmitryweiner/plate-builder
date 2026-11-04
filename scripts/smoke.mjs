@@ -351,6 +351,41 @@ try {
     await context.close();
   });
 
+  await step('crop around an image and a text, padding at its extremes', async () => {
+    const { page, context } = await app.open();
+    let { info } = await built(page);
+    await page.selectOption('#plate-kind', 'crop');
+    await page.setInputFiles('#imageFile', await testPicture(page, 'png'));
+    ({ info } = await built(page, info));
+    await page.click('#addText');
+    ({ info } = await built(page, info));
+    await setNumber(page, 'element-y', -40);
+    ({ info } = await built(page, info));
+    for (const padding of [0, 30, 3]) {
+      await setNumber(page, 'plate-padding', padding);
+      ({ info } = await built(page, info));
+      check(await page.locator('#meshBlocked').isHidden(), `padding ${padding}: the mesh is blocked`);
+      console.log(`    padding ${padding}: ${info}`);
+    }
+    // the disc and the text far apart: two islands at padding 3, said so
+    const warnings = await page.locator('#warningList').textContent();
+    check(/pieces/.test(warnings), `no islands warning: ${warnings}`);
+    if (shots) await page.screenshot({ path: 'shots/crop-desktop.png' });
+    await context.close();
+  });
+
+  await step('a rim on every kind', async () => {
+    const { page, context } = await app.open();
+    let { info } = await built(page);
+    await page.check('#plate-rim');
+    for (const kind of ['rectangle', 'ellipse', 'triangle', 'polygon', 'star', 'heart', 'shield', 'tag']) {
+      await page.selectOption('#plate-kind', kind);
+      ({ info } = await built(page, info));
+      check(info.includes('× 4 mm') && (await page.locator('#meshBlocked').isHidden()), `${kind} with a rim: ${info}`);
+    }
+    await context.close();
+  });
+
   await step('downloads a real STL', async () => {
     const { page, context } = await app.open();
     await built(page);

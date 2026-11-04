@@ -18,7 +18,7 @@ import type { MeshProblem, MeshReport } from '../geo/validate';
  */
 export type Job =
   | { kind: 'ping' }
-  | { kind: 'outline'; state: PlateState }
+  | { kind: 'outline'; state: PlateState; rasters?: (Raster | null)[]; textRasters?: (TextRaster | null)[] }
   | {
       kind: 'mesh';
       quality: 'preview' | 'export';
@@ -51,7 +51,8 @@ export interface MeshResult {
 }
 
 /** What a finished job returns, by kind. */
-export type JobResult = { kind: 'ping'; volume: number } | { kind: 'outline'; rings: Ring[] } | MeshResult;
+/** An outline: its rings (plate frame) and what it has to say (islands, nothing to crop). */
+export type JobResult = { kind: 'ping'; volume: number } | { kind: 'outline'; rings: Ring[]; warnings: Warning[] } | MeshResult;
 
 /**
  * Progress by stages. Manifold says nothing about itself inside one boolean:

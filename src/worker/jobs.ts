@@ -7,7 +7,7 @@ import { meshNormals } from '../geo/mesh';
 import { sanitizeState } from '../geo/state';
 import { isTextRaster } from '../geo/textShape';
 import { meshProblems, validateMesh } from '../geo/validate';
-import { buildPlate, outlineRings, plateOutline } from './build';
+import { buildPlate, outlineRings, stateOutline } from './build';
 import { CsgScope, type CsgApi } from './csg';
 import type { Job, JobResult } from './protocol';
 
@@ -20,16 +20,22 @@ export function runJob(csg: CsgApi, job: Job): JobResult {
     }
     // The worker boundary is an outer boundary, like a file or the UI.
     const state = sanitizeState(job.state);
-    if (job.kind === 'outline') return { kind: 'outline', rings: outlineRings(plateOutline(csg, scope, state.plate)) };
-    const rasters = state.images.map((_, i) => {
-      const raster = job.rasters?.[i];
-      return isRaster(raster) ? raster : null;
-    });
-    const texts = state.texts.map((_, i) => {
-      const raster = job.textRasters?.[i];
-      return isTextRaster(raster) ? raster : null;
-    });
-    const { mesh, warnings } = buildPlate(csg, scope, state, { images: rasters, texts }, job.quality);
+    // rasters are checked by their shape only, one per element (spec §8.3)
+    const rasters = {
+      images: state.images.map((_, i) => {
+        const raster = job.rasters?.[i];
+        return isRaster(raster) ? raster : null;
+      }),
+      texts: state.texts.map((_, i) => {
+        const raster = job.textRasters?.[i];
+        return isTextRaster(raster) ? raster : null;
+      }),
+    };
+    if (job.kind === 'outline') {
+      const { section, warnings } = stateOutline(csg, scope, state, rasters);
+      return { kind: 'outline', rings: outlineRings(section), warnings };
+    }
+    const { mesh, warnings } = buildPlate(csg, scope, state, rasters, job.quality);
     const { positions, indices } = mesh;
     const report = validateMesh({ positions, indices, normals: meshNormals(positions, indices) });
     const problems = meshProblems(report);

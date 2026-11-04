@@ -17,7 +17,7 @@ import {
 } from '../geo/state';
 import type { TextRaster } from '../geo/textShape';
 import { meshProblems, validateMesh } from '../geo/validate';
-import { buildMesh, buildPlate, gridStep, IMAGE_EPS, outlineRings, plateOutline } from './build';
+import { buildMesh, buildPlate, gridStep, IMAGE_EPS, outlineRings, plateOutline, stateOutline, type Rasters } from './build';
 import { CsgScope, initCSG, type CsgApi } from './csg';
 
 let csg: CsgApi;
@@ -347,5 +347,145 @@ describe('texts', () => {
     const arc = warnings.find((w) => w.code === 'text.arcTooLong');
     expect(arc?.params?.percent).toBeGreaterThan(0);
     expect(arc?.params?.percent).toBeLessThan(100);
+  });
+});
+
+/** An opaque disc of radius r px in the middle of a size × size raster, anti-aliased. */
+function discRaster(size: number, r: number, hole = 0): Raster {
+  const data = new Uint8Array(size * size * 2);
+  for (let j = 0; j < size; j++) {
+    for (let i = 0; i < size; i++) {
+      const d = Math.hypot(i + 0.5 - size / 2, j + 0.5 - size / 2);
+      const outer = Math.min(1, Math.max(0, r - d + 0.5));
+      const inner = hole > 0 ? Math.min(1, Math.max(0, d - hole + 0.5)) : 1;
+      data[(j * size + i) * 2] = 255;
+      data[(j * size + i) * 2 + 1] = Math.round(255 * Math.min(outer, inner));
+    }
+  }
+  return { width: size, height: size, data };
+}
+
+function cropState(images: Partial<ImageElement>[], over: Partial<Plate> = {}): PlateState {
+  const state = withPlate({ kind: 'crop', padding: 3, rounding: 0, ...over });
+  return {
+    ...state,
+    images: images.map((o, i) => ({ ...defaultImage(state, 'data:image/png;base64,', 64, 64), id: `i${i + 1}`, size: 32, ...o })),
+  };
+}
+
+function cropped(state: PlateState, rasters: Rasters) {
+  return inScope((scope) => {
+    const { section, warnings } = stateOutline(csg, scope, state, rasters);
+    return { rings: outlineRings(section), area: section.area(), warnings };
+  });
+}
+
+describe('crop outline', () => {
+  it('a disc image cropped with padding p is a circle of r + p', () => {
+    // 64 px over 32 mm: a 24 px disc is 12 mm
+    // the mask's edge at 50 % of the height is where the anti-aliased disc's edge is
+    const { rings, area, warnings } = cropped(cropState([{ threshold: 50 }]), { images: [discRaster(64, 24)], texts: [] });
+    expect(rings).toHaveLength(1);
+    expect(Math.abs(area / (Math.PI * 15 * 15) - 1)).toBeLessThan(0.01);
+    expect(warnings).toEqual([]);
+    const b = bounds(rings);
+    expect((b.minX + b.maxX) / 2).toBeCloseTo(0, 1);
+  });
+
+  it('follows a moved image and leaves out one that is not in the outline', () => {
+    const state = cropState([
+      { x: 20, y: -5 },
+      { x: -30, inOutline: false },
+    ]);
+    const { rings } = cropped(state, { images: [discRaster(64, 24), discRaster(64, 24)], texts: [] });
+    expect(rings).toHaveLength(1);
+    const b = bounds(rings);
+    expect((b.minX + b.maxX) / 2).toBeCloseTo(20, 1);
+    expect((b.minY + b.maxY) / 2).toBeCloseTo(-5, 1);
+  });
+
+  it('two far images give two islands and a warning', () => {
+    const state = cropState([{ x: -40 }, { x: 40 }]);
+    const { rings, warnings } = cropped(state, { images: [discRaster(64, 24), discRaster(64, 24)], texts: [] });
+    expect(rings).toHaveLength(2);
+    expect(warnings).toEqual([expect.objectContaining({ code: 'outline.islands', params: { count: 2 } })]);
+  });
+
+  it('fills the hole of a ring-shaped mask', () => {
+    const { rings, area } = cropped(cropState([{ threshold: 50 }], { padding: 0 }), { images: [discRaster(64, 24, 12)], texts: [] });
+    expect(rings).toHaveLength(1);
+    expect(Math.abs(area / (Math.PI * 12 * 12) - 1)).toBeLessThan(0.02);
+  });
+
+  it('takes the mask above the threshold only', () => {
+    // a ramp: the left half is below 50 %
+    const state = cropState([{ threshold: 50, size: 40, pixelWidth: 16, pixelHeight: 8 }], { padding: 0 });
+    const { rings } = cropped(state, { images: [ramp()], texts: [] });
+    const b = bounds(rings);
+    expect(b.minX).toBeGreaterThan(-2);
+    expect(b.maxX).toBeCloseTo(20, 0);
+  });
+
+  it('crops around a text alone', () => {
+    const state = { ...withPlate({ kind: 'crop', padding: 2, rounding: 0 }), texts: [{ ...defaultText(defaultState()), id: 't1' }] };
+    const { rings, area } = cropped(state, { images: [], texts: [blockRaster(20, 8)] });
+    expect(rings).toHaveLength(1);
+    const b = bounds(rings);
+    expect(b.maxX - b.minX).toBeCloseTo(24, 1);
+    // a rounded rectangle: 24 × 12 less the corners outside the arcs of 2 mm
+    expect(area).toBeCloseTo(24 * 12 - (4 - Math.PI) * 4, 0);
+  });
+
+  it('rounds no more than the padding, so thin letters are not cut away', () => {
+    // beside a big disc, which survives any rounding, a 1 mm stroke would vanish under a 4 mm one
+    const base = cropState([{ threshold: 50, x: -30 }], { padding: 0, rounding: 4 });
+    const state = { ...base, texts: [{ ...defaultText(defaultState()), id: 't1', x: 20 }] };
+    const { area } = cropped(state, { images: [discRaster(64, 24)], texts: [blockRaster(20, 1)] });
+    expect(area).toBeCloseTo(Math.PI * 144 + 20, -1);
+  });
+
+  it('is empty, with a warning, when there is nothing to crop around', () => {
+    const { rings, warnings } = cropped(cropState([]), { images: [], texts: [] });
+    expect(rings).toEqual([]);
+    expect(warnings.map((w) => w.code)).toEqual(['outline.empty']);
+  });
+
+  it('builds a closed plate around the elements', () => {
+    const state = { ...cropState([{ height: 1 }]) };
+    const { mesh } = inScope((scope) => buildPlate(csg, scope, state, { images: [discRaster(64, 24)], texts: [] }, 'preview'));
+    const report = validateMesh({ ...mesh, normals: meshNormals(mesh.positions, mesh.indices) });
+    expect(report.watertight).toBe(true);
+    expect(report.bbox.max[0] - report.bbox.min[0]).toBeCloseTo(30, 0);
+  });
+});
+
+describe('rim', () => {
+  it('is the outline less its inset, raised by its height, on any kind', () => {
+    const state = withPlate({ width: 100, height: 60, thickness: 3, rounding: 0, rim: true, rimWidth: 4, rimHeight: 2 });
+    const { mesh } = inScope((scope) => buildPlate(csg, scope, state, { images: [], texts: [] }, 'preview'));
+    const report = validateMesh({ ...mesh, normals: meshNormals(mesh.positions, mesh.indices) });
+    expect(report.watertight).toBe(true);
+    expect(report.bbox.max[2]).toBeCloseTo(5, 4);
+    expect(report.volume).toBeCloseTo(100 * 60 * 3 + (100 * 60 - 92 * 52) * 2, 0);
+  });
+
+  it.each(PRIMITIVE_KINDS)('%s: the default rim leaves no slivers', (kind) => {
+    const state = withPlate({ kind, rim: true });
+    const { mesh } = inScope((scope) => buildPlate(csg, scope, state, { images: [], texts: [] }, 'preview'));
+    const report = validateMesh({ ...mesh, normals: meshNormals(mesh.positions, mesh.indices) });
+    expect({ watertight: report.watertight, problems: meshProblems(report) }).toEqual({ watertight: true, problems: [] });
+  });
+
+  it('joins with the relief and is cut by holes into one closed solid', () => {
+    for (const kind of PRIMITIVE_KINDS) {
+      const state = {
+        ...withPlate({ kind, width: 80, height: 60, rim: true, rimWidth: 3, rimHeight: 1.5 }),
+        images: [{ ...defaultImage(defaultState(), 'data:image/png;base64,', 4, 4), id: 'i1', size: 70, height: 2 }],
+        holes: [{ ...defaultHole('round'), id: 'h1', y: 20 }],
+      };
+      const { mesh } = inScope((scope) => buildPlate(csg, scope, state, { images: [flat(200)], texts: [] }, 'preview'));
+      const report = validateMesh({ ...mesh, normals: meshNormals(mesh.positions, mesh.indices) });
+      expect({ kind, watertight: report.watertight, problems: meshProblems(report) }).toEqual({ kind, watertight: true, problems: [] });
+    }
   });
 });

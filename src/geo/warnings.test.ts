@@ -126,4 +126,9 @@ describe('warnings of texts and images', () => {
     expect(codes(withText({ x: 48 }))).toEqual(['element.outside']);
     expect(codes({ ...plate([]), images: [image({ y: 25 })] })).toEqual(['element.outside']);
   });
+
+  it('not under a crop, which follows its images and texts', () => {
+    const state = { ...plate([]), images: [image({ y: 25 })] };
+    expect(codes({ ...state, plate: { ...state.plate, kind: 'crop' } })).toEqual([]);
+  });
 });

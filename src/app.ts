@@ -165,6 +165,8 @@ export function startApp({ storage = null, languages = [], csg, createScene, dow
   const textShapes = new Map<string, { raster: TextRaster; rings: Ring[] } | null>();
   /** warnings from the last build: what only the contours tell */
   let workerWarnings: Warning[] = [];
+  /** warnings from the last outline (islands, nothing to crop): fresher than a build's */
+  let outlineWarnings: Warning[] = [];
   /** processed height pictures for the 2D view, by picture and levels */
   const processed = new Map<string, CanvasImageSource | null>();
 
@@ -179,7 +181,7 @@ export function startApp({ storage = null, languages = [], csg, createScene, dow
     change: (next, final) => update(next, final),
     outline: () => outline,
     snapping: () => snapping.checked,
-    sizeLabel: () => `${mm(state().plate.width)} × ${mm(state().plate.height)} ${t().mm}`,
+    sizeLabel: () => sizeLabel(),
     picture: (image) => picture(image),
     textShape: (text) => textShape(text)?.rings ?? null,
   });
@@ -193,6 +195,7 @@ export function startApp({ storage = null, languages = [], csg, createScene, dow
       void texts.loadFont(text.font).then(
         () => {
           if (stopped) return;
+          requestOutline();
           renderState();
           schedulePreview(PREVIEW_DELAY_MS);
         },
@@ -220,6 +223,15 @@ export function startApp({ storage = null, languages = [], csg, createScene, dow
 
   const textRasterList = () => state().texts.map((text) => textShape(text)?.raster ?? null);
 
+  /** The plate's size under it in the 2D view: a crop's is its outline's. */
+  function sizeLabel(): string {
+    const { plate } = state();
+    if (plate.kind !== 'crop') return `${mm(plate.width)} × ${mm(plate.height)} ${t().mm}`;
+    if (outline.length === 0) return '';
+    const b = bounds(outline);
+    return `${mm(b.maxX - b.minX)} × ${mm(b.maxY - b.minY)} ${t().mm}`;
+  }
+
   /** Starts decoding the pictures not decoded yet; each, once in, redraws and rebuilds. */
   function ensureRasters(): void {
     for (const { src } of state().images) {
@@ -231,6 +243,7 @@ export function startApp({ storage = null, languages = [], csg, createScene, dow
             rasters.set(src, raster);
             decoding.delete(src);
             if (stopped) return;
+            requestOutline();
             renderState();
             schedulePreview(PREVIEW_DELAY_MS);
           },
@@ -315,7 +328,8 @@ export function startApp({ storage = null, languages = [], csg, createScene, dow
 
     measureTexts();
     // the worker's warnings belong to the build they came from: kept only for elements still there
-    warnings = [...findWarnings(s, outline), ...workerWarnings.filter((w) => w.ids.every((id) => findElement(s, id)))];
+    const fromBuild = workerWarnings.filter((w) => !w.code.startsWith('outline.') && w.ids.every((id) => findElement(s, id)));
+    warnings = [...outlineWarnings, ...findWarnings(s, outline), ...fromBuild];
     renderWarnings(warningsCard, warningList, warnings, s, m, (spot) => {
       views.dataset.show = '2d';
       editor.frame(spot);
@@ -385,17 +399,35 @@ export function startApp({ storage = null, languages = [], csg, createScene, dow
   };
 
   /** The outline with its rounding comes from the worker; until then the primitive's is drawn. */
+  /**
+   * The crop follows the elements and their pictures: everything that shapes
+   * it is in its key, a picture by whether it is decoded yet.
+   */
+  const outlineKey = (s: PlateState): string => {
+    if (s.plate.kind !== 'crop') return JSON.stringify(s.plate);
+    const images = s.images.map((image) => [image.src.length, image.src.slice(-32), rasters.get(image.src) ? 1 : 0, { ...image, src: '' }]);
+    const shaped = s.texts.map((text) => [text, textShape(text) ? 1 : 0]);
+    return JSON.stringify([s.plate, images, shaped]);
+  };
+
   const requestOutline = () => {
-    const plate = state().plate;
-    const key = JSON.stringify(plate);
+    const s = state();
+    const key = outlineKey(s);
     if (key === outlineFor) return;
     outlineFor = key;
-    outline = instantOutline(plate);
-    csg.run({ kind: 'outline', state: state() }).then(
+    // a crop keeps its last outline until the new one comes; a primitive's is known at once
+    if (s.plate.kind !== 'crop') {
+      outline = instantOutline(s.plate);
+      outlineWarnings = [];
+    }
+    const crop = s.plate.kind === 'crop';
+    csg.run({ kind: 'outline', state: s, ...(crop ? { rasters: rasterList(), textRasters: textRasterList() } : {}) }).then(
       (done) => {
         if (stopped || !done || done.result.kind !== 'outline' || key !== outlineFor) return;
         outline = done.result.rings;
+        outlineWarnings = done.result.warnings;
         renderState();
+        if (crop) editor.fit();
       },
       // a failed outline leaves the instant one; the mesh job reports the failure
       () => {},
