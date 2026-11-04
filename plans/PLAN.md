@@ -375,3 +375,9 @@ sheet on a phone, offline reload.
   isolation, and "100 × 60" came out as "60 × 100" in Hebrew.
 - **M9**: the editor publishes its transform on the canvas (`data-view`)
   for the smoke, which maps plate points to the page with it.
+- **M10**: `scripts/inspect.mjs` (a build in Node) is not written: the
+  measurements run in the browser's worker (`smoke --measure`), and the
+  Node tests build every preset; a TS runner would be a new dependency.
+- **M10**: the back camera hides the bed's grid, which lay over the back
+  face, and has a light of its own from below, so keyholes read.
+- **M10**: `README.ru.md` is not written (optional in the conventions).
