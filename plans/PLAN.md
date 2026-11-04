@@ -314,3 +314,14 @@ sheet on a phone, offline reload.
   the project does not have.
 - **M3**: the 2D view's plate is a mid-tone, so a picture's white highs show
   on it in the light theme.
+- **M4**: the two new fonts are Marck Script (a script, Latin + Cyrillic)
+  and Frank Ruhl Libre (a Hebrew serif with Latin), both OFL.
+- **M4**: arc sides, where the spec's words were ambiguous: outside — the
+  baseline on the circle, letters outwards, along the top, read clockwise;
+  inside — the baseline on the circle, letters towards the centre, along the
+  bottom, upright, read left to right.
+- **M4**: `text.engraveDeep` is not raised: the depth's range (≤ T − 0.4)
+  already keeps 0.4 mm of base, so the case cannot happen.
+- **M4**: element boxes moved to `geo/boxes.ts`; text boxes measured from
+  their rasters are kept there by the app (`measuredTextBoxes`), the worker
+  does not need them.

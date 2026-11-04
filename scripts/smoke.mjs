@@ -313,6 +313,44 @@ try {
     });
   }
 
+  await step('texts: two lines in each font, Cyrillic, Hebrew, raised, engraved, on an arc', async () => {
+    const { page, context } = await app.open();
+    let { info } = await built(page);
+    await page.click('#addText');
+    // the font loads first: the text is built only then, 1 mm over the 3 mm base
+    ({ info } = await built(page, info));
+    check(info.includes('× 4 mm'), `raised text: ${info}`);
+    const setText = async (value) => {
+      await page.fill('#element-text', value);
+      await page.locator('#element-text').dispatchEvent('change');
+    };
+    await setText('Kitchen\nКухня');
+    ({ info } = await built(page, info));
+    for (const font of ['oswald', 'ptSerif', 'comfortaa', 'marckScript', 'frankRuhl', 'rubik']) {
+      await page.selectOption('#element-text-font', font);
+      ({ info } = await built(page, info));
+      check(info.includes('× 4 mm') && (await page.locator('#meshBlocked').isHidden()), `${font}: ${info}`);
+    }
+    await setText('שלום 12');
+    ({ info } = await built(page, info));
+    check(await page.locator('#meshBlocked').isHidden(), 'Hebrew: the mesh is blocked');
+    await page.selectOption('#element-text-mode', 'engraved');
+    ({ info } = await built(page, info));
+    check(info.includes('× 3 mm'), `engraved text: ${info}`);
+    await page.selectOption('#element-text-mode', 'raised');
+    await setText('PLATE BUILDER');
+    await page.check('#element-text-arc');
+    await setNumber(page, 'element-text-arcRadius', 25);
+    ({ info } = await built(page, info));
+    check(info.includes('× 4 mm') && (await page.locator('#meshBlocked').isHidden()), `arc text: ${info}`);
+    await page.selectOption('#element-text-arcSide', 'inside');
+    ({ info } = await built(page, info));
+    check(await page.locator('#meshBlocked').isHidden(), 'inside arc: the mesh is blocked');
+    if (shots) await page.screenshot({ path: 'shots/texts-desktop.png' });
+    console.log(`    arc text: ${info}`);
+    await context.close();
+  });
+
   await step('downloads a real STL', async () => {
     const { page, context } = await app.open();
     await built(page);
