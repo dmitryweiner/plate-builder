@@ -25,10 +25,13 @@ import { detectLocale, direction, isLocale, messages, staticText, type Locale, t
 import type { CameraPreset, SceneHandle } from './render/view';
 import { addHole, addText, duplicateElement, elementName, nudgeElement, removeElement, toggleVisible } from './state/edit';
 import { History } from './state/history';
+import { BUILT_IN_PRESETS } from './state/presets';
+import { projectFileName, projectFileText, readProjectFile } from './state/projectFile';
 import { loadSettings, saveSettings, type KeyValueStorage, type Settings } from './storage';
 import { renderControls, type ControlsHandle } from './ui/controls';
 import { el } from './ui/dom';
 import { renderElementList } from './ui/elementsCard';
+import { renderPresetList } from './ui/presetList';
 import { heightPicture, type ImportedImage } from './ui/imageImport';
 import { silhouetteSize, type VignetteEntry } from './ui/svgRaster';
 import { plateControls } from './ui/plateCard';
@@ -39,6 +42,8 @@ import type { Job, JobResult, MeshResult } from './worker/protocol';
 
 /** The pause after the last edit before a preview is built (spec §8.4). */
 export const PREVIEW_DELAY_MS = 250;
+/** The pause after the last edit before the project is saved to the browser's storage. */
+export const SAVE_DELAY_MS = 1000;
 /** Arrow keys move the selected element this far, mm; with Shift ten times as far (spec §7.3). */
 export const NUDGE_MM = 0.5;
 
@@ -157,6 +162,15 @@ export function startApp({
   const downloadButton = el('downloadStl', HTMLButtonElement);
   const exportStatus = el('exportStatus', HTMLOutputElement);
   const exportProgress = el('exportProgress', HTMLProgressElement);
+  const storageBanner = el('storageBanner', HTMLElement);
+  const bannerSave = el('bannerSave', HTMLButtonElement);
+  const projectName = el('projectName', HTMLInputElement);
+  const saveProjectButton = el('saveProject', HTMLButtonElement);
+  const openProjectButton = el('openProject', HTMLButtonElement);
+  const projectFile = el('projectFile', HTMLInputElement);
+  const projectStatus = el('projectStatus', HTMLElement);
+  const presetList = el('presetList', HTMLElement);
+  const savePresetButton = el('savePreset', HTMLButtonElement);
   const buildProgress = el('buildProgress', HTMLProgressElement);
   const printHints = el('printHints', HTMLElement);
   const undoButton = el('undo', HTMLButtonElement);
@@ -178,7 +192,13 @@ export function startApp({
 
   let settings: Settings = loadSettings(storage);
   let locale: Locale = detectLocale(settings.locale, languages);
-  const history = new History<PlateState>(defaultState());
+  // a first visit opens the first preset; afterwards, the project as it was left
+  const firstPreset = BUILT_IN_PRESETS[0];
+  const history = new History<PlateState>(settings.project ?? firstPreset?.state ?? defaultState());
+  /** the preset opened last and the project as it was then: "changed" once they differ */
+  let opened: { id: string; json: string } | null =
+    settings.project || !firstPreset ? null : { id: firstPreset.id, json: JSON.stringify(firstPreset.state) };
+  let saveTimer: number | null = null;
   let selected: string | null = null;
   let outline: Ring[] = instantOutline(history.state.plate);
   /** the plate the last outline job was asked for, to ask again only when it changes */
@@ -200,6 +220,7 @@ export function startApp({
   /** what the element list and the warnings last showed, so they are made again only when it changes */
   let elementListKey = '';
   let warningsKey = '';
+  let presetsKey = '';
   /** the vignette catalog, once fetched */
   let catalog: VignetteEntry[] = [];
   /** SVG proportions by URL, once loaded; a failed load stays NaN */
@@ -444,7 +465,13 @@ export function startApp({
     measureTexts();
     // the worker's warnings belong to the build they came from: kept only for elements still there
     const fromBuild = workerWarnings.filter((w) => !w.code.startsWith('outline.') && w.ids.every((id) => findElement(s, id)));
-    warnings = [...outlineWarnings, ...findWarnings(s, outline), ...fromBuild];
+    const ink = new Map(
+      s.texts.flatMap((text) => {
+        const rings = textShape(text)?.rings;
+        return rings ? [[text.id, rings] as const] : [];
+      }),
+    );
+    warnings = [...outlineWarnings, ...findWarnings(s, outline, ink), ...fromBuild];
     // the last build's mesh check: a warning that blocks the export
     const problems = build.state === 'done' ? build.mesh.problems : [];
     if (problems.length) warnings.push({ code: 'mesh.invalid', ids: [], spot: [0, 0] });
@@ -467,6 +494,8 @@ export function startApp({
       );
     }
     renderHints();
+    if (document.activeElement !== projectName) projectName.value = s.name;
+    renderPresets();
     undoButton.disabled = !history.canUndo;
     redoButton.disabled = !history.canRedo;
     editor.draw();
@@ -485,6 +514,84 @@ export function startApp({
     ctx.clearRect(0, 0, selectedThumb.width, selectedThumb.height);
     ctx.drawImage(source, 0, 0, selectedThumb.width, selectedThumb.height);
   }
+
+  function renderPresets(): void {
+    const changed = opened && JSON.stringify(state()) !== opened.json ? opened.id : null;
+    const key = JSON.stringify([locale, changed, settings.presets.map((p) => [p.id, p.name])]);
+    if (key === presetsKey) return;
+    presetsKey = key;
+    renderPresetList(presetList, BUILT_IN_PRESETS, settings.presets, changed, t(), locale, {
+      open: (id) => openPreset(id),
+      rename: (id, name) => {
+        settings = {
+          ...settings,
+          presets: settings.presets.map((p) => (p.id === id && name.trim() ? { ...p, name: name.trim().slice(0, 60) } : p)),
+        };
+        persist();
+        renderState();
+      },
+      remove: (id) => {
+        settings = { ...settings, presets: settings.presets.filter((p) => p.id !== id) };
+        if (opened?.id === id) opened = null;
+        persist();
+        renderState();
+      },
+    });
+  }
+
+  /** Opens a project in place of the current one: one step, so undo brings the old one back. */
+  function openProject(next: PlateState, preset: string | null): void {
+    selected = null;
+    history.commit(sanitizeState(next));
+    opened = preset ? { id: preset, json: JSON.stringify(state()) } : null;
+    afterChange();
+    editor.fit();
+  }
+
+  function openPreset(id: string): void {
+    const preset = BUILT_IN_PRESETS.find((p) => p.id === id) ?? settings.presets.find((p) => p.id === id);
+    if (preset) openProject(preset.state, id);
+  }
+
+  /** Saves to the browser's storage; the banner says so when it refuses, and goes once a save works. */
+  function persist(): void {
+    if (saveTimer !== null) timers.clear(saveTimer);
+    saveTimer = null;
+    settings = { ...settings, project: state() };
+    storageBanner.hidden = saveSettings(storage, settings);
+  }
+  const schedulePersist = () => {
+    if (saveTimer !== null) timers.clear(saveTimer);
+    saveTimer = timers.set(persist, SAVE_DELAY_MS);
+  };
+
+  const saveProjectFile = () => download(projectFileName(state().name), new TextEncoder().encode(projectFileText(state())).buffer);
+  const pickProject = () => projectFile.click();
+  const onProjectFile = () => {
+    const file = projectFile.files?.[0];
+    projectFile.value = '';
+    if (!file) return;
+    projectStatus.hidden = true;
+    void file.text().then((text) => {
+      if (stopped) return;
+      const read = readProjectFile(text);
+      if (read.ok) {
+        openProject(read.state, null);
+        return;
+      }
+      projectStatus.hidden = false;
+      projectStatus.textContent = { broken: t().projectBroken, foreign: t().projectForeign, newer: t().projectNewer }[read.reason];
+    });
+  };
+  const onProjectName = () => update({ ...state(), name: projectName.value }, true);
+  const savePreset = () => {
+    const n = Math.max(0, ...settings.presets.map((p) => Number(p.id.slice(1)) || 0)) + 1;
+    const id = `u${n}`;
+    settings = { ...settings, presets: [...settings.presets, { id, name: state().name, state: state() }] };
+    opened = { id, json: JSON.stringify(state()) };
+    persist();
+    renderState();
+  };
 
   /** The print hints (spec §9): the back on the bed, and where a colour change makes sense. */
   function renderHints(): void {
@@ -614,6 +721,7 @@ export function startApp({
 
   function afterChange() {
     if (selected && !findElement(state(), selected)) selected = null;
+    schedulePersist();
     ensureRasters();
     requestOutline();
     renderState();
@@ -741,7 +849,7 @@ export function startApp({
     if (!isLocale(value)) return;
     locale = value;
     settings = { ...settings, locale: value };
-    saveSettings(storage, settings);
+    persist();
     render();
   };
 
@@ -807,6 +915,12 @@ export function startApp({
   addImageButton.addEventListener('click', pickImage);
   addTextButton.addEventListener('click', addTextNow);
   svgUpload.addEventListener('click', pickSvg);
+  bannerSave.addEventListener('click', saveProjectFile);
+  saveProjectButton.addEventListener('click', saveProjectFile);
+  openProjectButton.addEventListener('click', pickProject);
+  projectFile.addEventListener('change', onProjectFile);
+  projectName.addEventListener('change', onProjectName);
+  savePresetButton.addEventListener('click', savePreset);
   svgFile.addEventListener('change', onSvgFile);
   silhouettes.catalog().then(
     (entries) => {
@@ -835,6 +949,16 @@ export function startApp({
     addImageButton.removeEventListener('click', pickImage);
     addTextButton.removeEventListener('click', addTextNow);
     svgUpload.removeEventListener('click', pickSvg);
+    bannerSave.removeEventListener('click', saveProjectFile);
+    saveProjectButton.removeEventListener('click', saveProjectFile);
+    openProjectButton.removeEventListener('click', pickProject);
+    projectFile.removeEventListener('change', onProjectFile);
+    projectName.removeEventListener('change', onProjectName);
+    savePresetButton.removeEventListener('click', savePreset);
+    if (saveTimer !== null) {
+      timers.clear(saveTimer);
+      persist();
+    }
     svgFile.removeEventListener('change', onSvgFile);
     imageFile.removeEventListener('change', onImageFile);
     document.removeEventListener('keydown', onKey);

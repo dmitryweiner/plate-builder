@@ -496,3 +496,45 @@ footer a {
   color: var(--muted);
   font-size: 0.875rem;
 }
+
+.banner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-block-end: 12px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--focus) 25%, var(--surface));
+  font-size: 0.875rem;
+}
+.banner[hidden] {
+  display: none;
+}
+.name-field {
+  grid-column: 1 / -1;
+  inline-size: 100%;
+  min-block-size: 36px;
+  padding-inline: 8px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--bg);
+  color: var(--fg);
+}
+.preset-list {
+  margin: 0 0 8px;
+  padding: 0;
+  list-style: none;
+}
+.preset-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.preset-row .name-field {
+  flex: 1;
+}
+.preset-changed {
+  color: var(--muted);
+  font-size: 0.8rem;
+}

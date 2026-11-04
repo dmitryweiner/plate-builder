@@ -142,3 +142,19 @@ describe('relief.tall', () => {
     expect(codes({ ...rim, plate: { ...rim.plate, rim: true, rimHeight: 3.5 } })).toEqual(['relief.tall']);
   });
 });
+
+const withO = (x: number) => ({ ...plate([{ x, diameter: 3 }]), texts: [{ ...defaultText(defaultState()), id: 't1' }] });
+
+describe('a hole and a text’s real ink', () => {
+  // a letter O: a 10 mm square ring with a 6 mm counter, around the origin
+  const ring: [number, number][][] = [square(-5, -5, 10), square(-3, -3, 6).toReversed()];
+
+  it('a hole in a letter’s counter does not cross the text', () => {
+    expect(codes(withO(0))).toEqual(['element.overlap']);
+    expect(warnings(withO(0), outline, new Map([['t1', ring]])).map((w) => w.code)).toEqual([]);
+  });
+
+  it('a hole on the stroke does', () => {
+    expect(warnings(withO(4), outline, new Map([['t1', ring]])).map((w) => w.code)).toEqual(['element.overlap']);
+  });
+});

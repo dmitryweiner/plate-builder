@@ -20,7 +20,18 @@ const preview = flags.has('preview');
 const shots = flags.has('shots');
 // --measure: the image timings of plan M3 (preview and export of a 512 px image on 100 × 60 and 300 × 300)
 const measure = flags.has('measure');
-const app = await launch({ preview });
+const launched = await launch({ preview });
+/**
+ * Every step starts from the plain default plate, as a returning visitor
+ * with an empty project would (a first visit opens the first preset: its own
+ * step). `{}` is a project that sanitising turns into the default.
+ */
+const BLANK = { 'plate-builder': JSON.stringify({ version: 2, settings: { locale: null, project: {}, presets: [] } }) };
+const app = {
+  ...launched,
+  open: (options = {}) => launched.open({ storage: BLANK, ...options }),
+  first: (options = {}) => launched.open(options),
+};
 
 async function step(name, fn) {
   app.label(name);
@@ -30,17 +41,18 @@ async function step(name, fn) {
 
 /** Waits until the build after the last edit is shown; returns the size line and the worker's time. */
 async function built(page, before = '') {
-  await page.waitForFunction(
+  // read in the same moment as the wait: a next build may start right after
+  const handle = await page.waitForFunction(
     (old) => {
       const status = document.querySelector('#status')?.textContent ?? '';
       const info = document.querySelector('#meshInfo')?.textContent ?? '';
-      return /built in \d+ ms/.test(status) && info !== '' && info !== old;
+      const ms = status.match(/built in (\d+) ms/);
+      return ms && info !== '' && info !== old ? { info, ms: Number(ms[1]) } : null;
     },
     before,
     { timeout: 20000 },
   );
-  const status = await page.locator('#status').textContent();
-  return { info: await page.locator('#meshInfo').textContent(), ms: Number(status.match(/\d+/)[0]) };
+  return handle.jsonValue();
 }
 
 /**
@@ -131,6 +143,18 @@ async function exportMs(page) {
 }
 
 const fieldValue = async (page, id) => Number(await page.locator(`#${id}-n`).inputValue());
+
+/** Waits until the shown build has this size line's start (a later build may land first). */
+async function builtAs(page, prefix) {
+  await page.waitForFunction(
+    (p) =>
+      (document.querySelector('#meshInfo')?.textContent ?? '').startsWith(p) &&
+      /built in/.test(document.querySelector('#status')?.textContent ?? ''),
+    prefix,
+    { timeout: 20000 },
+  );
+  return page.locator('#meshInfo').textContent();
+}
 
 /** Sets a range control through its exact number field. */
 async function setNumber(page, id, value) {
@@ -471,6 +495,58 @@ try {
     });
     check(await page.locator('#downloadStl').isDisabled(), 'a broken mesh can still be exported');
     console.log(`    ${codes.length} warnings: ${codes.join(', ')}`);
+    await context.close();
+  });
+
+  await step('projects: a first visit, a reload keeps the project and its images, a file round trip, presets', async () => {
+    const { page, context } = await app.first();
+    let { info } = await built(page);
+    check((await page.locator('#projectName').inputValue()) === 'Door sign', 'a first visit did not open the door sign');
+    await page.setInputFiles('#imageFile', await testPicture(page, 'png'));
+    ({ info } = await built(page, info));
+    await setNumber(page, 'plate-width', 170);
+    ({ info } = await built(page, info));
+    // the save waits a second after the last edit
+    await page.waitForTimeout(1500);
+    await page.reload();
+    info = await builtAs(page, '170 × 60').catch(() => page.locator('#meshInfo').textContent());
+    check(info.startsWith('170 × 60'), `the reload lost the project: ${info}`);
+    check((await page.locator('.element-row').count()) === 4, 'the reload lost an element');
+    check(await page.locator('#selectedThumb').isHidden(), 'nothing should be selected after a reload');
+    // the project file, out and back in
+    const [download] = await Promise.all([page.waitForEvent('download'), page.click('#saveProject')]);
+    const path = await download.path();
+    check(download.suggestedFilename() === 'door-sign.plate.json', `file name ${download.suggestedFilename()}`);
+    await page.click('.preset-row[data-id="medal"] button');
+    info = await builtAs(page, '60 × 60');
+    await page.setInputFiles('#projectFile', path);
+    info = await builtAs(page, '170 × 60');
+    // a user preset
+    await page.click('#savePreset');
+    check((await page.locator('.preset-row[data-id="u1"]').count()) === 1, 'the user preset is not listed');
+    for (const id of ['keychain', 'pet-tag', 'house-number', 'name-plate']) {
+      await page.click(`.preset-row[data-id="${id}"] button`);
+      ({ info } = await built(page, info));
+      check(await page.locator('#meshBlocked').isHidden(), `${id}: the mesh is blocked`);
+      const warned = await page.locator('#warningList li').evaluateAll((items) => items.map((li) => li.dataset.code));
+      check(warned.length === 0, `${id} has warnings: ${warned.join(', ')}`);
+      if (shots) await page.screenshot({ path: `shots/preset-${id}.png` });
+    }
+    await context.close();
+  });
+
+  await step('a browser that refuses to store says so', async () => {
+    const { page, context } = await app.open({
+      script: () => {
+        Storage.prototype.setItem = () => {
+          throw new DOMException('quota', 'QuotaExceededError');
+        };
+      },
+    });
+    let { info } = await built(page);
+    await setNumber(page, 'plate-width', 120);
+    ({ info } = await built(page, info));
+    await page.waitForFunction(() => !document.querySelector('#storageBanner')?.hidden, null, { timeout: 5000 });
     await context.close();
   });
 

@@ -357,3 +357,13 @@ sheet on a phone, offline reload.
   re-renders) otherwise lost its button between mousedown and mouseup.
 - **M7**: colour changes are listed only when there is more than one top
   (the base's alone is no change).
+- **M8**: storage version 2 keeps the language, the project and the user
+  presets under the one key; a version 1 save keeps its language.
+- **M8**: opening a preset or a project file is one undo step (not a reset),
+  so the project that was open comes back with undo.
+- **M8**: the keychain's ring for the key ring is a letter O around the hole
+  (holes take no part in a crop, so they need something of the crop around
+  them); a hole in a letter's counter is not `element.overlap` — the check
+  uses the text's traced ink where it is known.
+- **M8**: every built-in preset builds without a warning (checked by the
+  smoke).
