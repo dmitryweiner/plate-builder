@@ -255,11 +255,13 @@ select {
   color: var(--muted);
 }
 
+/* A row: on a phone the name above its control (a slider needs the width),
+   from 1024 px Case Constructor's line — name | − slider + | number unit. */
 .row {
   display: grid;
-  grid-template-columns: 1fr 5.5em auto;
+  grid-template-columns: minmax(0, 1fr);
   align-items: center;
-  gap: 4px 8px;
+  gap: 4px 6px;
   margin-block: 6px;
 }
 .row[hidden] {
@@ -267,16 +269,40 @@ select {
 }
 .row-name {
   grid-column: 1 / -1;
-  font-size: 0.875rem;
+  font-size: 12px;
   color: var(--muted);
 }
-.row select {
-  grid-column: 1 / -1;
+.range-row {
+  grid-template-columns: auto minmax(0, 1fr) auto 4.5em auto;
+}
+.range-row:not(:has(.unit)) {
+  grid-template-columns: auto minmax(0, 1fr) auto 4.5em;
 }
 .row input[type='range'] {
   inline-size: 100%;
+  min-inline-size: 0;
   min-block-size: 32px;
+  margin: 0;
   accent-color: var(--accent);
+}
+.adj-btn {
+  inline-size: 36px;
+  block-size: 36px;
+  padding: 0;
+  line-height: 1;
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  background: var(--panel);
+  color: var(--muted);
+  cursor: pointer;
+}
+.adj-btn:hover:not(:disabled) {
+  color: var(--text);
+  border-color: var(--accent);
+}
+.adj-btn:disabled {
+  opacity: 0.35;
+  cursor: default;
 }
 .exact {
   inline-size: 100%;
@@ -286,19 +312,31 @@ select {
   border-radius: 6px;
   background: var(--panel);
   color: var(--text);
+  font-variant-numeric: tabular-nums;
+  text-align: end;
+  appearance: textfield;
+}
+.exact::-webkit-inner-spin-button,
+.exact::-webkit-outer-spin-button {
+  appearance: none;
+  margin: 0;
 }
 .unit {
-  font-size: 0.875rem;
+  font-size: 12px;
   color: var(--muted);
 }
-.row:not(:has(.unit)) .exact {
-  grid-column: 2 / -1;
+.row select {
+  inline-size: 100%;
+  min-inline-size: 0;
 }
 .check-row {
   grid-template-columns: auto 1fr;
 }
 .check-row .row-name {
   grid-column: 2;
+}
+.check-row input {
+  accent-color: var(--accent);
 }
 
 button.primary {
@@ -465,7 +503,7 @@ footer a {
   }
   .panel {
     position: static;
-    inline-size: 340px;
+    inline-size: 360px;
     max-block-size: none;
     flex: none;
     overflow-y: auto;
@@ -484,6 +522,39 @@ footer a {
   /* a pointer, not a finger: Case Constructor's density */
   select {
     min-block-size: 30px;
+  }
+  .row {
+    grid-template-columns: 88px minmax(0, 1fr);
+    margin-block: 5px;
+  }
+  .row-name {
+    grid-column: 1;
+  }
+  .range-row {
+    grid-template-columns: 88px auto minmax(0, 1fr) auto 3.8em auto;
+  }
+  .range-row:not(:has(.unit)) {
+    grid-template-columns: 88px auto minmax(0, 1fr) auto 3.8em;
+  }
+  .row input[type='range'] {
+    min-block-size: 22px;
+  }
+  .adj-btn {
+    inline-size: 22px;
+    block-size: 22px;
+  }
+  .exact {
+    min-block-size: 26px;
+    padding-inline: 4px;
+  }
+  .check-row {
+    grid-template-columns: auto 1fr;
+  }
+  .text-row .row-name {
+    grid-column: 1 / -1;
+  }
+  .text-row textarea {
+    grid-column: 1 / -1;
   }
   button.primary {
     min-block-size: 36px;

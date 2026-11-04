@@ -66,6 +66,8 @@ export const uk: Messages = {
   visible: 'Видимість',
   duplicate: 'Копія',
   remove: 'Видалити',
+  decrease: 'Зменшити',
+  increase: 'Збільшити',
   holeKind: 'Вид',
   holeRound: 'Круглий',
   holeSlot: 'Паз',

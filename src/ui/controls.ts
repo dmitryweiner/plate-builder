@@ -138,13 +138,33 @@ export function renderControls<T>(container: HTMLElement, controls: readonly Con
       field.step = String(control.step);
       field.inputMode = 'decimal';
       field.setAttribute('aria-label', o.t[control.label]);
+      // Case Constructor's fine steps: − and + beside the slider, one history step a click
+      const stepper = (dir: -1 | 1): HTMLButtonElement => {
+        const button = make('button', 'adj-btn', dir < 0 ? '−' : '+');
+        button.type = 'button';
+        button.id = `${id}-${dir < 0 ? 'dec' : 'inc'}`;
+        button.setAttribute('aria-label', `${dir < 0 ? o.t.decrease : o.t.increase}: ${o.t[control.label]}`);
+        button.addEventListener('click', () => {
+          const state = o.read();
+          // on the step's grid, so a value typed between steps lands on one
+          const moved = Number(format(Math.round(control.get(state) / control.step + dir) * control.step, control.step));
+          o.change(control.set(state, Math.min(limit(control.max, state), Math.max(limit(control.min, state), moved))), true);
+          show(o.read());
+        });
+        return button;
+      };
+      const minus = stepper(-1);
+      const plus = stepper(1);
       const show = (state: T): void => {
-        const min = String(limit(control.min, state));
-        const max = String(limit(control.max, state));
-        const value = format(control.get(state), control.step);
-        slider.min = field.min = min;
-        slider.max = field.max = max;
+        const min = limit(control.min, state);
+        const max = limit(control.max, state);
+        const current = control.get(state);
+        const value = format(current, control.step);
+        slider.min = field.min = String(min);
+        slider.max = field.max = String(max);
         slider.value = field.value = value;
+        minus.disabled = current <= min;
+        plus.disabled = current >= max;
       };
       slider.addEventListener('input', () => {
         field.value = format(Number(slider.value), control.step);
@@ -163,7 +183,8 @@ export function renderControls<T>(container: HTMLElement, controls: readonly Con
         o.change(next, true);
         show(o.read());
       });
-      row.append(slider, field);
+      row.classList.add('range-row');
+      row.append(minus, slider, plus, field);
       if (control.unit) row.append(make('span', 'unit', o.t[control.unit]));
       syncers.push(show);
     }
