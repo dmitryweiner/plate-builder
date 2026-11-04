@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { startApp, PREVIEW_DELAY_MS, type AppOptions, type Timers } from './app';
 import { LOCALE_NAMES, LOCALES } from './i18n';
 import type { CameraPreset, SceneHandle, ViewMesh } from './render/view';
@@ -46,10 +46,14 @@ class FakeCsg {
   run(job: Job): Promise<JobDone<JobResult> | null> {
     return new Promise((settle, fail) => this.jobs.push({ job, settle, fail }));
   }
+  /** The last mesh job (outline jobs run beside them). */
   last() {
-    const last = this.jobs.at(-1);
-    if (!last) throw new Error('no job');
+    const last = this.jobs.findLast((j) => j.job.kind === 'mesh');
+    if (!last) throw new Error('no mesh job');
     return last;
+  }
+  meshJobs() {
+    return this.jobs.filter((j) => j.job.kind === 'mesh');
   }
 }
 
@@ -129,6 +133,8 @@ function start(languages: readonly string[] = ['en-US'], over: Partial<AppOption
 const settle = () => new Promise((r) => setTimeout(r, 0));
 
 beforeEach(() => {
+  // jsdom draws nothing on a canvas; the 2D view handles that
+  vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(null);
   document.head.innerHTML = head;
   document.body.innerHTML = body;
   storage = new MemoryStorage();
@@ -137,7 +143,10 @@ beforeEach(() => {
   timers = new ManualTimers();
   downloads = [];
 });
-afterEach(() => stop());
+afterEach(() => {
+  stop();
+  vi.restoreAllMocks();
+});
 
 describe('language', () => {
   it('lists every locale in the switcher by its own name', () => {
@@ -205,12 +214,12 @@ describe('preview', () => {
   it('waits for a pause in the edits and builds once', () => {
     start();
     timers.flush();
-    const before = csg.jobs.length;
+    const before = csg.meshJobs().length;
     for (const value of ['110', '120', '130']) setInput('#plate-width', value, 'input');
     expect(timers.pending.size).toBe(1);
     expect([...timers.pending.values()][0]?.ms).toBe(PREVIEW_DELAY_MS);
     timers.flush();
-    expect(csg.jobs.length).toBe(before + 1);
+    expect(csg.meshJobs().length).toBe(before + 1);
     expect(csg.last().job).toMatchObject({ state: { plate: { width: 130 } } });
   });
 
@@ -299,7 +308,143 @@ describe('3D view', () => {
   it('works without a view (no WebGL) and without storage', () => {
     start([], { createScene: () => null, storage: null });
     timers.flush();
-    expect(csg.jobs).toHaveLength(1);
+    expect(csg.meshJobs()).toHaveLength(1);
     $('[data-camera="iso"]', HTMLButtonElement).click();
+  });
+});
+
+const press = (key: string, over: KeyboardEventInit = {}) =>
+  document.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true, ...over }));
+const holes = () => {
+  const job = csg.last().job;
+  return job.kind === 'mesh' ? job.state.holes : [];
+};
+
+describe('elements', () => {
+  it('adds a hole, selects it and shows its card', () => {
+    start();
+    expect(text('#elementList')).toBe('No elements yet.');
+    $('#addHole', HTMLButtonElement).click();
+    expect([...document.querySelectorAll('.element-row')].map((r) => r.textContent)).toEqual(['○Hole 1⧉✕']);
+    expect($('#selectedCard', HTMLElement).hidden).toBe(false);
+    expect(text('#selectedTitle')).toBe('Hole 1');
+    expect($('#element-diameter-n', HTMLInputElement).value).toBe('4');
+    timers.flush();
+    expect(holes()).toHaveLength(1);
+  });
+
+  it('edits the selected hole by its card and changes the rows with its kind', () => {
+    start();
+    $('#addHole', HTMLButtonElement).click();
+    setInput('#element-x-n', '20');
+    const kind = $('#element-holeKind', HTMLSelectElement);
+    kind.value = 'keyhole';
+    kind.dispatchEvent(new Event('change'));
+    expect($('#element-keySlot', HTMLInputElement).closest('.row')?.hasAttribute('hidden')).toBe(false);
+    expect($('#element-diameter', HTMLInputElement).closest('.row')?.hasAttribute('hidden')).toBe(true);
+    timers.flush();
+    expect(holes()[0]).toMatchObject({ x: 20, kind: 'keyhole' });
+  });
+
+  it('duplicates, hides and deletes from the list', () => {
+    start();
+    $('#addHole', HTMLButtonElement).click();
+    $('.element-row [aria-label^="Duplicate"]', HTMLButtonElement).click();
+    expect(text('#selectedTitle')).toBe('Hole 2');
+    const eye = document.querySelectorAll<HTMLInputElement>('.element-visible')[1];
+    eye?.click();
+    expect(document.querySelectorAll('.hidden-element')).toHaveLength(1);
+    $('.element-row [aria-label="Delete: Hole 1"]', HTMLButtonElement).click();
+    expect([...document.querySelectorAll('.element-row')].map((r) => r.textContent)).toEqual(['○Hole 1⧉✕']);
+  });
+
+  it('selects from the list', () => {
+    start();
+    $('#addHole', HTMLButtonElement).click();
+    $('#addHole', HTMLButtonElement).click();
+    $('.element-row[data-id="h1"] .element-name', HTMLButtonElement).click();
+    expect(text('#selectedTitle')).toBe('Hole 1');
+    expect($('.element-row[data-id="h1"]', HTMLElement).classList.contains('selected')).toBe(true);
+  });
+});
+
+describe('history', () => {
+  it('undoes and redoes with the buttons and the keys, a slider drag being one step', () => {
+    start();
+    expect($('#undo', HTMLButtonElement).disabled).toBe(true);
+    for (const value of ['110', '120', '130']) setInput('#plate-width', value, 'input');
+    setInput('#plate-width', '130', 'change');
+    $('#undo', HTMLButtonElement).click();
+    expect($('#plate-width-n', HTMLInputElement).value).toBe('100');
+    expect($('#redo', HTMLButtonElement).disabled).toBe(false);
+    press('z', { ctrlKey: true, shiftKey: true });
+    expect($('#plate-width-n', HTMLInputElement).value).toBe('130');
+    press('z', { metaKey: true });
+    expect($('#plate-width-n', HTMLInputElement).value).toBe('100');
+    press('y', { ctrlKey: true });
+    expect($('#plate-width-n', HTMLInputElement).value).toBe('130');
+  });
+
+  it('undo of an added hole removes it and its selection', () => {
+    start();
+    $('#addHole', HTMLButtonElement).click();
+    press('z', { ctrlKey: true });
+    expect(text('#elementList')).toBe('No elements yet.');
+    expect($('#selectedCard', HTMLElement).hidden).toBe(true);
+  });
+});
+
+describe('keyboard', () => {
+  it('nudges, duplicates, deletes and deselects the selected element', () => {
+    start();
+    $('#addHole', HTMLButtonElement).click();
+    press('ArrowRight');
+    press('ArrowUp', { shiftKey: true });
+    expect($('#element-x-n', HTMLInputElement).value).toBe('0.5');
+    expect($('#element-y-n', HTMLInputElement).value).toBe('5');
+    press('d', { ctrlKey: true });
+    expect(document.querySelectorAll('.element-row')).toHaveLength(2);
+    press('Delete');
+    expect(document.querySelectorAll('.element-row')).toHaveLength(1);
+    $('.element-name', HTMLButtonElement).click();
+    press('Escape');
+    expect($('#selectedCard', HTMLElement).hidden).toBe(true);
+  });
+
+  it('leaves keys typed into a field alone', () => {
+    start();
+    $('#addHole', HTMLButtonElement).click();
+    $('#element-x-n', HTMLInputElement).dispatchEvent(new KeyboardEvent('keydown', { key: 'Delete', bubbles: true }));
+    expect(document.querySelectorAll('.element-row')).toHaveLength(1);
+  });
+});
+
+const outlines = () => csg.jobs.filter((j) => j.job.kind === 'outline').length;
+
+describe('warnings and outline', () => {
+  it('lists a warning with the element name and hides the card when it is gone', () => {
+    start();
+    $('#addHole', HTMLButtonElement).click();
+    setInput('#element-x-n', '47');
+    expect($('#warningsCard', HTMLElement).hidden).toBe(false);
+    expect(text('#warningList li span')).toBe('Hole 1: only 1 mm of material to the edge; 2 mm or more holds better.');
+    $('#warningList button', HTMLButtonElement).click();
+    setInput('#element-x-n', '0');
+    expect($('#warningsCard', HTMLElement).hidden).toBe(true);
+  });
+
+  it('asks the worker for the outline when the plate changes, not when an element does', () => {
+    start();
+    expect(outlines()).toBe(1);
+    $('#addHole', HTMLButtonElement).click();
+    expect(outlines()).toBe(1);
+    setInput('#plate-rounding-n', '10');
+    expect(outlines()).toBe(2);
+  });
+
+  it('switches the phone view between 2D and 3D', () => {
+    start();
+    $('.view-tabs [data-show="3d"]', HTMLButtonElement).click();
+    expect($('#views', HTMLElement).dataset.show).toBe('3d');
   });
 });

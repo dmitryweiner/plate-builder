@@ -5,7 +5,8 @@
 //   plate = ( base ∪ rim ∪ frame ∪ images ∪ raised texts ) ∩ outline prism
 //           − engraved texts − holes
 
-import type { CrossSection } from 'manifold-3d';
+import type { CrossSection, Manifold } from 'manifold-3d';
+import { holeCutters, type Cutter } from '../geo/holes';
 import { CHORD_TOLERANCE, primitiveOutline, segmentsFor, type Ring } from '../geo/outline';
 import { PRIMITIVE_KINDS, type Plate, type PlateState, type PrimitiveKind } from '../geo/state';
 import type { CsgApi, CsgScope } from './csg';
@@ -62,11 +63,34 @@ export interface PlateMesh {
   indices: Uint32Array;
 }
 
+function cutterSolid(csg: CsgApi, scope: CsgScope, cutter: Cutter): Manifold {
+  if (cutter.kind === 'revolve') {
+    const profile = scope.keep(new csg.CrossSection([cutter.profile], 'Positive'));
+    const radius = Math.max(...cutter.profile.map(([r]) => r));
+    const solid = scope.keep(profile.revolve(segmentsFor(radius)));
+    return scope.keep(solid.translate([cutter.x, cutter.y, 0]));
+  }
+  const section = scope.keep(new csg.CrossSection(cutter.rings, 'Positive'));
+  const prism = scope.keep(section.extrude(cutter.z1 - cutter.z0));
+  return scope.keep(prism.translate([0, 0, cutter.z0]));
+}
+
+/** The solid (spec §6): so far the base minus the holes. */
+export function buildSolid(csg: CsgApi, scope: CsgScope, state: PlateState): Manifold {
+  const { thickness } = state.plate;
+  const outline = plateOutline(csg, scope, state.plate);
+  const base = scope.keep(outline.extrude(thickness));
+  // the top of everything that stands on the base; reliefs join in M3–M6
+  const top = thickness;
+  const cutters = state.holes.filter((hole) => hole.visible).flatMap((hole) => holeCutters(hole, thickness, top));
+  if (cutters.length === 0) return base;
+  const holes = scope.keep(csg.Manifold.union(cutters.map((cutter) => cutterSolid(csg, scope, cutter))));
+  return scope.keep(base.subtract(holes));
+}
+
 /** The whole solid as a mesh. */
 export function buildMesh(csg: CsgApi, scope: CsgScope, state: PlateState): PlateMesh {
-  const outline = plateOutline(csg, scope, state.plate);
-  const base = scope.keep(outline.extrude(state.plate.thickness));
-  const mesh = base.getMesh();
+  const mesh = buildSolid(csg, scope, state).getMesh();
   return { positions: positionsOf(mesh.vertProperties, mesh.numProp), indices: new Uint32Array(mesh.triVerts) };
 }
 
