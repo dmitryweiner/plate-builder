@@ -663,7 +663,25 @@ try {
     check((await page.locator('html').getAttribute('dir')) === 'rtl', 'he-IL browser did not get dir=rtl');
     const select = await page.locator('#locale').boundingBox();
     check(select !== null && select.x < VIEWPORTS.desktop.width / 2, 'the language switcher did not move to the left');
+    // an element's card mirrors too: its name on the right, delete on the left
+    await page.click('#addText');
+    const name = await page.locator('.element-row .element-title').boundingBox();
+    const remove = await page.locator('.element-row [aria-label^="מחיקה"]').boundingBox();
+    check(name !== null && remove !== null && remove.x < name.x, "the element card's head did not mirror");
+    if (shots) await page.screenshot({ path: 'shots/hebrew-groups.png' });
     await context.close();
+  });
+
+  await step('the top bar keeps to two lines on a 360 px phone in every language', async () => {
+    for (const locale of ['en-US', 'ru-RU', 'uk-UA', 'he-IL']) {
+      const { page, context } = await app.open({ viewport: { width: 360, height: 740 }, locale });
+      const bar = await page.locator('.topbar').boundingBox();
+      check(bar !== null && bar.height <= 110, `${locale}: the top bar is ${bar?.height}px high`);
+      const overflow = await page.locator('.topbar').evaluate((node) => node.scrollWidth > node.clientWidth);
+      check(!overflow, `${locale}: the top bar overflows`);
+      if (shots) await page.screenshot({ path: `shots/phone-topbar-${locale}.png` });
+      await context.close();
+    }
   });
 
   for (const [name, viewport] of Object.entries(VIEWPORTS)) {
