@@ -23,14 +23,14 @@ import { stlFileName } from './geo/stl';
 import { warnings as findWarnings, type Warning } from './geo/warnings';
 import { detectLocale, direction, isLocale, messages, staticText, type Locale, type Messages } from './i18n';
 import type { CameraPreset, SceneHandle } from './render/view';
-import { addHole, addText, duplicateElement, elementName, nudgeElement, removeElement, toggleVisible } from './state/edit';
+import { addHole, addText, duplicateElement, nudgeElement, removeElement, toggleVisible } from './state/edit';
 import { History } from './state/history';
 import { BUILT_IN_PRESETS } from './state/presets';
 import { projectFileName, projectFileText, readProjectFile } from './state/projectFile';
 import { loadSettings, saveSettings, type KeyValueStorage, type Settings } from './storage';
 import { renderControls, type ControlsHandle } from './ui/controls';
-import { el } from './ui/dom';
-import { renderElementList } from './ui/elementsCard';
+import { el, scrollIntoContainer } from './ui/dom';
+import { elementsOf, renderElementGroup, syncHints, type ElementActions, type ElementType } from './ui/elementsCard';
 import { renderPresetList } from './ui/presetList';
 import { setupSheet, type NarrowQuery } from './ui/sheet';
 import { heightPicture, type ImportedImage } from './ui/imageImport';
@@ -155,9 +155,31 @@ export function startApp({
   const localeSelect = el('locale', HTMLSelectElement);
   const status = el('status', HTMLOutputElement);
   const plateBox = el('plateControls', HTMLElement);
-  const elementList = el('elementList', HTMLElement);
-  const selectedCard = el('selectedCard', HTMLElement);
-  const selectedTitle = el('selectedTitle', HTMLElement);
+  /** the element groups: their lists, counts and add buttons */
+  const groups: { type: ElementType; list: HTMLElement; count: HTMLElement; add: HTMLButtonElement; limit: number }[] = [
+    {
+      type: 'text',
+      list: el('textList', HTMLElement),
+      count: el('textsCount', HTMLElement),
+      add: el('addText', HTMLButtonElement),
+      limit: LIMITS.texts,
+    },
+    {
+      type: 'image',
+      list: el('imageList', HTMLElement),
+      count: el('imagesCount', HTMLElement),
+      add: el('addImage', HTMLButtonElement),
+      limit: LIMITS.images,
+    },
+    {
+      type: 'hole',
+      list: el('holeList', HTMLElement),
+      count: el('holesCount', HTMLElement),
+      add: el('addHole', HTMLButtonElement),
+      limit: LIMITS.holes,
+    },
+  ];
+  const selectedBody = el('selectedBody', HTMLElement);
   const selectedBox = el('selectedControls', HTMLElement);
   const warningsCard = el('warningsCard', HTMLElement);
   const warningList = el('warningList', HTMLElement);
@@ -174,6 +196,9 @@ export function startApp({
   const projectFile = el('projectFile', HTMLInputElement);
   const projectStatus = el('projectStatus', HTMLElement);
   const presetList = el('presetList', HTMLElement);
+  const presetsOpen = el('presetsOpen', HTMLButtonElement);
+  const presetsDialog = el('presets', HTMLElement);
+  const presetsClose = el('presetsClose', HTMLButtonElement);
   const savePresetButton = el('savePreset', HTMLButtonElement);
   const buildProgress = el('buildProgress', HTMLProgressElement);
   const printHints = el('printHints', HTMLElement);
@@ -230,8 +255,16 @@ export function startApp({
   const textShapes = new Map<string, { raster: TextRaster; rings: Ring[] } | null>();
   /** warnings from the last build: what only the contours tell */
   let workerWarnings: Warning[] = [];
-  /** what the element list and the warnings last showed, so they are made again only when it changes */
+  /** what the element lists and the warnings last showed, so they are made again only when it changes */
   let elementListKey = '';
+  /** the element whose card was last brought into view */
+  let shownSelected: string | null = null;
+  const actions: ElementActions = {
+    select: (id) => select(id),
+    toggle: (id) => update(toggleVisible(state(), id), true),
+    duplicate: (id) => duplicate(id),
+    remove: (id) => remove(id),
+  };
   let warningsKey = '';
   let presetsKey = '';
   /** the vignette catalog, once fetched */
@@ -455,18 +488,28 @@ export function startApp({
     ]);
     if (listKey !== elementListKey) {
       elementListKey = listKey;
-      renderElementList(elementList, s, selected, m, {
-        select: (id) => select(id),
-        toggle: (id) => update(toggleVisible(state(), id), true),
-        duplicate: (id) => duplicate(id),
-        remove: (id) => remove(id),
-      });
+      // parked while no card is open; a card that opens takes it
+      selectedBody.hidden = true;
+      panel.append(selectedBody);
+      for (const group of groups) {
+        renderElementGroup(group.list, group.type, s, selected, m, actions, selectedBody);
+      }
+      // a selection made elsewhere (the 2D view, a key, a new element) shows its card's head
+      if (selected !== shownSelected) {
+        shownSelected = selected;
+        const head = selectedBody.closest('.element-row')?.querySelector('.element-head');
+        if (head) scrollIntoContainer(panel, head);
+      }
+    }
+    for (const group of groups) {
+      const n = elementsOf(s, group.type).length;
+      group.count.textContent = `${n} / ${group.limit}`;
+      group.add.disabled = n >= group.limit;
+      syncHints(group.list, s, group.type, m);
     }
 
     const element = findElement(s, selected);
-    selectedCard.hidden = element === null;
     if (element) {
-      selectedTitle.textContent = elementName(s, element.id, m.elementName);
       const kind = element.type === 'hole' ? element.kind : element.type;
       // the rows are made again only for another element or kind; a value change just syncs them
       if (selectedControls?.id !== element.id || selectedControls.kind !== kind) {
@@ -517,6 +560,9 @@ export function startApp({
     }
     renderHints();
     if (document.activeElement !== projectName) projectName.value = s.name;
+    presetsOpen.textContent = s.name;
+    presetsOpen.title = m.presetsHeading;
+    presetsOpen.setAttribute('aria-label', `${m.presetsHeading}: ${s.name}`);
     renderPresets();
     undoButton.disabled = !history.canUndo;
     redoButton.disabled = !history.canRedo;
@@ -543,7 +589,10 @@ export function startApp({
     if (key === presetsKey) return;
     presetsKey = key;
     renderPresetList(presetList, BUILT_IN_PRESETS, settings.presets, changed, t(), locale, {
-      open: (id) => openPreset(id),
+      open: (id) => {
+        openPreset(id);
+        closePresets();
+      },
       rename: (id, name) => {
         settings = {
           ...settings,
@@ -569,6 +618,22 @@ export function startApp({
     afterChange();
     editor.fit();
   }
+
+  /** The presets dialog over everything; closed, the focus goes back to its button. */
+  const openPresets = () => {
+    presetsDialog.hidden = false;
+    presetsOpen.setAttribute('aria-expanded', 'true');
+    presetsClose.focus();
+  };
+  const closePresets = () => {
+    if (presetsDialog.hidden) return;
+    presetsDialog.hidden = true;
+    presetsOpen.setAttribute('aria-expanded', 'false');
+    presetsOpen.focus();
+  };
+  const onPresetsBackdrop = (event: MouseEvent) => {
+    if (event.target === presetsDialog) closePresets();
+  };
 
   function openPreset(id: string): void {
     const preset = BUILT_IN_PRESETS.find((p) => p.id === id) ?? settings.presets.find((p) => p.id === id);
@@ -829,6 +894,14 @@ export function startApp({
   };
 
   const onKey = (event: KeyboardEvent) => {
+    // the open dialog takes Esc, even from its name fields
+    if (!presetsDialog.hidden) {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        closePresets();
+      }
+      return;
+    }
     if (typing(event.target)) return;
     const mod = event.ctrlKey || event.metaKey;
     const key = event.key.toLowerCase();
@@ -943,6 +1016,9 @@ export function startApp({
   projectFile.addEventListener('change', onProjectFile);
   projectName.addEventListener('change', onProjectName);
   savePresetButton.addEventListener('click', savePreset);
+  presetsOpen.addEventListener('click', openPresets);
+  presetsClose.addEventListener('click', closePresets);
+  presetsDialog.addEventListener('click', onPresetsBackdrop);
   svgFile.addEventListener('change', onSvgFile);
   silhouettes.catalog().then(
     (entries) => {
@@ -977,6 +1053,9 @@ export function startApp({
     projectFile.removeEventListener('change', onProjectFile);
     projectName.removeEventListener('change', onProjectName);
     savePresetButton.removeEventListener('click', savePreset);
+    presetsOpen.removeEventListener('click', openPresets);
+    presetsClose.removeEventListener('click', closePresets);
+    presetsDialog.removeEventListener('click', onPresetsBackdrop);
     if (saveTimer !== null) {
       timers.clear(saveTimer);
       persist();

@@ -177,6 +177,40 @@ try {
     });
   }
 
+  await step('the 3D view on a phone fits a wide plate to its width, the first time it shows', async () => {
+    const { page, context } = await app.open({ viewport: VIEWPORTS.phone });
+    let { info } = await built(page);
+    // the keychain: much wider than high, in a view much higher than wide
+    await page.click('#presetsOpen');
+    await page.click('.preset-row[data-id="keychain"] button');
+    ({ info } = await built(page, info));
+    await page.click('#sheetClose');
+    await page.click('.view-tabs [data-show="3d"]');
+    // two frames for the renderer to take the new size
+    await page.waitForTimeout(300);
+    const shot = (await page.locator('#view3d').screenshot()).toString('base64');
+    // the plate is light, the page and the grid dark: no light pixel in the outer columns
+    const touches = await page.evaluate(async (png) => {
+      const image = new Image();
+      image.src = `data:image/png;base64,${png}`;
+      await image.decode();
+      const canvas = document.createElement('canvas');
+      canvas.width = image.width;
+      canvas.height = image.height;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(image, 0, 0);
+      const light = (x) => {
+        const { data } = ctx.getImageData(x, 0, 3, image.height);
+        for (let i = 0; i < data.length; i += 4) if (data[i] + data[i + 1] + data[i + 2] > 450) return true;
+        return false;
+      };
+      return { left: light(0), right: light(image.width - 3) };
+    }, shot);
+    check(!touches.left && !touches.right, `the plate runs off the 3D view: ${JSON.stringify(touches)}`);
+    if (shots) await page.screenshot({ path: 'shots/phone-3d-keychain.png' });
+    await context.close();
+  });
+
   await step('every primitive outline builds a valid mesh', async () => {
     const { page, context } = await app.open();
     let { info } = await built(page);
@@ -545,7 +579,11 @@ try {
     const [download] = await Promise.all([page.waitForEvent('download'), page.click('#saveProject')]);
     const path = await download.path();
     check(download.suggestedFilename() === 'door-sign.plate.json', `file name ${download.suggestedFilename()}`);
+    // the presets live in a dialog of the top bar; a pick closes it
+    await page.click('#presetsOpen');
+    if (shots) await page.screenshot({ path: 'shots/presets-dialog.png' });
     await page.click('.preset-row[data-id="medal"] button');
+    check(await page.locator('#presets').isHidden(), 'the presets dialog stayed open after a pick');
     info = await builtAs(page, '60 × 60');
     await page.setInputFiles('#projectFile', path);
     info = await builtAs(page, '170 × 60');
@@ -553,6 +591,7 @@ try {
     await page.click('#savePreset');
     check((await page.locator('.preset-row[data-id="u1"]').count()) === 1, 'the user preset is not listed');
     for (const id of ['keychain', 'pet-tag', 'house-number', 'name-plate']) {
+      await page.click('#presetsOpen');
       await page.click(`.preset-row[data-id="${id}"] button`);
       ({ info } = await built(page, info));
       check(await page.locator('#meshBlocked').isHidden(), `${id}: the mesh is blocked`);
@@ -617,37 +656,72 @@ try {
     await context.close();
   });
 
-  await step('the panel is a sheet on a phone: a tap on empty space hides it, a tap on an element shows its card', async () => {
-    const { page, context } = await app.open({ viewport: VIEWPORTS.phone });
-    await built(page);
-    await page.click('#addHole');
-    check(await page.locator('#panel').evaluate((p) => p.classList.contains('open')), 'the sheet is not open');
-    const tap = async ([x, y]) => {
-      const canvas = page.locator('#view2d');
-      for (const type of ['pointerdown', 'pointerup'])
-        await canvas.dispatchEvent(type, { pointerId: 3, pointerType: 'touch', isPrimary: true, clientX: x, clientY: y, bubbles: true });
-    };
-    await tap(await plateToPage(page, [30, 20]));
-    await page.waitForFunction(() => !document.querySelector('#panel')?.classList.contains('open'));
-    check(await page.locator('#sheetOpen').isVisible(), 'no button to bring the sheet back');
-    // the sheet slides away in 0.2 s
-    await page.waitForTimeout(300);
-    if (shots) await page.screenshot({ path: 'shots/phone-sheet-closed.png' });
-    await tap(await plateToPage(page, [0, 0]));
-    await page.waitForFunction(() => document.querySelector('#panel')?.classList.contains('open'));
-    check((await page.locator('#selectedTitle').textContent()) === 'Hole 1', 'the tapped hole is not selected');
-    await page.click('#sheetClose');
-    await page.click('#sheetOpen');
-    check(await page.locator('#panel').evaluate((p) => p.classList.contains('open')), 'the button did not bring the sheet back');
-    await context.close();
-  });
+  await step(
+    'the panel is a sheet on a phone: a tap on empty space hides it, a tap on an element shows its card in its group',
+    async () => {
+      const { page, context } = await app.open({ viewport: VIEWPORTS.phone });
+      await built(page);
+      await page.click('#addHole');
+      check(await page.locator('#panel').evaluate((p) => p.classList.contains('open')), 'the sheet is not open');
+      const tap = async ([x, y]) => {
+        const canvas = page.locator('#view2d');
+        for (const type of ['pointerdown', 'pointerup'])
+          await canvas.dispatchEvent(type, { pointerId: 3, pointerType: 'touch', isPrimary: true, clientX: x, clientY: y, bubbles: true });
+      };
+      await tap(await plateToPage(page, [30, 20]));
+      await page.waitForFunction(() => !document.querySelector('#panel')?.classList.contains('open'));
+      check(await page.locator('#sheetOpen').isVisible(), 'no button to bring the sheet back');
+      // as in Case Constructor, the view fills the screen under the top bar; the sheet lies over it
+      const viewBottom = await page.locator('#views').evaluate((node) => node.getBoundingClientRect().bottom);
+      check(Math.abs(viewBottom - VIEWPORTS.phone.height) <= 1, `the view ends at ${viewBottom}px, not at the bottom of the screen`);
+      // the sheet slides away in 0.2 s
+      await page.waitForTimeout(300);
+      if (shots) await page.screenshot({ path: 'shots/phone-sheet-closed.png' });
+      await tap(await plateToPage(page, [0, 0]));
+      // only the panel scrolls to the card: the page and its top bar stay put
+      check((await page.evaluate(() => document.scrollingElement?.scrollTop)) === 0, 'the tap scrolled the page');
+      await page.waitForFunction(() => document.querySelector('#panel')?.classList.contains('open'));
+      check((await page.locator('.element-row.open .element-title').textContent()) === 'Hole 1', 'the tapped hole is not selected');
+      // its card's head in the sheet's visible part, once the sheet has slid in (however slow the machine)
+      await page.waitForFunction(() => document.querySelector('#panel')?.getAnimations().length === 0);
+      const inSheet = await page.evaluate(() => {
+        const head = document.querySelector('.element-row.open .element-head')?.getBoundingClientRect();
+        const sheet = document.querySelector('#panel')?.getBoundingClientRect();
+        return Boolean(head && sheet && head.top >= sheet.top && head.bottom <= Math.min(sheet.bottom, innerHeight));
+      });
+      check(inSheet, "the tapped hole's card is out of sight in the sheet");
+      check((await page.evaluate(() => document.scrollingElement?.scrollTop)) === 0, 'the page stayed scrolled');
+      await page.click('#sheetClose');
+      await page.click('#sheetOpen');
+      check(await page.locator('#panel').evaluate((p) => p.classList.contains('open')), 'the button did not bring the sheet back');
+      await context.close();
+    },
+  );
 
   await step('Hebrew turns the page right-to-left', async () => {
     const { page, context } = await app.open({ locale: 'he-IL' });
     check((await page.locator('html').getAttribute('dir')) === 'rtl', 'he-IL browser did not get dir=rtl');
     const select = await page.locator('#locale').boundingBox();
     check(select !== null && select.x < VIEWPORTS.desktop.width / 2, 'the language switcher did not move to the left');
+    // an element's card mirrors too: its name on the right, delete on the left
+    await page.click('#addText');
+    const name = await page.locator('.element-row .element-title').boundingBox();
+    const remove = await page.locator('.element-row [aria-label^="מחיקה"]').boundingBox();
+    check(name !== null && remove !== null && remove.x < name.x, "the element card's head did not mirror");
+    if (shots) await page.screenshot({ path: 'shots/hebrew-groups.png' });
     await context.close();
+  });
+
+  await step('the top bar keeps to two lines on a 360 px phone in every language', async () => {
+    for (const locale of ['en-US', 'ru-RU', 'uk-UA', 'he-IL']) {
+      const { page, context } = await app.open({ viewport: { width: 360, height: 740 }, locale });
+      const bar = await page.locator('.topbar').boundingBox();
+      check(bar !== null && bar.height <= 110, `${locale}: the top bar is ${bar?.height}px high`);
+      const overflow = await page.locator('.topbar').evaluate((node) => node.scrollWidth > node.clientWidth);
+      check(!overflow, `${locale}: the top bar overflows`);
+      if (shots) await page.screenshot({ path: `shots/phone-topbar-${locale}.png` });
+      await context.close();
+    }
   });
 
   for (const [name, viewport] of Object.entries(VIEWPORTS)) {

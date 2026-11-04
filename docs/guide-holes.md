@@ -1,6 +1,7 @@
 # Holes
 
-**Add hole** puts a round hole in the middle; its card changes the kind.
+**+ Add hole** in the Holes card puts a round hole in the middle; its card
+changes the kind.
 
 | Kind                    | Sizes                          | What it is for                        |
 | ----------------------- | ------------------------------ | ------------------------------------- |

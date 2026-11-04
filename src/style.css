@@ -1,42 +1,31 @@
 /* Mobile first: base rules are for a phone, min-width queries add room.
    Logical properties (inline/block) mirror the layout for RTL by themselves.
-   A phone: the view on top, the panel's cards below it. From 1024 px: the
-   panel on the start side, the view filling the rest. */
+   A phone: the view fills the screen, the panel a bottom sheet over it, as
+   in Case Constructor. From 1024 px: the panel on the start side, the view
+   filling the rest. */
 
+/* Case Constructor's dark palette with an emerald accent; dark only.
+   --panel is also the theme colour (index.html, the manifest; a test
+   keeps them equal), --bg the manifest's background. */
 :root {
-  --bg: #f4f6fc;
-  --fg: #17223e;
-  --muted: #5b6685;
-  --accent: #294edb;
-  --accent-fg: #fff;
-  --surface: #fff;
-  --line: #d5daea;
-  --error: #b42318;
-  --focus: #e6af00;
-  --view-bg: #1d2233;
-  --view-fg: #e7ebf7;
+  --bg: #15181c;
+  --panel: #1c2026;
+  --card: #252a31;
+  --text: #e4e9ef;
+  --muted: #94a0ad;
+  --accent: #34c38f;
+  --accent-strong: #5fd6a8;
+  --accent-soft: rgb(52 195 143 / 14%);
+  --on-accent: #04201a;
+  --warn: #e3b341;
+  --bad: #e06c5c;
+  --line: #343b44;
   /* the 2D editor's canvas, read by editor2d.ts */
-  --editor-bg: #e3e7f2;
-  --editor-grid: rgb(23 34 62 / 8%);
-  --editor-plate: #b9c0d4;
-  --editor-edge: #17223e;
-  color-scheme: light dark;
-}
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #11162a;
-    --fg: #e7ebf7;
-    --muted: #9aa4c4;
-    --accent: #6c8cff;
-    --accent-fg: #0b1020;
-    --surface: #1b2240;
-    --line: #2e3756;
-    --error: #ff8a7a;
-    --editor-bg: #0d1122;
-    --editor-grid: rgb(231 235 247 / 7%);
-    --editor-plate: #2a3356;
-    --editor-edge: #c9d1ee;
-  }
+  --editor-bg: #181b20;
+  --editor-grid: rgb(228 233 239 / 6%);
+  --editor-plate: #3a424d;
+  --editor-edge: #c9d1db;
+  color-scheme: dark;
 }
 
 * {
@@ -50,9 +39,11 @@ body {
   display: flex;
   flex-direction: column;
   background: var(--bg);
-  color: var(--fg);
+  color: var(--text);
   font:
-    16px/1.5 system-ui,
+    14px/1.45 system-ui,
+    -apple-system,
+    'Segoe UI',
     sans-serif;
 }
 button,
@@ -61,7 +52,7 @@ input {
   font: inherit;
 }
 :focus-visible {
-  outline: 3px solid var(--focus);
+  outline: 2px solid var(--accent-strong);
   outline-offset: 2px;
 }
 
@@ -69,19 +60,160 @@ input {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 8px 16px;
+  padding: 8px 12px;
+  background: var(--panel);
   border-block-end: 1px solid var(--line);
 }
+/* A phone: the brand and the language, then the project's name and the
+   buttons in a second line; from 760 px all in one, as in Case Constructor. */
+.topbar {
+  flex-wrap: wrap;
+  row-gap: 6px;
+}
 .brand {
+  flex: 1;
+  min-inline-size: 0;
+  overflow: hidden;
+  font-size: 15px;
   font-weight: 700;
+  letter-spacing: 0.5px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.lang-field {
+  order: 1;
+}
+.topbar-break {
+  order: 2;
+}
+.preset-button {
+  order: 3;
+  flex: 1;
+  min-inline-size: 0;
+  max-inline-size: 240px;
+  padding-inline: 10px;
+  overflow: hidden;
+  font-size: 14px;
+  text-align: start;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.preset-button::after {
+  content: ' …';
+  color: var(--muted);
+}
+.topbar .spacer {
+  display: none;
+}
+.topbar-break {
+  flex-basis: 100%;
+  block-size: 0;
+}
+.topbar-tools {
+  order: 4;
+  display: flex;
+  gap: 6px;
+}
+.lang-field select {
+  max-inline-size: 130px;
+}
+.lang-field {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.lang-globe {
+  display: none;
+}
+.topbar-note {
+  margin: 0;
+  padding: 6px 12px;
+  border-block-end: 1px solid var(--bad);
+  background: rgb(224 108 92 / 14%);
+  font-size: 12.5px;
+}
+.topbar-note[hidden] {
+  display: none;
+}
+@media (min-width: 760px) {
+  .topbar {
+    flex-wrap: nowrap;
+  }
+  .topbar .spacer {
+    display: block;
+    order: 3;
+  }
+  .topbar-break {
+    display: none;
+  }
+  .topbar-tools {
+    order: 2;
+  }
+  .lang-field {
+    order: 4;
+  }
+  .lang-globe {
+    display: inline;
+  }
+  .brand {
+    flex: none;
+    font-size: 17px;
+  }
+  .preset-button {
+    order: 1;
+    flex: 0 1 auto;
+  }
+  .lang-field select {
+    max-inline-size: none;
+  }
+}
+
+/* the presets: a dialog over everything */
+.modal {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px;
+  background: rgb(0 0 0 / 60%);
+}
+.modal[hidden] {
+  display: none;
+}
+.modal-box {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  inline-size: min(420px, 100%);
+  max-block-size: min(80vh, 80dvh);
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--panel);
+  box-shadow: 0 12px 40px rgb(0 0 0 / 60%);
+}
+.modal-box h2 {
+  margin: 0 0 8px;
+  font-size: 16px;
+}
+.modal-close {
+  position: absolute;
+  inset-block-start: 8px;
+  inset-inline-end: 8px;
+}
+.modal-box .preset-list {
+  min-block-size: 0;
+  overflow-y: auto;
 }
 select {
-  min-block-size: 44px;
-  padding-inline: 8px;
-  border-radius: 8px;
-  border: 1px solid var(--muted);
-  background: var(--surface);
-  color: var(--fg);
+  min-block-size: 40px;
+  padding-inline: 6px;
+  border-radius: 6px;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  color: var(--text);
 }
 
 .workspace {
@@ -91,13 +223,14 @@ select {
   min-block-size: 0;
 }
 
+/* a phone: the view fills the screen under the top bar, the sheet lies over it */
 .views {
   position: relative;
+  flex: 1;
   display: grid;
-  block-size: 52dvh;
-  min-block-size: 280px;
-  background: var(--view-bg);
-  color: var(--view-fg);
+  min-block-size: 0;
+  background: var(--bg);
+  color: var(--text);
   overflow: hidden;
 }
 /* a phone shows one view at a time; the tabs choose it */
@@ -128,23 +261,30 @@ select {
   display: flex;
   gap: 4px;
 }
+/* chips over the views, as Case Constructor's view caption: translucent page colour */
 .view-tabs button,
 .cameras button,
 .swap-views {
   min-block-size: 36px;
   min-inline-size: 44px;
   padding-inline: 10px;
-  border: 1px solid rgb(255 255 255 / 25%);
-  border-radius: 8px;
-  background: rgb(0 0 0 / 45%);
-  color: var(--view-fg);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: rgb(21 24 28 / 75%);
+  color: var(--text);
+  font-size: 12.5px;
   cursor: pointer;
+}
+.view-tabs button:hover,
+.cameras button:hover,
+.swap-views:hover {
+  border-color: var(--accent);
 }
 .views[data-show='2d'] .view-tabs [data-show='2d'],
 .views[data-show='3d'] .view-tabs [data-show='3d'] {
-  background: var(--accent);
   border-color: var(--accent);
-  color: var(--accent-fg);
+  background: color-mix(in srgb, var(--accent) 22%, rgb(21 24 28 / 85%));
+  color: var(--accent-strong);
 }
 .cameras {
   position: absolute;
@@ -161,10 +301,14 @@ select {
   align-items: center;
   gap: 4px;
   padding: 4px 8px;
-  border-radius: 8px;
-  background: rgb(0 0 0 / 45%);
-  color: var(--view-fg);
-  font-size: 0.875rem;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: rgb(21 24 28 / 75%);
+  color: var(--muted);
+  font-size: 12px;
+}
+.snap-toggle input {
+  accent-color: var(--accent);
 }
 .swap-views {
   display: none;
@@ -173,18 +317,18 @@ select {
   position: absolute;
   inset-block-end: 8px;
   inset-inline-start: 12px;
-  font-size: 0.875rem;
-  opacity: 0.8;
+  color: var(--muted);
+  font-size: 12px;
 }
 
 .tool-button {
-  min-block-size: 44px;
-  min-inline-size: 44px;
+  min-block-size: 40px;
+  min-inline-size: 40px;
   border: 1px solid var(--line);
-  border-radius: 8px;
-  background: var(--surface);
-  color: var(--fg);
-  font-size: 1.25rem;
+  border-radius: 6px;
+  background: var(--card);
+  color: var(--text);
+  font-size: 1.125rem;
   cursor: pointer;
 }
 .tool-button:disabled {
@@ -202,10 +346,11 @@ select {
   inset-block-end: 0;
   max-block-size: 62dvh;
   overflow-y: auto;
-  padding: 4px 16px 24px;
-  border-radius: 16px 16px 0 0;
-  background: var(--bg);
-  box-shadow: 0 -4px 16px rgb(0 0 0 / 25%);
+  padding: 4px 12px 24px;
+  border-block-start: 1px solid var(--line);
+  border-radius: 14px 14px 0 0;
+  background: var(--panel);
+  box-shadow: 0 -12px 28px rgb(0 0 0 / 55%);
   transform: translateY(105%);
   transition: transform 0.2s ease;
 }
@@ -241,29 +386,38 @@ select {
   border: 0;
   border-radius: 22px;
   background: var(--accent);
-  color: var(--accent-fg);
+  color: var(--on-accent);
+  font-weight: 600;
+  box-shadow: 0 4px 14px rgb(0 0 0 / 45%);
   cursor: pointer;
+}
+.sheet-open::before {
+  content: '⚙ ';
 }
 .sheet-open[hidden] {
   display: none;
 }
 .card {
-  margin-block-end: 12px;
-  padding: 12px;
-  border: 1px solid var(--line);
-  border-radius: 12px;
-  background: var(--surface);
+  margin-block-end: 8px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: var(--card);
 }
 .card h2 {
   margin-block: 0 8px;
-  font-size: 1rem;
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: var(--muted);
 }
 
+/* A row: on a phone the name above its control (a slider needs the width),
+   from 1024 px Case Constructor's line — name | − slider + | number unit. */
 .row {
   display: grid;
-  grid-template-columns: 1fr 5.5em auto;
+  grid-template-columns: minmax(0, 1fr);
   align-items: center;
-  gap: 4px 8px;
+  gap: 4px 6px;
   margin-block: 6px;
 }
 .row[hidden] {
@@ -271,16 +425,40 @@ select {
 }
 .row-name {
   grid-column: 1 / -1;
-  font-size: 0.875rem;
+  font-size: 12px;
   color: var(--muted);
 }
-.row select {
-  grid-column: 1 / -1;
+.range-row {
+  grid-template-columns: auto minmax(0, 1fr) auto 4.5em auto;
+}
+.range-row:not(:has(.unit)) {
+  grid-template-columns: auto minmax(0, 1fr) auto 4.5em;
 }
 .row input[type='range'] {
   inline-size: 100%;
+  min-inline-size: 0;
   min-block-size: 32px;
+  margin: 0;
   accent-color: var(--accent);
+}
+.adj-btn {
+  inline-size: 36px;
+  block-size: 36px;
+  padding: 0;
+  line-height: 1;
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  background: var(--panel);
+  color: var(--muted);
+  cursor: pointer;
+}
+.adj-btn:hover:not(:disabled) {
+  color: var(--text);
+  border-color: var(--accent);
+}
+.adj-btn:disabled {
+  opacity: 0.35;
+  cursor: default;
 }
 .exact {
   inline-size: 100%;
@@ -288,15 +466,24 @@ select {
   padding-inline: 6px;
   border: 1px solid var(--line);
   border-radius: 6px;
-  background: var(--bg);
-  color: var(--fg);
+  background: var(--panel);
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+  text-align: end;
+  appearance: textfield;
+}
+.exact::-webkit-inner-spin-button,
+.exact::-webkit-outer-spin-button {
+  appearance: none;
+  margin: 0;
 }
 .unit {
-  font-size: 0.875rem;
+  font-size: 12px;
   color: var(--muted);
 }
-.row:not(:has(.unit)) .exact {
-  grid-column: 2 / -1;
+.row select {
+  inline-size: 100%;
+  min-inline-size: 0;
 }
 .check-row {
   grid-template-columns: auto 1fr;
@@ -304,26 +491,41 @@ select {
 .check-row .row-name {
   grid-column: 2;
 }
+.check-row input {
+  accent-color: var(--accent);
+}
 
 button.primary {
-  min-block-size: 48px;
+  min-block-size: 44px;
   inline-size: 100%;
-  padding-inline: 20px;
+  padding-inline: 12px;
   border: 0;
-  border-radius: 12px;
+  border-radius: 6px;
   background: var(--accent);
-  color: var(--accent-fg);
+  color: var(--on-accent);
+  font-weight: 600;
   cursor: pointer;
 }
+button.primary:hover:not(:disabled) {
+  background: var(--accent-strong);
+}
+/* Case Constructor's tb-btn: a quiet frame that lights up in the accent */
 button.secondary {
-  min-block-size: 44px;
-  padding-inline: 16px;
-  border: 0;
-  border-radius: 10px;
-  background: transparent;
-  color: var(--accent);
-  box-shadow: inset 0 0 0 2px var(--accent);
+  min-block-size: 40px;
+  padding-inline: 12px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--panel);
+  color: var(--text);
   cursor: pointer;
+}
+button.secondary:hover:not(:disabled),
+.tool-button:hover:not(:disabled) {
+  border-color: var(--accent);
+}
+button.secondary:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
 }
 .element-list,
 .warning-list {
@@ -331,14 +533,27 @@ button.secondary {
   padding: 0;
   list-style: none;
 }
+.group-count {
+  margin-inline-start: 4px;
+  font-weight: 400;
+  letter-spacing: 0;
+  text-transform: none;
+  font-variant-numeric: tabular-nums;
+}
+/* an element's own card in its group, as Case Constructor's board boxes */
 .element-row {
+  margin-block: 6px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+}
+.element-row.open {
+  border-color: color-mix(in srgb, var(--accent) 60%, var(--line));
+}
+.element-head {
   display: flex;
   align-items: center;
-  gap: 6px;
-  border-radius: 8px;
-}
-.element-row.selected {
-  background: color-mix(in srgb, var(--accent) 14%, transparent);
+  gap: 2px;
+  padding-inline-end: 2px;
 }
 .element-row.hidden-element .element-name {
   opacity: 0.5;
@@ -347,40 +562,84 @@ button.secondary {
   flex: 1;
   display: flex;
   align-items: center;
-  gap: 8px;
-  min-block-size: 44px;
-  padding-inline: 8px;
+  gap: 6px;
+  min-inline-size: 0;
+  min-block-size: 40px;
+  padding-inline: 8px 4px;
   border: 0;
   background: none;
   color: inherit;
   text-align: start;
   cursor: pointer;
 }
+.element-caret {
+  color: var(--muted);
+  font-size: 12px;
+}
+/* a closed card's caret points along the line: leftwards in RTL */
+[dir='rtl'] .element-caret {
+  scale: -1 1;
+}
 .element-icon {
-  inline-size: 1.75em;
+  inline-size: 1.5em;
   text-align: center;
   color: var(--muted);
 }
+.element-title {
+  flex: none;
+  font-weight: 600;
+}
+.element-hint {
+  flex: 1;
+  min-inline-size: 0;
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.element-row.open .element-title {
+  color: var(--accent);
+}
+.element-body {
+  padding: 0 8px 6px;
+  border-block-start: 1px solid var(--line);
+}
+.element-body[hidden] {
+  display: none;
+}
 .element-visible {
-  inline-size: 20px;
-  block-size: 20px;
+  inline-size: 18px;
+  block-size: 18px;
+  margin-inline: 6px;
   accent-color: var(--accent);
 }
 .icon-button {
-  min-block-size: 40px;
-  min-inline-size: 40px;
+  min-block-size: 36px;
+  min-inline-size: 36px;
   border: 0;
-  border-radius: 8px;
+  border-radius: 6px;
   background: none;
   color: var(--muted);
   cursor: pointer;
+}
+.icon-button:hover {
+  color: var(--text);
+  background: var(--panel);
+}
+.add-button {
+  inline-size: 100%;
+}
+.add-button::before {
+  content: '+ ';
 }
 .warning {
   display: flex;
   align-items: baseline;
   gap: 8px;
-  padding-block: 4px;
-  font-size: 0.875rem;
+  padding-block: 3px;
+  color: var(--warn);
+  font-size: 12px;
 }
 .warning span {
   flex: 1;
@@ -391,7 +650,7 @@ button.secondary {
   color: var(--accent);
   text-decoration: underline;
   cursor: pointer;
-  font-size: 0.875rem;
+  font-size: 12px;
 }
 button.primary:disabled {
   opacity: 0.5;
@@ -401,17 +660,17 @@ button.primary:disabled {
   display: block;
   margin-block: 6px;
   color: var(--muted);
-  font-size: 0.875rem;
+  font-size: 12px;
 }
 .error {
   margin-block: 6px;
-  color: var(--error);
-  font-size: 0.875rem;
+  color: var(--bad);
+  font-size: 12px;
 }
 footer {
-  padding-block: 8px;
+  padding: 8px 2px;
   color: var(--muted);
-  font-size: 0.875rem;
+  font-size: 12px;
 }
 footer a {
   color: inherit;
@@ -438,7 +697,7 @@ footer a {
   .views[data-show] .pane2d,
   .views[data-show] .pane3d {
     display: block;
-    background: var(--view-bg);
+    background: var(--bg);
   }
   .pane2d {
     grid-area: 1 / 1;
@@ -461,7 +720,8 @@ footer a {
     max-block-size: none;
     flex: none;
     overflow-y: auto;
-    padding: 12px 16px 24px;
+    padding: 12px 12px 24px;
+    border-block-start: 0;
     border-radius: 0;
     box-shadow: none;
     transform: none;
@@ -471,6 +731,60 @@ footer a {
   .sheet-handle,
   .sheet-open {
     display: none;
+  }
+  /* a pointer, not a finger: Case Constructor's density */
+  select {
+    min-block-size: 30px;
+  }
+  .row {
+    grid-template-columns: 88px minmax(0, 1fr);
+    margin-block: 5px;
+  }
+  .row-name {
+    grid-column: 1;
+  }
+  .range-row {
+    grid-template-columns: 88px auto minmax(0, 1fr) auto 3.8em auto;
+  }
+  .range-row:not(:has(.unit)) {
+    grid-template-columns: 88px auto minmax(0, 1fr) auto 3.8em;
+  }
+  .row input[type='range'] {
+    min-block-size: 22px;
+  }
+  .adj-btn {
+    inline-size: 22px;
+    block-size: 22px;
+  }
+  .exact {
+    min-block-size: 26px;
+    padding-inline: 4px;
+  }
+  .check-row {
+    grid-template-columns: auto 1fr;
+  }
+  .text-row .row-name {
+    grid-column: 1 / -1;
+  }
+  .text-row textarea {
+    grid-column: 1 / -1;
+  }
+  button.primary {
+    min-block-size: 36px;
+  }
+  button.secondary {
+    min-block-size: 32px;
+  }
+  .tool-button {
+    min-block-size: 34px;
+    min-inline-size: 40px;
+  }
+  .element-name {
+    min-block-size: 32px;
+  }
+  .icon-button {
+    min-block-size: 28px;
+    min-inline-size: 28px;
   }
 }
 
@@ -485,7 +799,7 @@ footer a {
   margin-block: 4px 8px;
   border-radius: 8px;
   /* a checkerboard: transparent is height 0 */
-  background: repeating-conic-gradient(#3a4160 0 25%, #2b3150 0 50%) 0 0 / 16px 16px;
+  background: repeating-conic-gradient(#343b44 0 25%, #2a3038 0 50%) 0 0 / 16px 16px;
 }
 .thumb[hidden] {
   display: none;
@@ -497,8 +811,8 @@ footer a {
   padding: 6px 8px;
   border: 1px solid var(--line);
   border-radius: 6px;
-  background: var(--bg);
-  color: var(--fg);
+  background: var(--panel);
+  color: var(--text);
   font: inherit;
   resize: vertical;
 }
@@ -515,19 +829,25 @@ footer a {
 }
 .vignette {
   padding: 4px;
-  border: 2px solid var(--line);
-  border-radius: 8px;
-  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--panel);
   cursor: pointer;
+}
+.vignette:hover {
+  border-color: var(--accent);
 }
 .vignette[aria-selected='true'] {
   border-color: var(--accent);
+  background: var(--accent-soft);
 }
 .vignette img {
   display: block;
   inline-size: 100%;
   aspect-ratio: 3 / 2;
   object-fit: contain;
+  /* the catalog's silhouettes are black: light grey on the dark tile */
+  filter: invert(0.85);
 }
 
 .progress {
@@ -548,13 +868,15 @@ footer a {
 }
 .card h3 {
   margin-block: 12px 4px;
-  font-size: 0.875rem;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
 }
 .hints {
   margin: 0;
   padding-inline-start: 18px;
   color: var(--muted);
-  font-size: 0.875rem;
+  font-size: 12px;
 }
 
 .banner {
@@ -562,11 +884,12 @@ footer a {
   flex-wrap: wrap;
   align-items: center;
   gap: 8px;
-  margin-block-end: 12px;
-  padding: 10px 12px;
-  border-radius: 12px;
-  background: color-mix(in srgb, var(--focus) 25%, var(--surface));
-  font-size: 0.875rem;
+  margin-block-end: 8px;
+  padding: 8px 12px;
+  border: 1px solid var(--warn);
+  border-radius: 8px;
+  background: rgb(227 179 65 / 12%);
+  font-size: 12.5px;
 }
 .banner[hidden] {
   display: none;
@@ -578,8 +901,8 @@ footer a {
   padding-inline: 8px;
   border: 1px solid var(--line);
   border-radius: 6px;
-  background: var(--bg);
-  color: var(--fg);
+  background: var(--panel);
+  color: var(--text);
 }
 .preset-list {
   margin: 0 0 8px;
@@ -590,11 +913,35 @@ footer a {
   display: flex;
   align-items: center;
   gap: 6px;
+  margin-block-end: 4px;
 }
 .preset-row .name-field {
   flex: 1;
+  min-inline-size: 0;
+}
+/* Case Constructor's preset rows: a framed button the width of the list */
+.preset-pick {
+  flex: 1;
+  min-inline-size: 0;
+  min-block-size: 38px;
+  padding-inline: 10px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--card);
+  color: var(--text);
+  text-align: start;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.preset-pick:hover {
+  border-color: var(--accent);
 }
 .preset-changed {
-  color: var(--muted);
-  font-size: 0.8rem;
+  color: var(--warn);
+  font-size: 12px;
+}
+.preset-list .link-button {
+  min-block-size: 38px;
 }

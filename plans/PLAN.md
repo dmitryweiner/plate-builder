@@ -381,3 +381,5 @@ sheet on a phone, offline reload.
 - **M10**: the back camera hides the bed's grid, which lay over the back
   face, and has a light of its own from below, so keyholes read.
 - **M10**: `README.ru.md` is not written (optional in the conventions).
+- **After M10**: the interface took Case Constructor's look (dark only,
+  emerald) and the element groups; see `plans/PLAN-DESIGN.md`.

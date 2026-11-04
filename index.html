@@ -6,7 +6,7 @@
     <meta name="description" content="Design a flat plate — a sign, a keychain, a tag — and download it as STL for 3D printing." />
     <title>Plate Builder</title>
     <link rel="icon" href="/icon.svg" type="image/svg+xml" />
-    <meta name="theme-color" content="#294edb" />
+    <meta name="theme-color" content="#1c2026" />
     <link rel="manifest" href="/manifest.webmanifest" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <script type="module" src="./src/main.ts"></script>
@@ -14,16 +14,73 @@
   <body>
     <header class="topbar">
       <span class="brand" data-i18n="title">Plate Builder</span>
+      <!-- the project's name; opens the presets -->
+      <button
+        id="presetsOpen"
+        type="button"
+        class="tool-button preset-button"
+        title="Presets"
+        aria-haspopup="dialog"
+        aria-expanded="false"
+      ></button>
       <span class="spacer"></span>
-      <button id="undo" type="button" class="tool-button" title="Undo" aria-label="Undo" data-i18n-label="undo">↶</button>
-      <button id="redo" type="button" class="tool-button" title="Redo" aria-label="Redo" data-i18n-label="redo">↷</button>
-      <select id="locale" aria-label="Language" data-i18n-label="languageLabel">
-        <option value="en" lang="en">English</option>
-        <option value="ru" lang="ru">Русский</option>
-        <option value="uk" lang="uk">Українська</option>
-        <option value="he" lang="he">עברית</option>
-      </select>
+      <label class="lang-field">
+        <span class="lang-globe" aria-hidden="true">🌐</span>
+        <select id="locale" aria-label="Language" data-i18n-label="languageLabel">
+          <option value="en" lang="en">English</option>
+          <option value="ru" lang="ru">Русский</option>
+          <option value="uk" lang="uk">Українська</option>
+          <option value="he" lang="he">עברית</option>
+        </select>
+      </label>
+      <!-- a phone breaks the bar here: the buttons go to a second line -->
+      <span class="topbar-break"></span>
+      <div class="topbar-tools">
+        <button
+          id="savePreset"
+          type="button"
+          class="tool-button"
+          title="Save as preset"
+          aria-label="Save as preset"
+          data-i18n-label="savePreset"
+        >
+          💾
+        </button>
+        <button
+          id="openProject"
+          type="button"
+          class="tool-button"
+          title="Open project file…"
+          aria-label="Open project file…"
+          data-i18n-label="openProject"
+        >
+          📂
+        </button>
+        <input id="projectFile" type="file" accept=".json,application/json" hidden />
+        <button
+          id="saveProject"
+          type="button"
+          class="tool-button"
+          title="Save project file"
+          aria-label="Save project file"
+          data-i18n-label="saveProject"
+        >
+          ⬇️
+        </button>
+        <button id="undo" type="button" class="tool-button" title="Undo" aria-label="Undo" data-i18n-label="undo">↶</button>
+        <button id="redo" type="button" class="tool-button" title="Redo" aria-label="Redo" data-i18n-label="redo">↷</button>
+      </div>
     </header>
+    <p id="projectStatus" class="topbar-note" role="alert" hidden></p>
+    <div id="presets" class="modal" hidden>
+      <div class="modal-box" role="dialog" aria-modal="true" aria-labelledby="presetsTitle">
+        <button id="presetsClose" type="button" class="icon-button modal-close" title="Close" aria-label="Close" data-i18n-label="close">
+          ✕
+        </button>
+        <h2 id="presetsTitle" data-i18n="presetsHeading">Presets</h2>
+        <ul id="presetList" class="preset-list"></ul>
+      </div>
+    </div>
     <main class="workspace">
       <section class="views" id="views" data-show="2d" aria-label="Views" data-i18n-label="views">
         <div class="view-tabs">
@@ -74,28 +131,39 @@
           </div>
           <p id="plateStatus" class="error" role="alert" hidden></p>
         </section>
-        <section class="card" id="elementsCard">
-          <h2 data-i18n="elementsCard">Elements</h2>
-          <ul id="elementList" class="element-list"></ul>
-          <div class="add-buttons">
-            <button id="addText" type="button" class="secondary" data-i18n="addText">Add text</button>
-            <button id="addImage" type="button" class="secondary" data-i18n="addImage">Add image</button>
-            <button id="addHole" type="button" class="secondary" data-i18n="addHole">Add hole</button>
-            <input id="imageFile" type="file" accept="image/*" hidden />
-          </div>
+        <!-- the elements by kind; the selected one's card is open with its controls -->
+        <section class="card group-card" id="textsCard">
+          <h2><span data-i18n="textsCard">Texts</span> <span id="textsCount" class="group-count"></span></h2>
+          <ul id="textList" class="element-list"></ul>
+          <button id="addText" type="button" class="secondary add-button" data-i18n="addText">Add text</button>
+        </section>
+        <section class="card group-card" id="imagesCard">
+          <h2><span data-i18n="imagesCard">Images</span> <span id="imagesCount" class="group-count"></span></h2>
+          <ul id="imageList" class="element-list"></ul>
+          <button id="addImage" type="button" class="secondary add-button" data-i18n="addImage">Add image</button>
+          <input id="imageFile" type="file" accept="image/*" hidden />
           <p id="elementsStatus" class="error" role="alert" hidden></p>
         </section>
-        <section class="card" id="selectedCard" hidden>
-          <h2 id="selectedTitle"></h2>
+        <section class="card group-card" id="holesCard">
+          <h2><span data-i18n="holesCard">Holes</span> <span id="holesCount" class="group-count"></span></h2>
+          <ul id="holeList" class="element-list"></ul>
+          <button id="addHole" type="button" class="secondary add-button" data-i18n="addHole">Add hole</button>
+        </section>
+        <!-- moved into the selected element's card; parked here while none is -->
+        <div id="selectedBody" class="element-body" hidden>
           <canvas id="selectedThumb" class="thumb" hidden></canvas>
           <div id="selectedControls"></div>
-        </section>
+        </div>
         <section class="card" id="warningsCard" hidden>
           <h2 data-i18n="warningsCard">Warnings</h2>
           <ul id="warningList" class="warning-list"></ul>
         </section>
         <section class="card" id="exportCard">
           <h2 data-i18n="exportCard">Export</h2>
+          <div class="row">
+            <label class="row-name" for="projectName" data-i18n="projectName">Name</label>
+            <input id="projectName" class="name-field" type="text" maxlength="60" />
+          </div>
           <p id="meshInfo" class="note"></p>
           <p id="meshBlocked" class="error" role="alert" hidden></p>
           <button id="downloadStl" type="button" class="primary" data-i18n="downloadStl">Download STL</button>
@@ -103,20 +171,6 @@
           <output id="exportStatus" class="note" aria-live="polite"></output>
           <h3 data-i18n="printHints">Printing</h3>
           <ul id="printHints" class="hints"></ul>
-          <h3 data-i18n="projectHeading">Project</h3>
-          <div class="row">
-            <label class="row-name" for="projectName" data-i18n="projectName">Name</label>
-            <input id="projectName" class="name-field" type="text" maxlength="60" />
-          </div>
-          <div class="add-buttons">
-            <button id="saveProject" type="button" class="secondary" data-i18n="saveProject">Save project file</button>
-            <button id="openProject" type="button" class="secondary" data-i18n="openProject">Open project file…</button>
-            <input id="projectFile" type="file" accept=".json,application/json" hidden />
-          </div>
-          <p id="projectStatus" class="error" role="alert" hidden></p>
-          <h3 data-i18n="presetsHeading">Presets</h3>
-          <ul id="presetList" class="preset-list"></ul>
-          <button id="savePreset" type="button" class="secondary" data-i18n="savePreset">Save as preset</button>
         </section>
         <footer>
           <a href="https://github.com/dmitryweiner/plate-builder" data-i18n="source">Source code</a>

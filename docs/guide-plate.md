@@ -3,7 +3,8 @@
 ![The door sign preset](images/door-sign.png)
 
 The **Plate** card sets the plate's outline and its base. Everything is in
-millimetres; the plate prints with its back on the bed.
+millimetres; the plate prints with its back on the bed. Each slider has −
+and + beside it for one step at a time, and a field for an exact number.
 
 ## Outline
 

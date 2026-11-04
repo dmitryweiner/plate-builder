@@ -2,7 +2,7 @@
 
 ![The medal: a star image, an arc text, a rim](images/medal.png)
 
-**Add image** takes a PNG, JPEG, WebP, GIF (its first frame) or SVG file up to
+**+ Add image** in the Images card takes a PNG, JPEG, WebP, GIF (its first frame) or SVG file up to
 20 MB. It is kept in the project as grayscale with transparency, at most
 512 pixels on its long side.
 

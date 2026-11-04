@@ -32,6 +32,7 @@ try {
     );
   await settle();
   if (flags.has('preset')) {
+    await page.click('#presetsOpen');
     await page.click(`.preset-row[data-id="${flags.get('preset')}"] button`);
     await page.waitForTimeout(400);
     await settle();

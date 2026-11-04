@@ -62,6 +62,12 @@ function input(id: string): HTMLInputElement {
   return node;
 }
 
+function button(id: string): HTMLButtonElement {
+  const node = document.getElementById(id);
+  if (!(node instanceof HTMLButtonElement)) throw new Error(id);
+  return node;
+}
+
 beforeEach(() => {
   document.body.innerHTML = '';
   state = { kind: 'a', size: 50, on: false, note: 'hi' };
@@ -115,6 +121,35 @@ describe('renderControls', () => {
     field.dispatchEvent(new Event('change'));
     expect(state.size).toBe(100);
     expect(field.value).toBe('100');
+  });
+
+  it('steps a range with − and +, one final change per click, stopping at the limits', () => {
+    render();
+    const minus = button('demo-size-dec');
+    const plus = button('demo-size-inc');
+    plus.click();
+    plus.click();
+    minus.click();
+    expect(changes.map((c) => [c.next.size, c.final])).toEqual([
+      [50.5, true],
+      [51, true],
+      [50.5, true],
+    ]);
+    expect([input('demo-size').value, input('demo-size-n').value]).toEqual(['50.5', '50.5']);
+    state = { ...state, size: 99.8 };
+    plus.click();
+    expect(state.size).toBe(100);
+    expect(plus.disabled).toBe(true);
+    expect(minus.disabled).toBe(false);
+  });
+
+  it('names the − and + buttons after their row, in the given language', () => {
+    render('ru');
+    expect([button('demo-size-dec').getAttribute('aria-label'), button('demo-size-inc').getAttribute('aria-label')]).toEqual([
+      'Уменьшить: Ширина',
+      'Увеличить: Ширина',
+    ]);
+    expect(button('demo-size-dec').type).toBe('button');
   });
 
   it('hides a row that does nothing in the current state and syncs it back', () => {

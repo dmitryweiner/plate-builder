@@ -10,10 +10,10 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { toCreasedNormals } from 'three/addons/utils/BufferGeometryUtils.js';
 import type { CameraPreset, SceneHandle, ViewMesh } from './view';
 
-/** the page's background in either theme is close to this; the view keeps one look */
-const CLEAR_COLOR = 0x1d2233;
+/** the page's background, --bg in style.css */
+const CLEAR_COLOR = 0x15181c;
 const PLATE_COLOR = 0xe9e4da;
-const GRID_COLORS = { center: 0x56607e, lines: 0x343b52 } as const;
+const GRID_COLORS = { center: 0x4f5964, lines: 0x2b3038 } as const;
 /** faces meeting at more than this angle get their own normals: a slab's edges stay sharp */
 const CREASE = (40 * Math.PI) / 180;
 
@@ -37,7 +37,7 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle | null {
 
   const scene = new THREE.Scene();
   const camera = new THREE.PerspectiveCamera(40, 1, 1, 5000);
-  scene.add(new THREE.HemisphereLight(0xf4f1ea, 0x30364a, 0.75));
+  scene.add(new THREE.HemisphereLight(0xf4f1ea, 0x2b3038, 0.75));
   // low and from one side: shallow relief reads by its shadows' gradient
   const key = new THREE.DirectionalLight(0xfff6ea, 2.2);
   key.position.set(-1, 0.45, 0.6);
@@ -65,6 +65,11 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle | null {
   let mesh: THREE.Mesh | null = null;
   let radius = 60;
   let fitted = false;
+  /** whether the person turned or zoomed since the last fit: until then a new size fits again */
+  let touched = false;
+  controls.addEventListener('start', () => {
+    touched = true;
+  });
   let disposed = false;
 
   function setGrid(size: number): void {
@@ -91,6 +96,8 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle | null {
       renderer.setSize(w, h, false);
       camera.aspect = w / h;
       camera.updateProjectionMatrix();
+      // a view hidden while fitted (a phone's 2D tab) had another shape: fit to the one it shows in
+      if (fitted && !touched) place(camera.position.clone().sub(controls.target));
     }
   }
 
@@ -110,6 +117,7 @@ export function createScene(canvas: HTMLCanvasElement): SceneHandle | null {
     const vFov = (camera.fov * Math.PI) / 180;
     const hFov = 2 * Math.atan(Math.tan(vFov / 2) * (camera.aspect || 1));
     const distance = (radius / Math.sin(Math.min(vFov, hFov) / 2)) * 1.1;
+    touched = false;
     controls.target.set(0, 0, 0);
     camera.position.copy(direction).setLength(distance);
     camera.near = Math.max(0.1, distance / 200);
