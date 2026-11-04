@@ -84,17 +84,26 @@ browser (service worker, layout, workers) → a step in `scripts/smoke.mjs`.
 - `src/app.ts` — DOM wiring: translation of the page, the cards, the preview
   after a pause in the edits, the export.
 - `src/geo/` — the pure core: `state.ts` (schema, ranges, defaults,
-  `sanitizeState`), `outline.ts` (primitive outlines as polygons), `mesh.ts`
+  `sanitizeState`), `outline.ts` (primitive outlines as polygons),
+  `holes.ts` (footprints, boxes and cutters of the hole kinds),
+  `warnings.ts` (the warnings that need no CSG), `mesh.ts`
   (`SurfaceMesh`, normals), `stl.ts` (binary STL, file names), `validate.ts`
   (watertightness, volume, what blocks an export).
 - `src/worker/` — `protocol.ts` (typed messages), `client.ts` (lazy worker,
   one-deep queue per lane), `csg.worker.ts` (thin adapter), `jobs.ts` (what
   each job does), `build.ts` (the recipe of the solid), `csg.ts` (manifold
   loading, `CsgScope`); all but the adapter tested in Node with real WASM.
+- `src/editor/` — the 2D view: `view.ts` (mm ↔ px, fit, zoom, pan),
+  `elements.ts` (boxes, hit tests, uniform scaling), `gestures.ts` (move,
+  corner scale, rotate, pinch, snapping), `editor2d.ts` (pointer events and
+  drawing on the canvas).
+- `src/state/` — `history.ts` (undo/redo, a gesture is one step), `edit.ts`
+  (add, duplicate, delete, show/hide, nudge, element names).
 - `src/render/` — `view.ts` (what the app needs from the 3D view, types
   only), `scene.ts` (Three.js; checked by the smoke, not vitest).
 - `src/ui/` — `controls.ts` (declarative slider / number / select / check
-  rows), `plateCard.ts` (the Plate card's controls), `dom.ts`.
+  rows), `plateCard.ts`, `selectedCard.ts` (the cards' controls),
+  `elementsCard.ts` (the element list), `warningsCard.ts`, `dom.ts`.
 - `src/i18n/` — `en.ts` defines the messages, `ru.ts`, `uk.ts`, `he.ts` follow
   its type; `index.ts` — locales, detection, text direction, `staticText`;
   `plural.ts` — `Intl.PluralRules` helper.

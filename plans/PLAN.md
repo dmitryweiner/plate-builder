@@ -291,3 +291,17 @@ sheet on a phone, offline reload.
   size.
 - **M1**: the vignette, own SVG and crop kinds are in the schema but build as
   a rectangle until M5–M6; the Plate card offers primitives only.
+- **M2**: corner handles scale all of a hole's sizes together (a slot's
+  width with its length, a countersink's head with its screw, a keyhole's
+  head, shank and slot), so the box scales uniformly and the opposite corner
+  stays put.
+- **M2**: a press inside the selected element always moves it; its handles
+  win only outside it (a small hole's handles would otherwise cover it on
+  touch, where two fingers scale instead).
+- **M2**: keyhole sizes: lip 1.5 mm, channel 0.6 × shank + 0.6 mm, front
+  skin 0.8 mm — 5.3 mm for M4, the "about 5 mm" of the spec. A countersink
+  is one solid of revolution (three separate cutters left slivers).
+- **M2**: a basic Warnings card with "show" arrives now for the hole
+  warnings; M7 completes it.
+- **M2**: on desktop the page is bound to the window height (the panel
+  scrolls); before, the views grew with the panel.
