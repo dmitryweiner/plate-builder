@@ -39,8 +39,8 @@ export type PrimitiveKind = (typeof PRIMITIVE_KINDS)[number];
 export const HOLE_KINDS = ['round', 'slot', 'countersunk', 'keyhole'] as const;
 export type HoleKind = (typeof HOLE_KINDS)[number];
 
-/** Bundled fonts (spec §4); a script font and a Hebrew serif join in M4. */
-export const FONT_IDS = ['rubik', 'oswald', 'ptSerif', 'comfortaa'] as const;
+/** Bundled fonts (spec §4): Rubik (Latin, Cyrillic, Hebrew), Oswald, PT Serif, Comfortaa, Marck Script (Latin, Cyrillic), Frank Ruhl Libre (Latin, Hebrew). */
+export const FONT_IDS = ['rubik', 'oswald', 'ptSerif', 'comfortaa', 'marckScript', 'frankRuhl'] as const;
 export type FontId = (typeof FONT_IDS)[number];
 
 export const ALIGNS = ['left', 'center', 'right'] as const;

@@ -5,8 +5,9 @@ import { isRaster } from '../geo/heightmap';
 import { encodeSTL } from '../geo/stl';
 import { meshNormals } from '../geo/mesh';
 import { sanitizeState } from '../geo/state';
+import { isTextRaster } from '../geo/textShape';
 import { meshProblems, validateMesh } from '../geo/validate';
-import { buildMesh, outlineRings, plateOutline } from './build';
+import { buildPlate, outlineRings, plateOutline } from './build';
 import { CsgScope, type CsgApi } from './csg';
 import type { Job, JobResult } from './protocol';
 
@@ -24,11 +25,16 @@ export function runJob(csg: CsgApi, job: Job): JobResult {
       const raster = job.rasters?.[i];
       return isRaster(raster) ? raster : null;
     });
-    const { positions, indices } = buildMesh(csg, scope, state, rasters, job.quality);
+    const texts = state.texts.map((_, i) => {
+      const raster = job.textRasters?.[i];
+      return isTextRaster(raster) ? raster : null;
+    });
+    const { mesh, warnings } = buildPlate(csg, scope, state, { images: rasters, texts }, job.quality);
+    const { positions, indices } = mesh;
     const report = validateMesh({ positions, indices, normals: meshNormals(positions, indices) });
     const problems = meshProblems(report);
     const stl = job.quality === 'export' && problems.length === 0 ? encodeSTL({ positions, indices }, { name: state.name }) : null;
-    return { kind: 'mesh', quality: job.quality, positions, indices, report, problems, stl };
+    return { kind: 'mesh', quality: job.quality, positions, indices, report, problems, stl, warnings };
   } finally {
     scope.dispose();
   }

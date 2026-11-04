@@ -1,24 +1,28 @@
 import { createEditor, type EditorHandle } from './editor/editor2d';
 import { findElement } from './editor/elements';
-import { primitiveOutline, type Ring } from './geo/outline';
+import { measuredTextBoxes } from './geo/boxes';
+import { bounds, primitiveOutline, type Ring } from './geo/outline';
 import {
   defaultImage,
   defaultState,
   LIMITS,
   PRIMITIVE_KINDS,
   sanitizeState,
+  type FontId,
   type ImageElement,
   type Plate,
   type PlateState,
   type PrimitiveKind,
+  type TextElement,
 } from './geo/state';
+import { textRings, type TextRaster } from './geo/textShape';
 import type { Raster } from './geo/heightmap';
 import { processPixels } from './geo/heightmap';
 import { stlFileName } from './geo/stl';
 import { warnings as findWarnings, type Warning } from './geo/warnings';
 import { detectLocale, direction, isLocale, messages, staticText, type Locale, type Messages } from './i18n';
 import type { CameraPreset, SceneHandle } from './render/view';
-import { addHole, duplicateElement, elementName, nudgeElement, removeElement, toggleVisible } from './state/edit';
+import { addHole, addText, duplicateElement, elementName, nudgeElement, removeElement, toggleVisible } from './state/edit';
 import { History } from './state/history';
 import { loadSettings, saveSettings, type KeyValueStorage, type Settings } from './storage';
 import { renderControls, type ControlsHandle } from './ui/controls';
@@ -52,6 +56,12 @@ export interface AppOptions {
   /** Saves a file for the person (a download in the browser). */
   download: (name: string, data: ArrayBuffer) => void;
   timers: Timers;
+  /** Texts are drawn with the bundled fonts: loading one, and drawing a block once its font is in. */
+  texts: {
+    fontReady(font: FontId): boolean;
+    loadFont(font: FontId): Promise<void>;
+    rasterize(text: TextElement): TextRaster | null;
+  };
   /** Reading pictures needs the browser's decoders: a file into the stored picture, a stored one back into pixels. */
   pictures: {
     importFile(file: File): Promise<ImportedImage>;
@@ -87,6 +97,10 @@ const isPrimitive = (kind: Plate['kind']): kind is PrimitiveKind => PRIMITIVE_KI
 /** The outline the 2D view can draw at once, before the worker's (with rounding) arrives. */
 const instantOutline = (plate: Plate): Ring[] => [primitiveOutline({ ...plate, kind: isPrimitive(plate.kind) ? plate.kind : 'rectangle' })];
 
+/** What shapes a text's raster and contours: its cache key. */
+const textKey = (x: TextElement) =>
+  JSON.stringify([x.text, x.font, x.size, x.lineSpacing, x.align, x.arc, x.arc ? x.arcRadius : 0, x.arc ? x.arcSide : '']);
+
 /** 12.5 → "12.5", 3 → "3": sizes without trailing zeros. */
 const mm = (value: number) => String(Number(value.toFixed(1)));
 
@@ -104,7 +118,7 @@ type Exporting =
   { state: 'idle' } | { state: 'building' } | { state: 'saved'; name: string; ms: number } | { state: 'failed'; reason: string };
 
 /** Starts the app on the current page; returns a function that removes its listeners. */
-export function startApp({ storage = null, languages = [], csg, createScene, download, timers, pictures }: AppOptions): () => void {
+export function startApp({ storage = null, languages = [], csg, createScene, download, timers, pictures, texts }: AppOptions): () => void {
   const localeSelect = el('locale', HTMLSelectElement);
   const status = el('status', HTMLOutputElement);
   const plateBox = el('plateControls', HTMLElement);
@@ -122,6 +136,7 @@ export function startApp({ storage = null, languages = [], csg, createScene, dow
   const redoButton = el('redo', HTMLButtonElement);
   const addHoleButton = el('addHole', HTMLButtonElement);
   const addImageButton = el('addImage', HTMLButtonElement);
+  const addTextButton = el('addText', HTMLButtonElement);
   const imageFile = el('imageFile', HTMLInputElement);
   const elementsStatus = el('elementsStatus', HTMLElement);
   const selectedThumb = el('selectedThumb', HTMLCanvasElement);
@@ -146,6 +161,10 @@ export function startApp({ storage = null, languages = [], csg, createScene, dow
   /** decoded pictures by their data URL; a failed decode stays null */
   const rasters = new Map<string, Raster | null>();
   const decoding = new Map<string, Promise<void>>();
+  /** text rasters and their shapes (element frame, mm), by what shapes them */
+  const textShapes = new Map<string, { raster: TextRaster; rings: Ring[] } | null>();
+  /** warnings from the last build: what only the contours tell */
+  let workerWarnings: Warning[] = [];
   /** processed height pictures for the 2D view, by picture and levels */
   const processed = new Map<string, CanvasImageSource | null>();
 
@@ -162,7 +181,44 @@ export function startApp({ storage = null, languages = [], csg, createScene, dow
     snapping: () => snapping.checked,
     sizeLabel: () => `${mm(state().plate.width)} × ${mm(state().plate.height)} ${t().mm}`,
     picture: (image) => picture(image),
+    textShape: (text) => textShape(text)?.rings ?? null,
   });
+
+  /**
+   * A text's raster and contours, once its font is in. A missing font starts
+   * loading; the text then waits (it is not drawn with a fallback).
+   */
+  function textShape(text: TextElement): { raster: TextRaster; rings: Ring[] } | null {
+    if (!texts.fontReady(text.font)) {
+      void texts.loadFont(text.font).then(
+        () => {
+          if (stopped) return;
+          renderState();
+          schedulePreview(PREVIEW_DELAY_MS);
+        },
+        () => {},
+      );
+      return null;
+    }
+    const key = textKey(text);
+    if (!textShapes.has(key)) {
+      if (textShapes.size > 64) textShapes.delete(textShapes.keys().next().value ?? '');
+      const raster = texts.rasterize(text);
+      textShapes.set(key, raster ? { raster, rings: textRings(raster, text).rings } : null);
+    }
+    return textShapes.get(key) ?? null;
+  }
+
+  /** Measured boxes for the texts whose shapes are known; the rest keep their estimate. */
+  function measureTexts(): void {
+    measuredTextBoxes.clear();
+    for (const text of state().texts) {
+      const rings = textShape(text)?.rings;
+      if (rings?.length) measuredTextBoxes.set(text.id, bounds(rings));
+    }
+  }
+
+  const textRasterList = () => state().texts.map((text) => textShape(text)?.raster ?? null);
 
   /** Starts decoding the pictures not decoded yet; each, once in, redraws and rebuilds. */
   function ensureRasters(): void {
@@ -227,6 +283,7 @@ export function startApp({ storage = null, languages = [], csg, createScene, dow
   const renderState = () => {
     const s = state();
     const m = t();
+    measureTexts();
     plateCard?.sync(s);
     renderElementList(elementList, s, selected, m, {
       select: (id) => select(id),
@@ -256,7 +313,9 @@ export function startApp({ storage = null, languages = [], csg, createScene, dow
     }
     drawThumb(element?.type === 'image' ? element : null);
 
-    warnings = findWarnings(s, outline);
+    measureTexts();
+    // the worker's warnings belong to the build they came from: kept only for elements still there
+    warnings = [...findWarnings(s, outline), ...workerWarnings.filter((w) => w.ids.every((id) => findElement(s, id)))];
     renderWarnings(warningsCard, warningList, warnings, s, m, (spot) => {
       views.dataset.show = '2d';
       editor.frame(spot);
@@ -302,11 +361,13 @@ export function startApp({ storage = null, languages = [], csg, createScene, dow
     previewTimer = null;
     build = { state: 'building' };
     renderStatus();
-    csg.run({ kind: 'mesh', quality: 'preview', state: state(), rasters: rasterList() }).then(
+    csg.run({ kind: 'mesh', quality: 'preview', state: state(), rasters: rasterList(), textRasters: textRasterList() }).then(
       (done) => {
         // null: a fresher preview replaced this one and will answer instead
         if (stopped || !done || done.result.kind !== 'mesh') return;
         build = { state: 'done', mesh: done.result, ms: done.ms };
+        workerWarnings = done.result.warnings;
+        renderState();
         scene?.setMesh({ positions: done.result.positions, indices: done.result.indices });
         renderStatus();
       },
@@ -385,6 +446,13 @@ export function startApp({ storage = null, languages = [], csg, createScene, dow
   };
   const pickImage = () => imageFile.click();
 
+  const addTextNow = () => {
+    const { state: next, id } = addText(state());
+    if (!id) return;
+    selected = id;
+    update(next, true);
+  };
+
   const addHoleNow = () => {
     const { state: next, id } = addHole(state());
     if (!id) return;
@@ -459,10 +527,10 @@ export function startApp({ storage = null, languages = [], csg, createScene, dow
     exporting = { state: 'building' };
     renderStatus();
     const name = stlFileName(state().name);
-    // every picture decoded first: an export never leaves an image out
+    // every picture decoded and every font in first: an export never leaves an element out
     ensureRasters();
-    Promise.all(decoding.values())
-      .then(() => csg.run({ kind: 'mesh', quality: 'export', state: state(), rasters: rasterList() }))
+    Promise.all([...decoding.values(), ...state().texts.map((text) => texts.loadFont(text.font))])
+      .then(() => csg.run({ kind: 'mesh', quality: 'export', state: state(), rasters: rasterList(), textRasters: textRasterList() }))
       .then(
         (done) => {
           if (stopped || !done || done.result.kind !== 'mesh') return;
@@ -506,6 +574,7 @@ export function startApp({ storage = null, languages = [], csg, createScene, dow
   redoButton.addEventListener('click', redo);
   addHoleButton.addEventListener('click', addHoleNow);
   addImageButton.addEventListener('click', pickImage);
+  addTextButton.addEventListener('click', addTextNow);
   imageFile.addEventListener('change', onImageFile);
   document.addEventListener('keydown', onKey);
   ensureRasters();
@@ -524,6 +593,7 @@ export function startApp({ storage = null, languages = [], csg, createScene, dow
     redoButton.removeEventListener('click', redo);
     addHoleButton.removeEventListener('click', addHoleNow);
     addImageButton.removeEventListener('click', pickImage);
+    addTextButton.removeEventListener('click', addTextNow);
     imageFile.removeEventListener('change', onImageFile);
     document.removeEventListener('keydown', onKey);
     editor.dispose();

@@ -6,12 +6,14 @@
 //           − engraved texts − holes
 
 import type { CrossSection, Manifold } from 'manifold-3d';
-import { elementBox } from '../editor/elements';
+import { elementBox } from '../geo/boxes';
 import { heightfieldMesh } from '../geo/grid';
 import { heightField, sampleField, type Raster } from '../geo/heightmap';
 import { holeCutters, type Cutter } from '../geo/holes';
 import { CHORD_TOLERANCE, primitiveOutline, segmentsFor, type Ring } from '../geo/outline';
-import { PRIMITIVE_KINDS, type ImageElement, type Plate, type PlateState, type PrimitiveKind } from '../geo/state';
+import { PRIMITIVE_KINDS, type ImageElement, type Plate, type PlateState, type PrimitiveKind, type TextElement } from '../geo/state';
+import { textRings, type TextRaster } from '../geo/textShape';
+import type { Warning } from '../geo/warnings';
 import type { CsgApi, CsgScope } from './csg';
 
 const isPrimitive = (kind: Plate['kind']): kind is PrimitiveKind => PRIMITIVE_KINDS.some((k) => k === kind);
@@ -59,11 +61,6 @@ export function plateOutline(csg: CsgApi, scope: CsgScope, plate: Plate): CrossS
 
 export function outlineRings(section: CrossSection): Ring[] {
   return section.toPolygons().map((polygon) => polygon.map(([x, y]): [number, number] => [x, y]));
-}
-
-export interface PlateMesh {
-  positions: Float32Array;
-  indices: Uint32Array;
 }
 
 function cutterSolid(csg: CsgApi, scope: CsgScope, cutter: Cutter): Manifold {
@@ -117,50 +114,132 @@ function imageSolid(csg: CsgApi, scope: CsgScope, image: ImageElement, raster: R
   return scope.keep(turned.translate([image.x, image.y, 0]));
 }
 
+/** Strokes thinner than this would not print well (spec §10: two nozzle widths), mm. */
+export const THIN_STROKE = 0.8;
+/** The share of a text's area an opening by half THIN_STROKE may take before `text.thin`. */
+const THIN_LOSS = 0.05;
+
+interface TextSection {
+  text: TextElement;
+  section: CrossSection;
+  squeeze: number;
+}
+
+/** A text's contours as a cross-section in the plate frame. */
+function textSection(csg: CsgApi, scope: CsgScope, text: TextElement, raster: TextRaster): TextSection | null {
+  const { rings, squeeze } = textRings(raster, text);
+  if (rings.length === 0) return null;
+  const local = scope.keep(new csg.CrossSection(rings, 'Positive'));
+  const turned = scope.keep(local.rotate(text.rotation));
+  return { text, section: scope.keep(turned.translate([text.x, text.y])), squeeze };
+}
+
+/** `text.thin` (spec §10): the contour opened by half a thin stroke loses more than 5 % of its area. */
+function isThin(scope: CsgScope, section: CrossSection): boolean {
+  const area = section.area();
+  if (area <= 0) return false;
+  const r = THIN_STROKE / 2;
+  const shrunk = scope.keep(section.offset(-r, 'Round', 2, segmentsFor(r)));
+  const opened = scope.keep(shrunk.offset(r, 'Round', 2, segmentsFor(r)));
+  return 1 - opened.area() / area > THIN_LOSS;
+}
+
+/** A prism of a cross-section between two heights. */
+function prismOf(scope: CsgScope, section: CrossSection, z0: number, z1: number): Manifold {
+  const prism = scope.keep(section.extrude(z1 - z0));
+  return scope.keep(prism.translate([0, 0, z0]));
+}
+
+export interface Rasters {
+  /** one per `state.images` (null: not decoded) */
+  images: readonly (Raster | null)[];
+  /** one per `state.texts` (null: not drawn yet) */
+  texts: readonly (TextRaster | null)[];
+}
+
 /**
  * The solid (spec §6):
- *   ( base ∪ images ) ∩ outline prism − holes
- * `rasters` go with `state.images`, one each (null: not decoded).
+ *   ( base ∪ images ∪ raised texts ) ∩ outline prism − engraved texts − holes
+ * and the warnings only the contours can tell.
  */
 export function buildSolid(
   csg: CsgApi,
   scope: CsgScope,
   state: PlateState,
-  rasters: readonly (Raster | null)[] = [],
-  quality: Quality = 'preview',
-): Manifold {
+  rasters: Rasters,
+  quality: Quality,
+): { solid: Manifold; warnings: Warning[] } {
   const { thickness } = state.plate;
+  const warnings: Warning[] = [];
   const outline = plateOutline(csg, scope, state.plate);
   const base = scope.keep(outline.extrude(thickness));
   const images = state.images.flatMap((image, i) => {
-    const raster = rasters[i];
+    const raster = rasters.images[i];
     return image.visible && raster ? [{ image, raster }] : [];
   });
+  const texts = state.texts.flatMap((text, i) => {
+    const raster = rasters.texts[i];
+    const made = text.visible && raster ? textSection(csg, scope, text, raster) : null;
+    return made ? [made] : [];
+  });
+  for (const { text, section, squeeze } of texts) {
+    const spot: [number, number] = [text.x, text.y];
+    if (isThin(scope, section)) warnings.push({ code: 'text.thin', ids: [text.id], spot });
+    if (squeeze < 1) warnings.push({ code: 'text.arcTooLong', ids: [text.id], params: { percent: Math.round(squeeze * 100) }, spot });
+  }
+  const raised = texts.filter(({ text }) => text.mode === 'raised');
+  const engraved = texts.filter(({ text }) => text.mode === 'engraved');
+
   // the top of everything that stands on the base
-  const top = thickness + Math.max(0, ...images.map(({ image }) => image.height));
+  const top = thickness + Math.max(0, ...images.map(({ image }) => image.height), ...raised.map(({ text }) => text.height));
   let solid = base;
-  if (images.length > 0) {
-    const reliefs = images.map(({ image, raster }) => imageSolid(csg, scope, image, raster, thickness, quality));
+  if (images.length > 0 || raised.length > 0) {
+    const reliefs = [
+      ...images.map(({ image, raster }) => imageSolid(csg, scope, image, raster, thickness, quality)),
+      // from inside the base, so the text is one with whatever is under it
+      ...raised.map(({ text, section }) => prismOf(scope, section, thickness / 2, thickness + text.height)),
+    ];
     const additive = scope.keep(csg.Manifold.union([base, ...reliefs]));
     const prism = scope.keep(outline.extrude(top + 1));
     solid = scope.keep(additive.intersect(prism));
   }
-  const cutters = state.holes.filter((hole) => hole.visible).flatMap((hole) => holeCutters(hole, thickness, top));
-  if (cutters.length === 0) return solid;
-  const holes = scope.keep(csg.Manifold.union(cutters.map((cutter) => cutterSolid(csg, scope, cutter))));
-  return scope.keep(solid.subtract(holes));
+  const cutters = [
+    // from the floor of the engraving up through everything
+    ...engraved.map(({ text, section }) => prismOf(scope, section, thickness - text.depth, top + 1)),
+    ...state.holes
+      .filter((hole) => hole.visible)
+      .flatMap((hole) => holeCutters(hole, thickness, top).map((cutter) => cutterSolid(csg, scope, cutter))),
+  ];
+  if (cutters.length > 0) solid = scope.keep(solid.subtract(scope.keep(csg.Manifold.union(cutters))));
+  return { solid, warnings };
 }
 
-/** The whole solid as a mesh. */
+export interface PlateMesh {
+  positions: Float32Array;
+  indices: Uint32Array;
+}
+
+export function buildPlate(
+  csg: CsgApi,
+  scope: CsgScope,
+  state: PlateState,
+  rasters: Rasters,
+  quality: Quality,
+): { mesh: PlateMesh; warnings: Warning[] } {
+  const { solid, warnings } = buildSolid(csg, scope, state, rasters, quality);
+  const mesh = solid.getMesh();
+  return { mesh: { positions: positionsOf(mesh.vertProperties, mesh.numProp), indices: new Uint32Array(mesh.triVerts) }, warnings };
+}
+
+/** The whole solid as a mesh, images only (texts need their rasters too: buildPlate). */
 export function buildMesh(
   csg: CsgApi,
   scope: CsgScope,
   state: PlateState,
-  rasters: readonly (Raster | null)[] = [],
+  images: readonly (Raster | null)[] = [],
   quality: Quality = 'preview',
 ): PlateMesh {
-  const mesh = buildSolid(csg, scope, state, rasters, quality).getMesh();
-  return { positions: positionsOf(mesh.vertProperties, mesh.numProp), indices: new Uint32Array(mesh.triVerts) };
+  return buildPlate(csg, scope, state, { images, texts: [] }, quality).mesh;
 }
 
 /** The first three properties of each vertex are x, y, z; manifold may carry more. */

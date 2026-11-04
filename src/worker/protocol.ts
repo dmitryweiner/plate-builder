@@ -7,6 +7,8 @@
 import type { Raster } from '../geo/heightmap';
 import type { Ring } from '../geo/outline';
 import type { PlateState } from '../geo/state';
+import type { TextRaster } from '../geo/textShape';
+import type { Warning } from '../geo/warnings';
 import type { MeshProblem, MeshReport } from '../geo/validate';
 
 /**
@@ -28,6 +30,8 @@ export type Job =
        * its shape.
        */
       rasters?: (Raster | null)[];
+      /** the texts drawn by the main thread with their fonts, one per `state.texts` (null: the font is not in yet) */
+      textRasters?: (TextRaster | null)[];
     };
 
 export type JobKind = Job['kind'];
@@ -42,6 +46,8 @@ export interface MeshResult {
   problems: MeshProblem[];
   /** the binary STL of an export; null for a preview */
   stl: ArrayBuffer | null;
+  /** what only the contours can tell (text.thin, text.arcTooLong) */
+  warnings: Warning[];
 }
 
 /** What a finished job returns, by kind. */

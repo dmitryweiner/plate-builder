@@ -5,7 +5,7 @@
 
 import { holeFootprint, placeRing } from '../geo/holes';
 import { bounds, type Bounds, type Point, type Ring } from '../geo/outline';
-import type { ImageElement, PlateElement, PlateState } from '../geo/state';
+import type { ImageElement, PlateElement, PlateState, TextElement } from '../geo/state';
 import { allElements, boxCorners, elementBox, findElement, hitsElement, hitTest, replaceElement } from './elements';
 import { moveElement, pinchElement, rotateTowards, scaleFromCorner, snapPoint, snapTargets, type Snapped } from './gestures';
 import { fitView, panView, toPlate, toScreen, zoomAt, type ViewTransform } from './view';
@@ -35,6 +35,8 @@ export interface EditorOptions {
   sizeLabel(): string;
   /** an image's height map as a picture (white high), or null while it is not decoded */
   picture(image: ImageElement): CanvasImageSource | null;
+  /** a text's contours in its own frame (mm), or null while its font loads */
+  textShape(text: TextElement): readonly Ring[] | null;
 }
 
 export interface EditorHandle {
@@ -308,6 +310,15 @@ export function createEditor(o: EditorOptions): EditorHandle {
         (box.maxY - box.minY) * view.scale,
       );
       ctx.restore();
+    }
+
+    // texts as their ink: raised darker, engraved lighter
+    for (const text of state.texts) {
+      const rings = text.visible ? o.textShape(text) : null;
+      if (!rings) continue;
+      path(rings.map((ring) => placeRing(text, ring)));
+      ctx.fillStyle = text.mode === 'raised' ? c.edge : c.background;
+      ctx.fill('nonzero');
     }
     ctx.restore();
 

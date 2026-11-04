@@ -2,11 +2,21 @@
 // the state and the outline the 2D view shows. Each names its elements and
 // carries a spot for the 2D view to frame.
 
+import { boxCorners } from './boxes';
 import { holeFootprint, keyholeMinThickness, placeRing } from './holes';
 import type { Point, Ring } from './outline';
 import type { HoleElement, PlateState } from './state';
 
-export type WarningCode = 'element.outside' | 'element.overlap' | 'hole.nearEdge' | 'keyhole.thin';
+export type WarningCode =
+  | 'element.outside'
+  | 'element.overlap'
+  | 'hole.nearEdge'
+  | 'keyhole.thin'
+  | 'text.arcLines'
+  | 'text.buried'
+  // found by the worker, which has the contours
+  | 'text.thin'
+  | 'text.arcTooLong';
 
 export interface Warning {
   code: WarningCode;
@@ -99,6 +109,24 @@ export function warnings(state: PlateState, outline: readonly Ring[]): Warning[]
       const [a, b] = [holes[i], holes[j]];
       if (ringsOverlap(footprints.get(a) ?? [], footprints.get(b) ?? []))
         out.push({ code: 'element.overlap', ids: [a.id, b.id], spot: [(a.x + b.x) / 2, (a.y + b.y) / 2] });
+    }
+  }
+
+  const images = state.images.filter((image) => image.visible);
+  const texts = state.texts.filter((text) => text.visible);
+  for (const e of [...images, ...texts]) {
+    if (!boxCorners(e).every((p) => pointInRings(p, outline))) out.push({ code: 'element.outside', ids: [e.id], spot: [e.x, e.y] });
+  }
+  for (const text of texts) {
+    const box = boxCorners(text);
+    const spot: Point = [text.x, text.y];
+    if (text.arc && text.text.includes('\n')) out.push({ code: 'text.arcLines', ids: [text.id], spot });
+    if (text.mode === 'raised' && images.some((image) => image.height > text.height && ringsOverlap(box, boxCorners(image)))) {
+      out.push({ code: 'text.buried', ids: [text.id], spot });
+    }
+    for (const hole of holes) {
+      if (ringsOverlap(footprints.get(hole) ?? [], box))
+        out.push({ code: 'element.overlap', ids: [hole.id, text.id], spot: [(hole.x + text.x) / 2, (hole.y + text.y) / 2] });
     }
   }
   return out;

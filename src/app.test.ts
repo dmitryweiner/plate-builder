@@ -107,9 +107,33 @@ function meshResult(over: Partial<MeshResult> = {}): MeshResult {
     },
     problems: [],
     stl: null,
+    warnings: [],
     ...over,
   };
 }
+
+/** Fonts the test has "loaded"; a text raster is a block as wide as the text is long. */
+let loadedFonts: Set<string>;
+const texts: AppOptions['texts'] = {
+  fontReady: (font) => loadedFonts.has(font),
+  loadFont: (font) => {
+    loadedFonts.add(font);
+    return Promise.resolve();
+  },
+  rasterize: (block) => {
+    const width = 10 * block.size * block.text.length;
+    const height = 10 * block.size + 20;
+    return {
+      width,
+      height,
+      data: new Uint8Array(width * height).fill(255),
+      pxPerMm: 10,
+      originX: width / 2,
+      originY: height / 2,
+      cap: block.size,
+    };
+  },
+};
 
 let stop: () => void = () => {};
 let storage: MemoryStorage;
@@ -138,6 +162,7 @@ function start(languages: readonly string[] = ['en-US'], over: Partial<AppOption
     download: (name, data) => downloads.push({ name, bytes: data.byteLength }),
     timers,
     pictures,
+    texts,
     ...over,
   });
 }
@@ -156,6 +181,7 @@ beforeEach(() => {
   timers = new ManualTimers();
   downloads = [];
   decodes = new Map();
+  loadedFonts = new Set();
 });
 afterEach(() => {
   stop();
@@ -515,5 +541,67 @@ describe('images', () => {
     const job = csg.last().job;
     expect(job).toMatchObject({ kind: 'mesh', quality: 'export' });
     expect(job.kind === 'mesh' && job.rasters).toEqual([raster2x1]);
+  });
+});
+
+describe('texts', () => {
+  it('adds a text, waits for its font, then sends its raster with the preview', async () => {
+    start();
+    $('#addText', HTMLButtonElement).click();
+    expect(text('#selectedTitle')).toBe('Text 1');
+    expect($('#element-text', HTMLTextAreaElement).value).toBe('Text');
+    expect([...$('#element-text-font', HTMLSelectElement).options].map((o) => o.textContent)).toEqual([
+      'Rubik',
+      'Oswald',
+      'PT Serif',
+      'Comfortaa',
+      'Marck Script',
+      'Frank Ruhl Libre',
+    ]);
+    // the font was asked for when the text was first drawn
+    expect(loadedFonts.has('rubik')).toBe(true);
+    await settle();
+    timers.flush();
+    const job = csg.last().job;
+    expect(job.kind === 'mesh' && job.textRasters?.[0]?.width).toBe(10 * 8 * 4);
+  });
+
+  it('shows the rows of the text’s kind and arc', async () => {
+    start();
+    $('#addText', HTMLButtonElement).click();
+    const row = (id: string) => $(`#${id}`, HTMLElement).closest('.row');
+    expect(row('element-text-depth')?.hasAttribute('hidden')).toBe(true);
+    const mode = $('#element-text-mode', HTMLSelectElement);
+    mode.value = 'engraved';
+    mode.dispatchEvent(new Event('change'));
+    expect(row('element-text-depth')?.hasAttribute('hidden')).toBe(false);
+    expect(row('element-text-height')?.hasAttribute('hidden')).toBe(true);
+    expect(row('element-text-arcRadius')?.hasAttribute('hidden')).toBe(true);
+    $('#element-text-arc', HTMLInputElement).click();
+    expect(row('element-text-arcRadius')?.hasAttribute('hidden')).toBe(false);
+    expect($('#element-text-arcRadius-n', HTMLInputElement).value).toBe('50');
+  });
+
+  it('types into the text as one step per edit and warns about joined arc lines', () => {
+    start();
+    $('#addText', HTMLButtonElement).click();
+    const area = $('#element-text', HTMLTextAreaElement);
+    area.value = 'Kitchen\nDoor';
+    area.dispatchEvent(new Event('input'));
+    area.dispatchEvent(new Event('change'));
+    $('#element-text-arc', HTMLInputElement).click();
+    expect(text('#warningList')).toContain('Text 1: an arc takes one line; the lines are joined.');
+    $('#undo', HTMLButtonElement).click();
+    $('#undo', HTMLButtonElement).click();
+    expect($('#element-text', HTMLTextAreaElement).value).toBe('Text');
+  });
+
+  it('shows the warnings the worker found', async () => {
+    start();
+    $('#addText', HTMLButtonElement).click();
+    timers.flush();
+    csg.last().settle({ result: meshResult({ warnings: [{ code: 'text.thin', ids: ['t1'], spot: [0, 0] }] }), ms: 5 });
+    await settle();
+    expect(text('#warningList')).toContain('Text 1 has strokes thinner than 0.8 mm');
   });
 });

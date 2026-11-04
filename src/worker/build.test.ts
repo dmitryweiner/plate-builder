@@ -6,15 +6,18 @@ import {
   defaultHole,
   defaultImage,
   defaultState,
+  defaultText,
   HOLE_KINDS,
   PRIMITIVE_KINDS,
   type HoleElement,
   type ImageElement,
   type Plate,
   type PlateState,
+  type TextElement,
 } from '../geo/state';
+import type { TextRaster } from '../geo/textShape';
 import { meshProblems, validateMesh } from '../geo/validate';
-import { buildMesh, gridStep, IMAGE_EPS, outlineRings, plateOutline } from './build';
+import { buildMesh, buildPlate, gridStep, IMAGE_EPS, outlineRings, plateOutline } from './build';
 import { CsgScope, initCSG, type CsgApi } from './csg';
 
 let csg: CsgApi;
@@ -267,5 +270,82 @@ describe('gridStep', () => {
     expect(gridStep(image, 'export')).toBeCloseTo(60 / 512);
     expect(gridStep({ ...image, size: 300 }, 'export')).toBe(0.2);
     expect(gridStep({ ...image, size: 20 }, 'export')).toBe(0.1);
+  });
+});
+
+/** A 10 px/mm text raster: a filled w × h mm block (as if one wide letter), origin in its middle. */
+function blockRaster(w: number, h: number, cap = h): TextRaster {
+  const pad = 10;
+  const width = w * 10 + 2 * pad;
+  const height = h * 10 + 2 * pad;
+  const data = new Uint8Array(width * height);
+  for (let j = pad; j < height - pad; j++) for (let i = pad; i < width - pad; i++) data[j * width + i] = 255;
+  return { width, height, data, pxPerMm: 10, originX: width / 2, originY: height / 2, cap };
+}
+
+function plateWithTexts(texts: Partial<TextElement>[]): PlateState {
+  const state = withPlate({ width: 100, height: 60, thickness: 3, rounding: 0 });
+  return { ...state, texts: texts.map((over, i) => ({ ...defaultText(state), id: `t${i + 1}`, ...over })) };
+}
+
+function builtTexts(state: PlateState, rasters: (TextRaster | null)[], images: (Raster | null)[] = []) {
+  const result = inScope((scope) => buildPlate(csg, scope, state, { images, texts: rasters }, 'preview'));
+  return { ...result, report: validateMesh({ ...result.mesh, normals: meshNormals(result.mesh.positions, result.mesh.indices) }) };
+}
+
+describe('texts', () => {
+  it('a raised text stands on the base to its height, watertight', () => {
+    const { report } = builtTexts(plateWithTexts([{ height: 1.5 }]), [blockRaster(20, 8)]);
+    expect(report.watertight).toBe(true);
+    expect(meshProblems(report)).toEqual([]);
+    expect(report.bbox.max[2]).toBeCloseTo(4.5, 4);
+    expect(report.volume).toBeCloseTo(100 * 60 * 3 + 20 * 8 * 1.5, -1);
+  });
+
+  it('an engraved text is cut to its depth', () => {
+    const { mesh, report } = builtTexts(plateWithTexts([{ mode: 'engraved', depth: 1.2 }]), [blockRaster(20, 8)]);
+    expect(report.watertight).toBe(true);
+    expect(report.volume).toBeCloseTo(100 * 60 * 3 - 20 * 8 * 1.2, -1);
+    // the floor of the engraving: its corners are the lowest vertices within the text
+    let floor = Infinity;
+    for (let v = 0; v < mesh.positions.length; v += 3) {
+      if (Math.abs(mesh.positions[v]) <= 10.01 && Math.abs(mesh.positions[v + 1]) <= 4.01) floor = Math.min(floor, mesh.positions[v + 2]);
+    }
+    expect(floor).toBeCloseTo(3 - 1.2, 4);
+  });
+
+  it('an engraved text cuts into an image under it', () => {
+    const state = {
+      ...plateWithTexts([{ mode: 'engraved', depth: 0.6 }]),
+      images: [{ ...defaultImage(defaultState(), 'data:image/png;base64,', 4, 4), id: 'i1', size: 40, height: 2 }],
+    };
+    const { report } = builtTexts(state, [blockRaster(20, 8)], [flat(255)]);
+    expect(report.watertight).toBe(true);
+    expect(report.volume).toBeCloseTo(100 * 60 * 3 + 40 * 40 * (2 - IMAGE_EPS) - 20 * 8 * (2 - IMAGE_EPS + 0.6), -1);
+  });
+
+  it('turns and moves a text with its element', () => {
+    const { report } = builtTexts(plateWithTexts([{ rotation: 90, x: 20, y: 5 }]), [blockRaster(20, 8)]);
+    expect(report.watertight).toBe(true);
+    const relief = (axis: 0 | 1) => [report.bbox.min[axis], report.bbox.max[axis]];
+    expect(relief(0)).toEqual([-50, 50].map((v) => expect.closeTo(v, 4)));
+    // the text's own top is at x = 20 ± 4, y = 5 ± 10 after a quarter turn: checked by its volume being whole
+    expect(report.volume).toBeCloseTo(100 * 60 * 3 + 20 * 8, -1);
+  });
+
+  it('warns about strokes thinner than 0.8 mm and not about thick ones', () => {
+    const thin = builtTexts(plateWithTexts([{}]), [blockRaster(20, 0.6, 8)]);
+    expect(thin.warnings.map((w) => w.code)).toEqual(['text.thin']);
+    expect(thin.warnings[0]?.ids).toEqual(['t1']);
+    expect(builtTexts(plateWithTexts([{}]), [blockRaster(20, 2)]).warnings).toEqual([]);
+  });
+
+  it('squeezes an arc text that is longer than its circle and says by how much', () => {
+    const raster = { ...blockRaster(100, 4), originY: 4 * 10 + 10 };
+    const { warnings, report } = builtTexts(plateWithTexts([{ arc: true, arcRadius: 10 }]), [raster]);
+    expect(report.watertight).toBe(true);
+    const arc = warnings.find((w) => w.code === 'text.arcTooLong');
+    expect(arc?.params?.percent).toBeGreaterThan(0);
+    expect(arc?.params?.percent).toBeLessThan(100);
   });
 });
