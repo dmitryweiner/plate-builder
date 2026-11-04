@@ -751,3 +751,57 @@ describe('vignettes and own SVG', () => {
     expect(text('#plateStatus')).toBe('The SVG could not be read: not an SVG');
   });
 });
+
+const hints = () => [...document.querySelectorAll('#printHints li')].map((li) => li.textContent);
+
+describe('export card and warnings', () => {
+  it('keeps the list buttons through an edit that does not change the lists, so a click that blurs a field lands', () => {
+    start();
+    $('#addHole', HTMLButtonElement).click();
+    setInput('#element-x-n', '47');
+    const row = $('.element-row .element-name', HTMLButtonElement);
+    const show = $('#warningList button', HTMLButtonElement);
+    setInput('#element-y-n', '1');
+    expect(document.querySelector('.element-row .element-name')).toBe(row);
+    expect(document.querySelector('#warningList button')).toBe(show);
+  });
+
+  it('gives the print hints and the colour changes of the flat reliefs', () => {
+    start();
+    expect(hints()).toEqual(['Print with the back on the bed; no supports needed.']);
+    $('#plate-rim', HTMLInputElement).click();
+    expect(hints()).toEqual([
+      'Print with the back on the bed; no supports needed.',
+      'Change filament at Z = 3 mm (the first layer above it).',
+      'Change filament at Z = 4 mm (the first layer above it).',
+    ]);
+  });
+
+  it('notes that images are a gradient', async () => {
+    start();
+    chooseFile('logo.png');
+    await settle();
+    expect(hints().at(-1)).toBe('Images are a gradient: a colour change across them gives bands, not a picture.');
+  });
+
+  it('lists a broken mesh among the warnings, without a place to show', async () => {
+    start();
+    timers.flush();
+    csg.last().settle({ result: meshResult({ problems: ['empty'] }), ms: 1 });
+    await settle();
+    const item = $('#warningList li[data-code="mesh.invalid"]', HTMLElement);
+    expect(item.textContent).toBe('The mesh is broken (the mesh is empty); the STL cannot be exported.');
+    expect(item.querySelector('button')).toBeNull();
+  });
+
+  it('shows a progress bar while a build or an export runs', async () => {
+    start();
+    timers.flush();
+    expect($('#buildProgress', HTMLElement).hidden).toBe(false);
+    csg.last().settle({ result: meshResult(), ms: 1 });
+    await settle();
+    expect($('#buildProgress', HTMLElement).hidden).toBe(true);
+    $('#downloadStl', HTMLButtonElement).click();
+    expect($('#exportProgress', HTMLElement).hidden).toBe(false);
+  });
+});

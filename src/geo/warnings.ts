@@ -14,6 +14,9 @@ export type WarningCode =
   | 'keyhole.thin'
   | 'text.arcLines'
   | 'text.buried'
+  | 'relief.tall'
+  // the last build's mesh check failed: export is blocked
+  | 'mesh.invalid'
   // found by the worker, which has the contours
   | 'outline.islands'
   | 'outline.empty'
@@ -29,6 +32,9 @@ export interface Warning {
   /** where to look, plate frame */
   spot: Point;
 }
+
+/** A relief taller than this many times the base warps it as it cools (spec §10). */
+export const TALL_RELIEF = 3;
 
 /** Material a hole needs around it, mm (two nozzle widths and a half). */
 export const HOLE_EDGE_MIN = 2;
@@ -134,5 +140,15 @@ export function warnings(state: PlateState, outline: readonly Ring[]): Warning[]
         out.push({ code: 'element.overlap', ids: [hole.id, text.id], spot: [(hole.x + text.x) / 2, (hole.y + text.y) / 2] });
     }
   }
+  const { plate } = state;
+  const relief = Math.max(
+    0,
+    ...images.map((image) => image.height),
+    ...texts.filter((text) => text.mode === 'raised').map((text) => text.height),
+    plate.rim ? plate.rimHeight : 0,
+    (plate.kind === 'vignette' || plate.kind === 'svg') && plate.frame ? plate.frameHeight : 0,
+  );
+  if (relief > TALL_RELIEF * plate.thickness + 1e-9)
+    out.push({ code: 'relief.tall', ids: [], params: { times: Math.round((relief / plate.thickness) * 10) / 10 }, spot: [0, 0] });
   return out;
 }

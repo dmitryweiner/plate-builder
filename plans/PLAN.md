@@ -349,3 +349,11 @@ sheet on a phone, offline reload.
 - **M6**: the silhouette travels to the worker as a mask raster with its
   origin in the middle (the text raster's shape), drawn by the main thread at
   the plate's size, the SVG's proportions kept or stretched.
+- **M7**: the progress bars are indeterminate: manifold says nothing from
+  inside a boolean, and stage counts would pretend otherwise for a job that
+  is one boolean chain.
+- **M7**: the element list and the warnings are made again only when what
+  they show changes: a click that blurs a number field (whose change
+  re-renders) otherwise lost its button between mousedown and mouseup.
+- **M7**: colour changes are listed only when there is more than one top
+  (the base's alone is no change).

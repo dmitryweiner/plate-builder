@@ -423,6 +423,57 @@ try {
     await context.close();
   });
 
+  await step('warnings: each of them, "show" moves the view, a blocked export', async () => {
+    const { page, context } = await app.open();
+    let { info } = await built(page);
+    await setNumber(page, 'plate-thickness', 1);
+    ({ info } = await built(page, info));
+    // a hole near the edge and one outside, overlapping; a keyhole too thin; a tall arc text with lines
+    const hole = async (kind, x, y) => {
+      await page.click('#addHole');
+      await page.selectOption('#element-holeKind', kind);
+      await setNumber(page, 'element-x', x);
+      await setNumber(page, 'element-y', y);
+    };
+    await hole('round', 47, 0);
+    await hole('round', 49, 3);
+    await hole('keyhole', -30, 0);
+    await page.click('#addText');
+    await page.fill('#element-text', 'Kitchen\nDoor');
+    await page.locator('#element-text').dispatchEvent('change');
+    await setNumber(page, 'element-text-height', 4);
+    await page.check('#element-text-arc');
+    await setNumber(page, 'element-text-arcRadius', 5);
+    ({ info } = await built(page, info));
+    const codes = await page.locator('#warningList li').evaluateAll((items) => items.map((li) => li.dataset.code));
+    for (const code of [
+      'hole.nearEdge',
+      'element.outside',
+      'element.overlap',
+      'keyhole.thin',
+      'text.arcLines',
+      'text.arcTooLong',
+      'relief.tall',
+    ]) {
+      check(codes.includes(code), `no ${code} among ${codes.join(', ')}`);
+    }
+    const before = await page.locator('#view2d').getAttribute('data-view');
+    await page.locator('#warningList li[data-code="hole.nearEdge"] button').click();
+    const after = await page.locator('#view2d').getAttribute('data-view');
+    check(before !== after, `"show" did not move the 2D view (${before} → ${after})`);
+    if (shots) await page.screenshot({ path: 'shots/warnings-desktop.png' });
+    // nothing to crop around: an empty mesh, the export blocked and said why
+    await page.selectOption('#plate-kind', 'crop');
+    await page.locator('.element-row [aria-label^="Delete"]').first().click();
+    while ((await page.locator('.element-row').count()) > 0) await page.locator('.element-row [aria-label^="Delete"]').first().click();
+    await page.waitForFunction(() => document.querySelector('#warningList li[data-code="mesh.invalid"]') !== null, null, {
+      timeout: 20000,
+    });
+    check(await page.locator('#downloadStl').isDisabled(), 'a broken mesh can still be exported');
+    console.log(`    ${codes.length} warnings: ${codes.join(', ')}`);
+    await context.close();
+  });
+
   await step('downloads a real STL', async () => {
     const { page, context } = await app.open();
     await built(page);
