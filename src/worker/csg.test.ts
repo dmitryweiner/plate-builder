@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { CsgScope, initCSG } from './csg';
-import { defaultState } from '../geo/state';
+import type { Raster } from '../geo/heightmap';
+import { defaultImage, defaultState } from '../geo/state';
 import { resultTransfer, runJob } from './jobs';
 
 describe('initCSG', () => {
@@ -54,6 +55,20 @@ describe('runJob', () => {
     const exported = runJob(csg, { kind: 'mesh', quality: 'export', state });
     if (exported.kind !== 'mesh') throw new Error(exported.kind);
     expect(exported.stl?.byteLength).toBe(84 + 50 * exported.report.triangleCount);
+  });
+
+  it('builds the images whose rasters come with the job and ignores broken ones', async () => {
+    const csg = await initCSG();
+    const base = defaultState();
+    const image = { ...defaultImage(base, 'data:image/png;base64,x', 2, 2), height: 2 };
+    const state = { ...base, images: [image, image] };
+    const raster = { width: 2, height: 2, data: new Uint8Array([255, 255, 255, 255, 255, 255, 255, 255]) };
+    const top = (rasters: unknown) => {
+      const result = runJob(csg, { kind: 'mesh', quality: 'preview', state, rasters: rasters as (Raster | null)[] });
+      return result.kind === 'mesh' ? result.report.bbox.max[2] : 0;
+    };
+    expect(top([raster, null])).toBeCloseTo(5, 1);
+    expect(top([{ width: 3, height: 2, data: raster.data }, 'x'])).toBeCloseTo(3, 4);
   });
 });
 

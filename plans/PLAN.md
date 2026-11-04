@@ -305,3 +305,12 @@ sheet on a phone, offline reload.
   warnings; M7 completes it.
 - **M2**: on desktop the page is bound to the window height (the panel
   scrolls); before, the views grew with the panel.
+- **M3 decision** (measured, see "What costs what" in AGENTS.md): images
+  stay at 512 px; flat-run merging is not built — the reference plate's
+  preview takes 120 ms and its export 1.6 s; a 290 mm image on a 300 × 300
+  plate previews in 1.9 s and exports in 14 s.
+- **M3**: the measurement runs in the browser's worker as a smoke flag
+  (`--measure`) rather than `scripts/inspect.mjs`, which needs a TS runner
+  the project does not have.
+- **M3**: the 2D view's plate is a mid-tone, so a picture's white highs show
+  on it in the light theme.

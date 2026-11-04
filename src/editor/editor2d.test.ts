@@ -56,6 +56,7 @@ beforeEach(() => {
     outline: () => outline,
     snapping: () => snapping,
     sizeLabel: () => '100 × 60 mm',
+    picture: () => null,
   });
   editor.fit();
 });

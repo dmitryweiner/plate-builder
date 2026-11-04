@@ -7,6 +7,7 @@
 //   npm run smoke               # dev server
 //   npm run smoke -- --preview  # production build + offline check
 //   npm run smoke -- --shots    # also saves shots/<viewport>-<locale>.png
+//   npm run smoke -- --measure  # also times images on small and large plates
 //
 // Prints one line per step; exits 1 on the first failed step or on any
 // console error. New checks are new steps here, not new scripts.
@@ -17,6 +18,8 @@ import { check, launch, parseArgs, VIEWPORTS } from './lib/harness.mjs';
 const flags = parseArgs(process.argv.slice(2));
 const preview = flags.has('preview');
 const shots = flags.has('shots');
+// --measure: the image timings of plan M3 (preview and export of a 512 px image on 100 × 60 and 300 × 300)
+const measure = flags.has('measure');
 const app = await launch({ preview });
 
 async function step(name, fn) {
@@ -61,6 +64,63 @@ async function mouseDrag(page, from, to, { shift = false } = {}) {
   await page.mouse.move(x1, y1, { steps: 6 });
   await page.mouse.up();
   if (shift) await page.keyboard.up('Shift');
+}
+
+/**
+ * Test pictures drawn in the page: a PNG disc fading out on a transparent
+ * ground, or a JPEG of soft noise like a photo. Returns a file for setInputFiles.
+ */
+async function testPicture(page, kind, width = 512, height = 512) {
+  const base64 = await page.evaluate(
+    async ([type, w, h]) => {
+      const canvas = document.createElement('canvas');
+      canvas.width = w;
+      canvas.height = h;
+      const ctx = canvas.getContext('2d');
+      if (type === 'png') {
+        const g = ctx.createRadialGradient(w / 2, h / 2, 0, w / 2, h / 2, w / 2);
+        g.addColorStop(0, 'rgba(255,255,255,1)');
+        g.addColorStop(0.7, 'rgba(120,120,120,1)');
+        g.addColorStop(1, 'rgba(0,0,0,0)');
+        ctx.fillStyle = g;
+        ctx.fillRect(0, 0, w, h);
+      } else {
+        const img = ctx.createImageData(w, h);
+        for (let y = 0; y < h; y++) {
+          for (let x = 0; x < w; x++) {
+            const v = 128 + 60 * Math.sin(x / 17) * Math.cos(y / 23) + 40 * Math.sin((x + y) / 7);
+            img.data.set([v, v * 0.9, v * 0.8, 255], (y * w + x) * 4);
+          }
+        }
+        ctx.putImageData(img, 0, 0);
+      }
+      const blob = await new Promise((r) => canvas.toBlob(r, type === 'png' ? 'image/png' : 'image/jpeg', 0.9));
+      const bytes = new Uint8Array(await blob.arrayBuffer());
+      let s = '';
+      for (const b of bytes) s += String.fromCharCode(b);
+      return btoa(s);
+    },
+    [kind, width, height],
+  );
+  return {
+    name: `test.${kind === 'png' ? 'png' : 'jpg'}`,
+    mimeType: kind === 'png' ? 'image/png' : 'image/jpeg',
+    buffer: Buffer.from(base64, 'base64'),
+  };
+}
+
+/** Clicks the download and returns the worker's time of the export. */
+async function exportMs(page) {
+  const before = await page.locator('#exportStatus').textContent();
+  const [download] = await Promise.all([page.waitForEvent('download', { timeout: 120000 }), page.click('#downloadStl')]);
+  await download.path();
+  await page.waitForFunction(
+    (old) =>
+      /saved/.test(document.querySelector('#exportStatus')?.textContent ?? '') &&
+      document.querySelector('#exportStatus')?.textContent !== old,
+    before,
+  );
+  return Number((await page.locator('#exportStatus').textContent()).match(/(\d+) ms/)[1]);
 }
 
 const fieldValue = async (page, id) => Number(await page.locator(`#${id}-n`).inputValue());
@@ -194,6 +254,64 @@ try {
     if (shots) await page.screenshot({ path: 'shots/phone-2d.png' });
     await context.close();
   });
+
+  await step('images: a transparent PNG and a JPEG, every parameter at its extremes', async () => {
+    const { page, context } = await app.open();
+    let { info } = await built(page);
+    await page.setInputFiles('#imageFile', await testPicture(page, 'png'));
+    ({ info } = await built(page, info));
+    check((await page.locator('.element-row').count()) === 1, 'the PNG did not become an image');
+    check(await page.locator('#selectedThumb').isVisible(), 'no height picture in the card');
+    // the disc rises 1.5 mm over the 3 mm base
+    check(info.includes('× 4.5 mm'), `PNG relief: ${info}`);
+    const cases = [
+      ['element-height', 10],
+      ['element-height', 0.1],
+      ['element-size', 300],
+      ['element-size', 5],
+      ['element-black', 254],
+      ['element-black', 0],
+      ['element-white', 1],
+      ['element-blur', 5],
+      ['element-rotation', 359],
+    ];
+    for (const [id, value] of cases) {
+      await setNumber(page, id, value);
+      ({ info } = await built(page, info).catch(() => ({ info })));
+      check(await page.locator('#meshBlocked').isHidden(), `${id} = ${value}: the mesh is blocked`);
+    }
+    await page.check('#element-invert');
+    await page.setInputFiles('#imageFile', await testPicture(page, 'jpeg', 640, 480));
+    ({ info } = await built(page, info));
+    check((await page.locator('.element-row').count()) === 2, 'the JPEG did not become an image');
+    check(await page.locator('#meshBlocked').isHidden(), 'two images: the mesh is blocked');
+    if (shots) await page.screenshot({ path: 'shots/images-desktop.png' });
+    const ms = await exportMs(page);
+    console.log(`    two images: ${info}; export ${ms} ms`);
+    await context.close();
+  });
+
+  if (measure) {
+    await step('measure: one 512 px image on 100 × 60 and on 300 × 300', async () => {
+      const { page, context } = await app.open();
+      let { info } = await built(page);
+      await page.setInputFiles('#imageFile', await testPicture(page, 'jpeg'));
+      for (const [w, h, size] of [
+        [100, 60, 55],
+        [300, 300, 290],
+      ]) {
+        await setNumber(page, 'plate-width', w);
+        await setNumber(page, 'plate-height', h);
+        await page.click('.element-name');
+        await setNumber(page, 'element-size', size);
+        const result = await built(page, info);
+        info = result.info;
+        const ms = await exportMs(page);
+        console.log(`    ${w} × ${h}, image ${size} mm: preview ${result.ms} ms (${info}); export ${ms} ms`);
+      }
+      await context.close();
+    });
+  }
 
   await step('downloads a real STL', async () => {
     const { page, context } = await app.open();

@@ -85,6 +85,8 @@ browser (service worker, layout, workers) → a step in `scripts/smoke.mjs`.
   after a pause in the edits, the export.
 - `src/geo/` — the pure core: `state.ts` (schema, ranges, defaults,
   `sanitizeState`), `outline.ts` (primitive outlines as polygons),
+  `heightmap.ts` (an image's height function), `grid.ts` (its heightfield
+  solid),
   `holes.ts` (footprints, boxes and cutters of the hole kinds),
   `warnings.ts` (the warnings that need no CSG), `mesh.ts`
   (`SurfaceMesh`, normals), `stl.ts` (binary STL, file names), `validate.ts`
@@ -103,7 +105,9 @@ browser (service worker, layout, workers) → a step in `scripts/smoke.mjs`.
   only), `scene.ts` (Three.js; checked by the smoke, not vitest).
 - `src/ui/` — `controls.ts` (declarative slider / number / select / check
   rows), `plateCard.ts`, `selectedCard.ts` (the cards' controls),
-  `elementsCard.ts` (the element list), `warningsCard.ts`, `dom.ts`.
+  `elementsCard.ts` (the element list), `warningsCard.ts`,
+  `imageImport.ts` (files → grayscale + alpha PNG, decoding, height
+  pictures), `dom.ts`.
 - `src/i18n/` — `en.ts` defines the messages, `ru.ts`, `uk.ts`, `he.ts` follow
   its type; `index.ts` — locales, detection, text direction, `staticText`;
   `plural.ts` — `Intl.PluralRules` helper.
@@ -116,7 +120,9 @@ browser (service worker, layout, workers) → a step in `scripts/smoke.mjs`.
 
 ## Scripts
 
-- `scripts/smoke.mjs` — the browser smoke (grows with each milestone).
+- `scripts/smoke.mjs` — the browser smoke (grows with each milestone);
+  `--preview` (build + offline), `--shots` (screenshots), `--measure` (image
+  timings for "what costs what").
 - `scripts/lib/harness.mjs` — flags, vite on 5373/4373, console errors.
 - `scripts/icons.mjs` — PWA icons from `public/icon.svg`.
 

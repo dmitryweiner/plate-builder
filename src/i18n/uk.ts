@@ -69,6 +69,19 @@ export const uk: Messages = {
   keyShank: 'Діаметр стрижня гвинта',
   keySlot: 'Довжина паза',
 
+  addImage: 'Додати зображення',
+  imageSize: 'Розмір (довга сторона)',
+  reliefHeight: 'Висота рельєфу',
+  invert: 'Інверсія (темне вище)',
+  blackPoint: 'Точка чорного',
+  whitePoint: 'Точка білого',
+  smoothing: 'Згладжування',
+  cropThreshold: 'Поріг обрізки',
+  inOutline: 'У контурі',
+  percent: '%',
+  px: 'пкс',
+  heightPreview: 'Що стане висотою: біле — вище',
+
   warningsCard: 'Попередження',
   show: 'Показати',
 
@@ -78,6 +91,7 @@ export const uk: Messages = {
   exported: (name: string, ms: number) => `${name} збережено, побудовано за ${Math.round(ms)} мс`,
   engineFailed: (reason: string) => `Геометричний рушій не впорався: ${reason}`,
   meshBlocked: (problems: string) => `Сітка зіпсована (${problems}); STL не експортувати.`,
+  imageFailed: (reason: string) => `Не вдалося прочитати зображення: ${reason}`,
   elementName: (type: 'image' | 'text' | 'hole', n: number) => `${{ image: 'Зображення', text: 'Напис', hole: 'Отвір' }[type]} ${n}`,
   warning: {
     outside: (names: string) => `${names} виходить за контур і обрізається.`,

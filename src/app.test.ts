@@ -6,6 +6,7 @@ import { startApp, PREVIEW_DELAY_MS, type AppOptions, type Timers } from './app'
 import { LOCALE_NAMES, LOCALES } from './i18n';
 import type { CameraPreset, SceneHandle, ViewMesh } from './render/view';
 import { loadSettings, type KeyValueStorage } from './storage';
+import type { Raster } from './geo/heightmap';
 import type { JobDone } from './worker/client';
 import type { Job, JobResult, MeshResult } from './worker/protocol';
 
@@ -116,6 +117,17 @@ let csg: FakeCsg;
 let scene: FakeScene;
 let timers: ManualTimers;
 let downloads: { name: string; bytes: number }[];
+/** decodes waiting for the test, by data URL */
+let decodes: Map<string, (raster: Raster) => void>;
+const PNG = 'data:image/png;base64,AAAA';
+const raster2x1: Raster = { width: 2, height: 1, data: new Uint8Array([255, 255, 0, 255]) };
+const pictures: AppOptions['pictures'] = {
+  importFile: (file) =>
+    file.name === 'broken.png'
+      ? Promise.reject(new Error('not a picture'))
+      : Promise.resolve({ src: PNG, width: 200, height: 100, raster: raster2x1 }),
+  decode: (src) => new Promise((done) => decodes.set(src, done)),
+};
 
 function start(languages: readonly string[] = ['en-US'], over: Partial<AppOptions> = {}) {
   stop = startApp({
@@ -125,6 +137,7 @@ function start(languages: readonly string[] = ['en-US'], over: Partial<AppOption
     createScene: () => scene,
     download: (name, data) => downloads.push({ name, bytes: data.byteLength }),
     timers,
+    pictures,
     ...over,
   });
 }
@@ -142,6 +155,7 @@ beforeEach(() => {
   scene = new FakeScene();
   timers = new ManualTimers();
   downloads = [];
+  decodes = new Map();
 });
 afterEach(() => {
   stop();
@@ -275,6 +289,7 @@ describe('export', () => {
     $('#downloadStl', HTMLButtonElement).click();
     expect($('#downloadStl', HTMLButtonElement).disabled).toBe(true);
     expect(text('#exportStatus')).toBe('Building the STL…');
+    await settle();
     const { job, settle: answer } = csg.last();
     expect(job).toMatchObject({ kind: 'mesh', quality: 'export' });
     answer({ result: meshResult({ quality: 'export', stl: new ArrayBuffer(684) }), ms: 120 });
@@ -446,5 +461,59 @@ describe('warnings and outline', () => {
     start();
     $('.view-tabs [data-show="3d"]', HTMLButtonElement).click();
     expect($('#views', HTMLElement).dataset.show).toBe('3d');
+  });
+});
+
+/** Picks a file in the hidden input as the browser would. */
+function chooseFile(name: string) {
+  const input = $('#imageFile', HTMLInputElement);
+  Object.defineProperty(input, 'files', { value: [new File(['x'], name, { type: 'image/png' })], configurable: true });
+  input.dispatchEvent(new Event('change'));
+}
+
+describe('images', () => {
+  it('adds an image from a file, fitted to the plate, selected, its raster sent with the preview', async () => {
+    start();
+    chooseFile('logo.png');
+    await settle();
+    expect(text('#selectedTitle')).toBe('Image 1');
+    expect($('#element-size-n', HTMLInputElement).value).toBe('60');
+    expect($('#element-height-n', HTMLInputElement).value).toBe('1.5');
+    // the crop's own rows wait for the crop outline
+    expect($('#element-threshold', HTMLInputElement).closest('.row')?.hasAttribute('hidden')).toBe(true);
+    timers.flush();
+    const job = csg.last().job;
+    expect(job.kind === 'mesh' && job.rasters).toEqual([raster2x1]);
+  });
+
+  it('says when a file cannot be read', async () => {
+    start();
+    chooseFile('broken.png');
+    await settle();
+    expect($('#elementsStatus', HTMLElement).hidden).toBe(false);
+    expect(text('#elementsStatus')).toBe('The picture could not be read: not a picture');
+    expect(document.querySelectorAll('.element-row')).toHaveLength(0);
+  });
+
+  it('a duplicate shares the decoded picture: nothing to decode again', async () => {
+    start();
+    chooseFile('logo.png');
+    await settle();
+    $('.element-row [aria-label^="Duplicate"]', HTMLButtonElement).click();
+    timers.flush();
+    const preview = csg.last().job;
+    expect(preview.kind === 'mesh' && preview.rasters).toEqual([raster2x1, raster2x1]);
+    expect(decodes.size).toBe(0);
+  });
+
+  it('waits for every picture before an export', async () => {
+    start();
+    chooseFile('logo.png');
+    await settle();
+    $('#downloadStl', HTMLButtonElement).click();
+    await settle();
+    const job = csg.last().job;
+    expect(job).toMatchObject({ kind: 'mesh', quality: 'export' });
+    expect(job.kind === 'mesh' && job.rasters).toEqual([raster2x1]);
   });
 });

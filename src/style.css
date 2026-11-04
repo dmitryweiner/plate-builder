@@ -18,7 +18,7 @@
   /* the 2D editor's canvas, read by editor2d.ts */
   --editor-bg: #e3e7f2;
   --editor-grid: rgb(23 34 62 / 8%);
-  --editor-plate: #ffffff;
+  --editor-plate: #b9c0d4;
   --editor-edge: #17223e;
   color-scheme: light dark;
 }
@@ -412,4 +412,21 @@ footer a {
     overflow-y: auto;
     border-inline-end: 1px solid var(--line);
   }
+}
+
+.add-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.thumb {
+  display: block;
+  max-inline-size: 100%;
+  margin-block: 4px 8px;
+  border-radius: 8px;
+  /* a checkerboard: transparent is height 0 */
+  background: repeating-conic-gradient(#3a4160 0 25%, #2b3150 0 50%) 0 0 / 16px 16px;
+}
+.thumb[hidden] {
+  display: none;
 }

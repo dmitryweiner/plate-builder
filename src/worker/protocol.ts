@@ -4,6 +4,7 @@
 // The worker boundary is an outer boundary of the core, like a file or
 // localStorage: whatever state comes in is sanitised by the worker itself.
 
+import type { Raster } from '../geo/heightmap';
 import type { Ring } from '../geo/outline';
 import type { PlateState } from '../geo/state';
 import type { MeshProblem, MeshReport } from '../geo/validate';
@@ -14,7 +15,20 @@ import type { MeshProblem, MeshReport } from '../geo/validate';
  * solid, at preview or export quality (an export also returns the STL).
  */
 export type Job =
-  { kind: 'ping' } | { kind: 'outline'; state: PlateState } | { kind: 'mesh'; quality: 'preview' | 'export'; state: PlateState };
+  | { kind: 'ping' }
+  | { kind: 'outline'; state: PlateState }
+  | {
+      kind: 'mesh';
+      quality: 'preview' | 'export';
+      state: PlateState;
+      /**
+       * The images' pictures, one per `state.images` (null: not decoded yet).
+       * Decoding needs the DOM, so the main thread does it; a raster is
+       * derived from the state, not part of it, and the worker checks only
+       * its shape.
+       */
+      rasters?: (Raster | null)[];
+    };
 
 export type JobKind = Job['kind'];
 

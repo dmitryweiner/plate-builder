@@ -70,6 +70,19 @@ export const en = {
   keyShank: 'Screw shank diameter',
   keySlot: 'Slot length',
 
+  addImage: 'Add image',
+  imageSize: 'Size (long side)',
+  reliefHeight: 'Relief height',
+  invert: 'Invert (dark is high)',
+  blackPoint: 'Black point',
+  whitePoint: 'White point',
+  smoothing: 'Smoothing',
+  cropThreshold: 'Crop threshold',
+  inOutline: 'In the outline',
+  percent: '%',
+  px: 'px',
+  heightPreview: 'What becomes height: white is high',
+
   warningsCard: 'Warnings',
   show: 'Show',
 
@@ -79,6 +92,7 @@ export const en = {
   exported: (name: string, ms: number) => `${name} saved, built in ${Math.round(ms)} ms`,
   engineFailed: (reason: string) => `The geometry engine failed: ${reason}`,
   meshBlocked: (problems: string) => `The mesh is broken (${problems}); the STL cannot be exported.`,
+  imageFailed: (reason: string) => `The picture could not be read: ${reason}`,
   elementName: (type: 'image' | 'text' | 'hole', n: number) => `${{ image: 'Image', text: 'Text', hole: 'Hole' }[type]} ${n}`,
   warning: {
     outside: (names: string) => `${names} pokes out of the outline and is clipped.`,

@@ -5,8 +5,8 @@
 
 import { holeFootprint, placeRing } from '../geo/holes';
 import { bounds, type Bounds, type Point, type Ring } from '../geo/outline';
-import type { PlateElement, PlateState } from '../geo/state';
-import { allElements, boxCorners, findElement, hitsElement, hitTest, replaceElement } from './elements';
+import type { ImageElement, PlateElement, PlateState } from '../geo/state';
+import { allElements, boxCorners, elementBox, findElement, hitsElement, hitTest, replaceElement } from './elements';
 import { moveElement, pinchElement, rotateTowards, scaleFromCorner, snapPoint, snapTargets, type Snapped } from './gestures';
 import { fitView, panView, toPlate, toScreen, zoomAt, type ViewTransform } from './view';
 
@@ -33,6 +33,8 @@ export interface EditorOptions {
   snapping(): boolean;
   /** the plate's size line, drawn under the plate */
   sizeLabel(): string;
+  /** an image's height map as a picture (white high), or null while it is not decoded */
+  picture(image: ImageElement): CanvasImageSource | null;
 }
 
 export interface EditorHandle {
@@ -284,6 +286,30 @@ export function createEditor(o: EditorOptions): EditorHandle {
     ctx.strokeStyle = c.edge;
     ctx.lineWidth = 1.5;
     ctx.stroke();
+
+    // images as their height maps, clipped to the plate as the solid is
+    ctx.save();
+    path(outline);
+    ctx.clip('evenodd');
+    for (const image of state.images) {
+      const picture = image.visible ? o.picture(image) : null;
+      if (!picture) continue;
+      const box = elementBox(image);
+      const [sx, sy] = toScreen(view, [image.x, image.y]);
+      ctx.save();
+      ctx.translate(sx, sy);
+      // counter-clockwise in the plate is clockwise on a y-down screen
+      ctx.rotate((-image.rotation * Math.PI) / 180);
+      ctx.drawImage(
+        picture,
+        box.minX * view.scale,
+        -box.maxY * view.scale,
+        (box.maxX - box.minX) * view.scale,
+        (box.maxY - box.minY) * view.scale,
+      );
+      ctx.restore();
+    }
+    ctx.restore();
 
     for (const hole of state.holes) {
       if (!hole.visible) continue;
