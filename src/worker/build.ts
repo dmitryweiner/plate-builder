@@ -6,9 +6,12 @@
 //           − engraved texts − holes
 
 import type { CrossSection, Manifold } from 'manifold-3d';
+import { elementBox } from '../editor/elements';
+import { heightfieldMesh } from '../geo/grid';
+import { heightField, sampleField, type Raster } from '../geo/heightmap';
 import { holeCutters, type Cutter } from '../geo/holes';
 import { CHORD_TOLERANCE, primitiveOutline, segmentsFor, type Ring } from '../geo/outline';
-import { PRIMITIVE_KINDS, type Plate, type PlateState, type PrimitiveKind } from '../geo/state';
+import { PRIMITIVE_KINDS, type ImageElement, type Plate, type PlateState, type PrimitiveKind } from '../geo/state';
 import type { CsgApi, CsgScope } from './csg';
 
 const isPrimitive = (kind: Plate['kind']): kind is PrimitiveKind => PRIMITIVE_KINDS.some((k) => k === kind);
@@ -75,22 +78,88 @@ function cutterSolid(csg: CsgApi, scope: CsgScope, cutter: Cutter): Manifold {
   return scope.keep(prism.translate([0, 0, cutter.z0]));
 }
 
-/** The solid (spec §6): so far the base minus the holes. */
-export function buildSolid(csg: CsgApi, scope: CsgScope, state: PlateState): Manifold {
+/** How far under the base's top an image's height 0 lies, mm: the two never share a plane. */
+export const IMAGE_EPS = 0.01;
+
+export type Quality = 'preview' | 'export';
+
+/** The grid step of an image (spec §8.4): 0.5 mm for a preview; for an export its pixel size, within 0.1…0.2 mm. */
+export function gridStep(image: Pick<ImageElement, 'size' | 'pixelWidth' | 'pixelHeight'>, quality: Quality): number {
+  if (quality === 'preview') return 0.5;
+  const pixel = image.size / Math.max(image.pixelWidth, image.pixelHeight);
+  return Math.max(0.1, Math.min(pixel, 0.2));
+}
+
+function meshSolid(csg: CsgApi, scope: CsgScope, mesh: { positions: Float32Array; indices: Uint32Array }): Manifold {
+  const input = new csg.Mesh({ numProp: 3, vertProperties: mesh.positions, triVerts: mesh.indices });
+  const solid = scope.keep(csg.Manifold.ofMesh(input));
+  const status = solid.status();
+  if (status !== 'NoError') throw new Error(`a relief is not a closed solid (${status})`);
+  return solid;
+}
+
+/** An image's relief: a heightfield over its rectangle, turned and moved into place. */
+function imageSolid(csg: CsgApi, scope: CsgScope, image: ImageElement, raster: Raster, thickness: number, quality: Quality): Manifold {
+  const box = elementBox(image);
+  const w = box.maxX - box.minX;
+  const h = box.maxY - box.minY;
+  const field = heightField(raster, image);
+  const mesh = heightfieldMesh((x, y) => sampleField(field.values, field.width, field.height, w, h, x, y), {
+    width: w,
+    height: h,
+    step: gridStep(image, quality),
+    zero: thickness - IMAGE_EPS,
+    bottom: thickness / 2,
+    avoid: thickness,
+  });
+  const solid = meshSolid(csg, scope, mesh);
+  const turned = scope.keep(solid.rotate([0, 0, image.rotation]));
+  return scope.keep(turned.translate([image.x, image.y, 0]));
+}
+
+/**
+ * The solid (spec §6):
+ *   ( base ∪ images ) ∩ outline prism − holes
+ * `rasters` go with `state.images`, one each (null: not decoded).
+ */
+export function buildSolid(
+  csg: CsgApi,
+  scope: CsgScope,
+  state: PlateState,
+  rasters: readonly (Raster | null)[] = [],
+  quality: Quality = 'preview',
+): Manifold {
   const { thickness } = state.plate;
   const outline = plateOutline(csg, scope, state.plate);
   const base = scope.keep(outline.extrude(thickness));
-  // the top of everything that stands on the base; reliefs join in M3–M6
-  const top = thickness;
+  const images = state.images.flatMap((image, i) => {
+    const raster = rasters[i];
+    return image.visible && raster ? [{ image, raster }] : [];
+  });
+  // the top of everything that stands on the base
+  const top = thickness + Math.max(0, ...images.map(({ image }) => image.height));
+  let solid = base;
+  if (images.length > 0) {
+    const reliefs = images.map(({ image, raster }) => imageSolid(csg, scope, image, raster, thickness, quality));
+    const additive = scope.keep(csg.Manifold.union([base, ...reliefs]));
+    const prism = scope.keep(outline.extrude(top + 1));
+    solid = scope.keep(additive.intersect(prism));
+  }
   const cutters = state.holes.filter((hole) => hole.visible).flatMap((hole) => holeCutters(hole, thickness, top));
-  if (cutters.length === 0) return base;
+  if (cutters.length === 0) return solid;
   const holes = scope.keep(csg.Manifold.union(cutters.map((cutter) => cutterSolid(csg, scope, cutter))));
-  return scope.keep(base.subtract(holes));
+  return scope.keep(solid.subtract(holes));
 }
 
 /** The whole solid as a mesh. */
-export function buildMesh(csg: CsgApi, scope: CsgScope, state: PlateState): PlateMesh {
-  const mesh = buildSolid(csg, scope, state).getMesh();
+export function buildMesh(
+  csg: CsgApi,
+  scope: CsgScope,
+  state: PlateState,
+  rasters: readonly (Raster | null)[] = [],
+  quality: Quality = 'preview',
+): PlateMesh {
+  const mesh = buildSolid(csg, scope, state, rasters, quality).getMesh();
   return { positions: positionsOf(mesh.vertProperties, mesh.numProp), indices: new Uint32Array(mesh.triVerts) };
 }
 

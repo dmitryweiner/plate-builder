@@ -56,11 +56,15 @@
           <h2 data-i18n="elementsCard">Elements</h2>
           <ul id="elementList" class="element-list"></ul>
           <div class="add-buttons">
+            <button id="addImage" type="button" class="secondary" data-i18n="addImage">Add image</button>
             <button id="addHole" type="button" class="secondary" data-i18n="addHole">Add hole</button>
+            <input id="imageFile" type="file" accept="image/*" hidden />
           </div>
+          <p id="elementsStatus" class="error" role="alert" hidden></p>
         </section>
         <section class="card" id="selectedCard" hidden>
           <h2 id="selectedTitle"></h2>
+          <canvas id="selectedThumb" class="thumb" hidden></canvas>
           <div id="selectedControls"></div>
         </section>
         <section class="card" id="warningsCard" hidden>

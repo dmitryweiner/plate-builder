@@ -1,7 +1,19 @@
 import { createEditor, type EditorHandle } from './editor/editor2d';
 import { findElement } from './editor/elements';
 import { primitiveOutline, type Ring } from './geo/outline';
-import { defaultState, PRIMITIVE_KINDS, sanitizeState, type Plate, type PlateState, type PrimitiveKind } from './geo/state';
+import {
+  defaultImage,
+  defaultState,
+  LIMITS,
+  PRIMITIVE_KINDS,
+  sanitizeState,
+  type ImageElement,
+  type Plate,
+  type PlateState,
+  type PrimitiveKind,
+} from './geo/state';
+import type { Raster } from './geo/heightmap';
+import { processPixels } from './geo/heightmap';
 import { stlFileName } from './geo/stl';
 import { warnings as findWarnings, type Warning } from './geo/warnings';
 import { detectLocale, direction, isLocale, messages, staticText, type Locale, type Messages } from './i18n';
@@ -12,6 +24,7 @@ import { loadSettings, saveSettings, type KeyValueStorage, type Settings } from 
 import { renderControls, type ControlsHandle } from './ui/controls';
 import { el } from './ui/dom';
 import { renderElementList } from './ui/elementsCard';
+import { heightPicture, type ImportedImage } from './ui/imageImport';
 import { plateControls } from './ui/plateCard';
 import { elementControls } from './ui/selectedCard';
 import { renderWarnings } from './ui/warningsCard';
@@ -39,7 +52,15 @@ export interface AppOptions {
   /** Saves a file for the person (a download in the browser). */
   download: (name: string, data: ArrayBuffer) => void;
   timers: Timers;
+  /** Reading pictures needs the browser's decoders: a file into the stored picture, a stored one back into pixels. */
+  pictures: {
+    importFile(file: File): Promise<ImportedImage>;
+    decode(src: string): Promise<Raster>;
+  };
 }
+
+/** How many processed pictures the 2D view keeps (each image's current levels, and a few recent ones). */
+const PICTURE_CACHE = 24;
 
 /** Translates the static page: texts and labels marked in index.html, title, description, lang and dir. */
 function translatePage(locale: Locale, t: Messages) {
@@ -83,7 +104,7 @@ type Exporting =
   { state: 'idle' } | { state: 'building' } | { state: 'saved'; name: string; ms: number } | { state: 'failed'; reason: string };
 
 /** Starts the app on the current page; returns a function that removes its listeners. */
-export function startApp({ storage = null, languages = [], csg, createScene, download, timers }: AppOptions): () => void {
+export function startApp({ storage = null, languages = [], csg, createScene, download, timers, pictures }: AppOptions): () => void {
   const localeSelect = el('locale', HTMLSelectElement);
   const status = el('status', HTMLOutputElement);
   const plateBox = el('plateControls', HTMLElement);
@@ -100,6 +121,10 @@ export function startApp({ storage = null, languages = [], csg, createScene, dow
   const undoButton = el('undo', HTMLButtonElement);
   const redoButton = el('redo', HTMLButtonElement);
   const addHoleButton = el('addHole', HTMLButtonElement);
+  const addImageButton = el('addImage', HTMLButtonElement);
+  const imageFile = el('imageFile', HTMLInputElement);
+  const elementsStatus = el('elementsStatus', HTMLElement);
+  const selectedThumb = el('selectedThumb', HTMLCanvasElement);
   const snapping = el('snapping', HTMLInputElement);
   const views = el('views', HTMLElement);
   const scene = createScene(el('view3d', HTMLCanvasElement));
@@ -118,6 +143,11 @@ export function startApp({ storage = null, languages = [], csg, createScene, dow
   let stopped = false;
   let plateCard: ControlsHandle<PlateState> | null = null;
   let selectedControls: { id: string; kind: string; handle: ControlsHandle<PlateState> } | null = null;
+  /** decoded pictures by their data URL; a failed decode stays null */
+  const rasters = new Map<string, Raster | null>();
+  const decoding = new Map<string, Promise<void>>();
+  /** processed height pictures for the 2D view, by picture and levels */
+  const processed = new Map<string, CanvasImageSource | null>();
 
   const t = () => messages[locale];
   const state = () => history.state;
@@ -131,7 +161,44 @@ export function startApp({ storage = null, languages = [], csg, createScene, dow
     outline: () => outline,
     snapping: () => snapping.checked,
     sizeLabel: () => `${mm(state().plate.width)} × ${mm(state().plate.height)} ${t().mm}`,
+    picture: (image) => picture(image),
   });
+
+  /** Starts decoding the pictures not decoded yet; each, once in, redraws and rebuilds. */
+  function ensureRasters(): void {
+    for (const { src } of state().images) {
+      if (rasters.has(src) || decoding.has(src)) continue;
+      decoding.set(
+        src,
+        pictures.decode(src).then(
+          (raster) => {
+            rasters.set(src, raster);
+            decoding.delete(src);
+            if (stopped) return;
+            renderState();
+            schedulePreview(PREVIEW_DELAY_MS);
+          },
+          () => {
+            rasters.set(src, null);
+            decoding.delete(src);
+          },
+        ),
+      );
+    }
+  }
+
+  const rasterList = () => state().images.map((image) => rasters.get(image.src) ?? null);
+
+  function picture(image: ImageElement): CanvasImageSource | null {
+    const raster = rasters.get(image.src);
+    if (!raster) return null;
+    const key = `${image.src.length}:${image.src.slice(-64)}|${image.invert}|${image.black}|${image.white}|${image.blur}`;
+    if (!processed.has(key)) {
+      if (processed.size >= PICTURE_CACHE) processed.delete(processed.keys().next().value ?? '');
+      processed.set(key, heightPicture(processPixels(raster, image), raster.width, raster.height));
+    }
+    return processed.get(key) ?? null;
+  }
 
   const renderStatus = () => {
     const m = t();
@@ -187,6 +254,7 @@ export function startApp({ storage = null, languages = [], csg, createScene, dow
       selectedControls = null;
       selectedBox.textContent = '';
     }
+    drawThumb(element?.type === 'image' ? element : null);
 
     warnings = findWarnings(s, outline);
     renderWarnings(warningsCard, warningList, warnings, s, m, (spot) => {
@@ -197,6 +265,20 @@ export function startApp({ storage = null, languages = [], csg, createScene, dow
     redoButton.disabled = !history.canRedo;
     editor.draw();
   };
+
+  /** The selected image's height map in its card: the effect of levels before the 3D view catches up. */
+  function drawThumb(image: ImageElement | null): void {
+    const source = image ? picture(image) : null;
+    const ctx = source ? selectedThumb.getContext('2d') : null;
+    selectedThumb.hidden = !ctx;
+    if (!ctx || !source || !image) return;
+    const long = Math.max(image.pixelWidth, image.pixelHeight);
+    selectedThumb.width = Math.round((240 * image.pixelWidth) / long);
+    selectedThumb.height = Math.round((240 * image.pixelHeight) / long);
+    selectedThumb.title = t().heightPreview;
+    ctx.clearRect(0, 0, selectedThumb.width, selectedThumb.height);
+    ctx.drawImage(source, 0, 0, selectedThumb.width, selectedThumb.height);
+  }
 
   const renderCards = () => {
     plateCard = renderControls(plateBox, plateControls, {
@@ -220,7 +302,7 @@ export function startApp({ storage = null, languages = [], csg, createScene, dow
     previewTimer = null;
     build = { state: 'building' };
     renderStatus();
-    csg.run({ kind: 'mesh', quality: 'preview', state: state() }).then(
+    csg.run({ kind: 'mesh', quality: 'preview', state: state(), rasters: rasterList() }).then(
       (done) => {
         // null: a fresher preview replaced this one and will answer instead
         if (stopped || !done || done.result.kind !== 'mesh') return;
@@ -268,6 +350,7 @@ export function startApp({ storage = null, languages = [], csg, createScene, dow
 
   function afterChange() {
     if (selected && !findElement(state(), selected)) selected = null;
+    ensureRasters();
     requestOutline();
     renderState();
     schedulePreview(PREVIEW_DELAY_MS);
@@ -278,6 +361,29 @@ export function startApp({ storage = null, languages = [], csg, createScene, dow
     selected = id;
     renderState();
   }
+
+  const onImageFile = () => {
+    const file = imageFile.files?.[0];
+    imageFile.value = '';
+    if (!file || state().images.length >= LIMITS.images) return;
+    elementsStatus.hidden = true;
+    pictures.importFile(file).then(
+      (imported) => {
+        if (stopped) return;
+        rasters.set(imported.src, imported.raster);
+        const image = defaultImage(state(), imported.src, imported.width, imported.height);
+        const next = sanitizeState({ ...state(), images: [...state().images, image] });
+        selected = next.images.at(-1)?.id ?? null;
+        update(next, true);
+      },
+      (error: unknown) => {
+        if (stopped) return;
+        elementsStatus.hidden = false;
+        elementsStatus.textContent = t().imageFailed(errorText(error));
+      },
+    );
+  };
+  const pickImage = () => imageFile.click();
 
   const addHoleNow = () => {
     const { state: next, id } = addHole(state());
@@ -353,25 +459,29 @@ export function startApp({ storage = null, languages = [], csg, createScene, dow
     exporting = { state: 'building' };
     renderStatus();
     const name = stlFileName(state().name);
-    csg.run({ kind: 'mesh', quality: 'export', state: state() }).then(
-      (done) => {
-        if (stopped || !done || done.result.kind !== 'mesh') return;
-        const { stl, problems } = done.result;
-        if (stl && problems.length === 0) {
-          download(name, stl);
-          exporting = { state: 'saved', name, ms: done.ms };
-        } else {
-          exporting = { state: 'idle' };
-          build = { state: 'done', mesh: done.result, ms: done.ms };
-        }
-        renderStatus();
-      },
-      (error: unknown) => {
-        if (stopped) return;
-        exporting = { state: 'failed', reason: errorText(error) };
-        renderStatus();
-      },
-    );
+    // every picture decoded first: an export never leaves an image out
+    ensureRasters();
+    Promise.all(decoding.values())
+      .then(() => csg.run({ kind: 'mesh', quality: 'export', state: state(), rasters: rasterList() }))
+      .then(
+        (done) => {
+          if (stopped || !done || done.result.kind !== 'mesh') return;
+          const { stl, problems } = done.result;
+          if (stl && problems.length === 0) {
+            download(name, stl);
+            exporting = { state: 'saved', name, ms: done.ms };
+          } else {
+            exporting = { state: 'idle' };
+            build = { state: 'done', mesh: done.result, ms: done.ms };
+          }
+          renderStatus();
+        },
+        (error: unknown) => {
+          if (stopped) return;
+          exporting = { state: 'failed', reason: errorText(error) };
+          renderStatus();
+        },
+      );
   };
 
   const onViews = (event: MouseEvent) => {
@@ -395,7 +505,10 @@ export function startApp({ storage = null, languages = [], csg, createScene, dow
   undoButton.addEventListener('click', undo);
   redoButton.addEventListener('click', redo);
   addHoleButton.addEventListener('click', addHoleNow);
+  addImageButton.addEventListener('click', pickImage);
+  imageFile.addEventListener('change', onImageFile);
   document.addEventListener('keydown', onKey);
+  ensureRasters();
   requestOutline();
   render();
   editor.fit();
@@ -410,6 +523,8 @@ export function startApp({ storage = null, languages = [], csg, createScene, dow
     undoButton.removeEventListener('click', undo);
     redoButton.removeEventListener('click', redo);
     addHoleButton.removeEventListener('click', addHoleNow);
+    addImageButton.removeEventListener('click', pickImage);
+    imageFile.removeEventListener('change', onImageFile);
     document.removeEventListener('keydown', onKey);
     editor.dispose();
     scene?.dispose();

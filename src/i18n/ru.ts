@@ -69,6 +69,19 @@ export const ru: Messages = {
   keyShank: 'Диаметр стержня винта',
   keySlot: 'Длина паза',
 
+  addImage: 'Добавить картинку',
+  imageSize: 'Размер (длинная сторона)',
+  reliefHeight: 'Высота рельефа',
+  invert: 'Инверсия (тёмное выше)',
+  blackPoint: 'Точка чёрного',
+  whitePoint: 'Точка белого',
+  smoothing: 'Сглаживание',
+  cropThreshold: 'Порог обрезки',
+  inOutline: 'В контуре',
+  percent: '%',
+  px: 'пкс',
+  heightPreview: 'Что станет высотой: белое — выше',
+
   warningsCard: 'Предупреждения',
   show: 'Показать',
 
@@ -79,6 +92,7 @@ export const ru: Messages = {
   exported: (name: string, ms: number) => `${name} сохранён, построен за ${Math.round(ms)} мс`,
   engineFailed: (reason: string) => `Геометрический движок не справился: ${reason}`,
   meshBlocked: (problems: string) => `Сетка испорчена (${problems}); STL не экспортировать.`,
+  imageFailed: (reason: string) => `Не удалось прочитать картинку: ${reason}`,
   elementName: (type: 'image' | 'text' | 'hole', n: number) => `${{ image: 'Картинка', text: 'Надпись', hole: 'Отверстие' }[type]} ${n}`,
   warning: {
     outside: (names: string) => `${names} выходит за контур и обрезается.`,

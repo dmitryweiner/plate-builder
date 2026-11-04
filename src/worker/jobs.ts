@@ -1,6 +1,7 @@
 // What the worker does with each job, without the messaging: testable in
 // Node with the real manifold module.
 
+import { isRaster } from '../geo/heightmap';
 import { encodeSTL } from '../geo/stl';
 import { meshNormals } from '../geo/mesh';
 import { sanitizeState } from '../geo/state';
@@ -19,7 +20,11 @@ export function runJob(csg: CsgApi, job: Job): JobResult {
     // The worker boundary is an outer boundary, like a file or the UI.
     const state = sanitizeState(job.state);
     if (job.kind === 'outline') return { kind: 'outline', rings: outlineRings(plateOutline(csg, scope, state.plate)) };
-    const { positions, indices } = buildMesh(csg, scope, state);
+    const rasters = state.images.map((_, i) => {
+      const raster = job.rasters?.[i];
+      return isRaster(raster) ? raster : null;
+    });
+    const { positions, indices } = buildMesh(csg, scope, state, rasters, job.quality);
     const report = validateMesh({ positions, indices, normals: meshNormals(positions, indices) });
     const problems = meshProblems(report);
     const stl = job.quality === 'export' && problems.length === 0 ? encodeSTL({ positions, indices }, { name: state.name }) : null;

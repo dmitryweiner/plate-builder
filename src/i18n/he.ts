@@ -69,6 +69,19 @@ export const he: Messages = {
   keyShank: 'קוטר גוף הבורג',
   keySlot: 'אורך החריץ',
 
+  addImage: 'הוספת תמונה',
+  imageSize: 'גודל (הצלע הארוכה)',
+  reliefHeight: 'גובה התבליט',
+  invert: 'היפוך (כהה גבוה)',
+  blackPoint: 'נקודת שחור',
+  whitePoint: 'נקודת לבן',
+  smoothing: 'החלקה',
+  cropThreshold: 'סף חיתוך',
+  inOutline: 'בתוך המתאר',
+  percent: '%',
+  px: 'פיקסלים',
+  heightPreview: 'מה שיהפוך לגובה: לבן גבוה',
+
   warningsCard: 'אזהרות',
   show: 'הצגה',
 
@@ -78,6 +91,7 @@ export const he: Messages = {
   exported: (name: string, ms: number) => `${name} נשמר, נבנה תוך ${Math.round(ms)} אלפיות שנייה`,
   engineFailed: (reason: string) => `מנוע הגאומטריה נכשל: ${reason}`,
   meshBlocked: (problems: string) => `הרשת פגומה (${problems}); אי אפשר לייצא STL.`,
+  imageFailed: (reason: string) => `לא ניתן לקרוא את התמונה: ${reason}`,
   elementName: (type: 'image' | 'text' | 'hole', n: number) => `${{ image: 'תמונה', text: 'טקסט', hole: 'חור' }[type]} ${n}`,
   warning: {
     outside: (names: string) => `${names} בולט מחוץ למתאר ונחתך.`,

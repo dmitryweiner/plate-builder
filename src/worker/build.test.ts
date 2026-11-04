@@ -1,9 +1,20 @@
 import { beforeAll, describe, expect, it } from 'vitest';
 import { meshNormals } from '../geo/mesh';
 import { bounds, ringArea } from '../geo/outline';
-import { defaultHole, defaultState, HOLE_KINDS, PRIMITIVE_KINDS, type HoleElement, type Plate, type PlateState } from '../geo/state';
+import type { Raster } from '../geo/heightmap';
+import {
+  defaultHole,
+  defaultImage,
+  defaultState,
+  HOLE_KINDS,
+  PRIMITIVE_KINDS,
+  type HoleElement,
+  type ImageElement,
+  type Plate,
+  type PlateState,
+} from '../geo/state';
 import { meshProblems, validateMesh } from '../geo/validate';
-import { buildMesh, outlineRings, plateOutline } from './build';
+import { buildMesh, gridStep, IMAGE_EPS, outlineRings, plateOutline } from './build';
 import { CsgScope, initCSG, type CsgApi } from './csg';
 
 let csg: CsgApi;
@@ -161,3 +172,100 @@ function faceArea(mesh: { positions: Float32Array; indices: Uint32Array }, z: nu
   }
   return area;
 }
+
+/** An opaque raster of one gray level, or a left-to-right ramp. */
+function flat(gray: number, w = 4, h = 4): Raster {
+  const data = new Uint8Array(w * h * 2);
+  for (let i = 0; i < w * h; i++) {
+    data[i * 2] = gray;
+    data[i * 2 + 1] = 255;
+  }
+  return { width: w, height: h, data };
+}
+function ramp(w = 16, h = 8): Raster {
+  const data = new Uint8Array(w * h * 2);
+  for (let j = 0; j < h; j++) {
+    for (let i = 0; i < w; i++) {
+      data[(j * w + i) * 2] = Math.round((255 * i) / (w - 1));
+      data[(j * w + i) * 2 + 1] = 255;
+    }
+  }
+  return { width: w, height: h, data };
+}
+const png = 'data:image/png;base64,';
+function plateWithImages(images: Partial<ImageElement>[]): PlateState {
+  const state = withPlate({ width: 100, height: 60, thickness: 3, rounding: 0 });
+  return { ...state, images: images.map((over, i) => ({ ...defaultImage(state, png, 4, 4), id: `i${i + 1}`, size: 20, ...over })) };
+}
+function built(state: PlateState, rasters: (Raster | null)[]) {
+  const mesh = inScope((scope) => buildMesh(csg, scope, state, rasters, 'preview'));
+  return { mesh, report: validateMesh({ ...mesh, normals: meshNormals(mesh.positions, mesh.indices) }) };
+}
+/** The highest vertex within r of a plate point. */
+function topNear(mesh: { positions: Float32Array }, x: number, y: number, r = 1): number {
+  let top = -Infinity;
+  for (let v = 0; v < mesh.positions.length; v += 3) {
+    if (Math.hypot(mesh.positions[v] - x, mesh.positions[v + 1] - y) <= r) top = Math.max(top, mesh.positions[v + 2]);
+  }
+  return top;
+}
+
+describe('images', () => {
+  it('raises a flat image by its height over its square, watertight', () => {
+    const { report } = built(plateWithImages([{ height: 2 }]), [flat(255)]);
+    expect(report.watertight).toBe(true);
+    expect(meshProblems(report)).toEqual([]);
+    expect(report.bbox.max[2]).toBeCloseTo(3 + 2 - IMAGE_EPS, 4);
+    expect(report.volume).toBeCloseTo(100 * 60 * 3 + 20 * 20 * (2 - IMAGE_EPS), 0);
+  });
+
+  it('two overlapping images combine by max, not by sum', () => {
+    const state = plateWithImages([
+      { height: 1, x: -5 },
+      { height: 2, x: 5 },
+    ]);
+    const { mesh, report } = built(state, [flat(255), flat(255)]);
+    expect(report.watertight).toBe(true);
+    expect(topNear(mesh, 0, 0)).toBeCloseTo(3 + 2 - IMAGE_EPS, 4);
+    expect(topNear(mesh, -12, 0)).toBeCloseTo(3 + 1 - IMAGE_EPS, 4);
+    // the union: the 1 mm square without what the 2 mm one covers, plus the 2 mm square
+    const relief = (20 * 20 - 10 * 20) * (1 - IMAGE_EPS) + 20 * 20 * (2 - IMAGE_EPS);
+    expect(report.volume).toBeCloseTo(100 * 60 * 3 + relief, 0);
+  });
+
+  it('turns an image about its centre: a ramp turned 90° rises towards +y', () => {
+    const state = plateWithImages([{ height: 2, size: 32, pixelWidth: 16, pixelHeight: 8, rotation: 90, x: 10, y: 5 }]);
+    const { mesh, report } = built(state, [ramp()]);
+    expect(report.watertight).toBe(true);
+    expect(topNear(mesh, 10, 5 + 15)).toBeCloseTo(3 + 2 - IMAGE_EPS, 1);
+    expect(topNear(mesh, 10, 5 - 15)).toBeLessThan(3.3);
+  });
+
+  it('clips an image that pokes out of the outline', () => {
+    const { report } = built(plateWithImages([{ height: 1, x: 45 }]), [flat(255)]);
+    expect(report.watertight).toBe(true);
+    expect(report.bbox.max[0]).toBeCloseTo(50, 4);
+  });
+
+  it('skips hidden images and those without a raster', () => {
+    const { report } = built(plateWithImages([{ height: 1, visible: false }, { height: 1 }]), [flat(255), null]);
+    expect(report.volume).toBeCloseTo(100 * 60 * 3, 3);
+  });
+
+  it('cuts holes through the relief', () => {
+    const state = { ...plateWithImages([{ height: 2 }]), holes: [{ ...defaultHole('round'), id: 'h1', diameter: 6 }] };
+    const { report } = built(state, [flat(255)]);
+    expect(report.watertight).toBe(true);
+    expect(report.volume).toBeCloseTo(100 * 60 * 3 + 20 * 20 * (2 - IMAGE_EPS) - Math.PI * 9 * (5 - IMAGE_EPS), -1);
+  });
+});
+
+describe('gridStep', () => {
+  it('is 0.5 mm for a preview and the pixel size for an export, within 0.1…0.2 mm', () => {
+    const image = { ...defaultImage(defaultState(), 'data:image/png;base64,', 512, 256), size: 60 };
+    expect(gridStep(image, 'preview')).toBe(0.5);
+    expect(gridStep(image, 'export')).toBeCloseTo(60 / 512);
+    expect(gridStep({ ...image, size: 300 }, 'export')).toBe(0.2);
+    expect(gridStep({ ...image, size: 20 }, 'export')).toBe(0.1);
+  });
+});

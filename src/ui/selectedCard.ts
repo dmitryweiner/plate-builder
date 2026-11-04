@@ -2,7 +2,7 @@
 // the element's own parameters.
 
 import { findElement, replaceElement } from '../editor/elements';
-import { HOLE_KINDS, RANGES, type HoleElement, type HoleKind, type PlateState } from '../geo/state';
+import { HOLE_KINDS, RANGES, type HoleElement, type HoleKind, type ImageElement, type PlateState } from '../geo/state';
 import type { Control, TextKey } from './controls';
 
 const HOLE_LABELS: Record<HoleKind, TextKey> = {
@@ -59,7 +59,37 @@ export function elementControls(id: string): Control<PlateState>[] {
     };
   };
 
+  const image = (s: PlateState): ImageElement | null => {
+    const e = get(s);
+    return e?.type === 'image' ? e : null;
+  };
+  const setImage = (s: PlateState, over: Partial<ImageElement>): PlateState => {
+    const i = image(s);
+    return i ? replaceElement(s, { ...i, ...over }) : s;
+  };
+  /** the crop's own parameters matter only when the outline follows the elements */
+  const cropping = (s: PlateState) => image(s) !== null && s.plate.kind === 'crop';
+  const imageRange = (
+    key: 'size' | 'height' | 'black' | 'white' | 'blur' | 'threshold',
+    label: TextKey,
+    range: { min: number; max: number; def: number },
+    step: number,
+    unit?: TextKey,
+  ): Control<PlateState> => ({
+    kind: 'range',
+    key,
+    label,
+    min: range.min,
+    max: range.max,
+    step,
+    unit,
+    when: key === 'threshold' ? cropping : (s) => image(s) !== null,
+    get: (s) => image(s)?.[key] ?? range.def,
+    set: (s, value) => setImage(s, { [key]: value }),
+  });
+
   return [
+    imageRange('size', 'imageSize', RANGES.imageSize, 0.5, 'mm'),
     {
       kind: 'select',
       key: 'holeKind',
@@ -112,6 +142,27 @@ export function elementControls(id: string): Control<PlateState>[] {
         const e = get(s);
         return e ? replaceElement(s, { ...e, rotation }) : s;
       },
+    },
+    imageRange('height', 'reliefHeight', RANGES.reliefHeight, 0.1, 'mm'),
+    {
+      kind: 'check',
+      key: 'invert',
+      label: 'invert',
+      when: (s) => image(s) !== null,
+      get: (s) => image(s)?.invert ?? false,
+      set: (s, invert) => setImage(s, { invert }),
+    },
+    imageRange('black', 'blackPoint', { min: 0, max: 254, def: 0 }, 1),
+    imageRange('white', 'whitePoint', { min: 1, max: 255, def: 255 }, 1),
+    imageRange('blur', 'smoothing', RANGES.blur, 1, 'px'),
+    imageRange('threshold', 'cropThreshold', RANGES.threshold, 1, 'percent'),
+    {
+      kind: 'check',
+      key: 'inOutline',
+      label: 'inOutline',
+      when: cropping,
+      get: (s) => image(s)?.inOutline ?? true,
+      set: (s, inOutline) => setImage(s, { inOutline }),
     },
     holeParam('diameter', 'diameter', ['round']),
     holeParam('length', 'length', ['slot']),
