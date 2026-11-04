@@ -1,0 +1,37 @@
+{
+  "name": "plate-builder",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Design a flat plate — a sign, a keychain, a tag — and download it as STL for 3D printing.",
+  "license": "GPL-3.0-or-later",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "lint": "oxlint --type-aware --deny-warnings && prettier --check .",
+    "format": "prettier --write .",
+    "check": "npm run typecheck && npm run lint && npm test",
+    "smoke": "node scripts/smoke.mjs",
+    "icons": "node scripts/icons.mjs"
+  },
+  "devDependencies": {
+    "@types/node": "^24.19.2",
+    "@types/three": "^0.187.0",
+    "jsdom": "^29.1.1",
+    "oxlint": "^1.90.0",
+    "oxlint-tsgolint": "^7.0.2005",
+    "playwright": "^1.64.1",
+    "prettier": "^3.9.10",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.4",
+    "vitest": "^4.1.12"
+  },
+  "dependencies": {
+    "manifold-3d": "^3.5.4",
+    "three": "^0.187.0"
+  }
+}
