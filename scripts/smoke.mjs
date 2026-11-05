@@ -663,6 +663,9 @@ try {
       await built(page);
       await page.click('#addHole');
       check(await page.locator('#panel').evaluate((p) => p.classList.contains('open')), 'the sheet is not open');
+      // the hole's card below the sheet's visible part, wherever the click's own scroll left it:
+      // the tap must scroll the sheet down to it, a fraction of a pixel included
+      await page.locator('#panel').evaluate((p) => (p.scrollTop = 0));
       const tap = async ([x, y]) => {
         const canvas = page.locator('#view2d');
         for (const type of ['pointerdown', 'pointerup'])
@@ -684,12 +687,16 @@ try {
       check((await page.locator('.element-row.open .element-title').textContent()) === 'Hole 1', 'the tapped hole is not selected');
       // its card's head in the sheet's visible part, once the sheet has slid in (however slow the machine)
       await page.waitForFunction(() => document.querySelector('#panel')?.getAnimations().length === 0);
-      const inSheet = await page.evaluate(() => {
-        const head = document.querySelector('.element-row.open .element-head')?.getBoundingClientRect();
-        const sheet = document.querySelector('#panel')?.getBoundingClientRect();
-        return Boolean(head && sheet && head.top >= sheet.top && head.bottom <= Math.min(sheet.bottom, innerHeight));
+      // the top and the bottom of each; the sheet's cut at the window
+      const [head, sheet] = await page.evaluate(() => {
+        const box = document.querySelector('.element-row.open .element-head')?.getBoundingClientRect();
+        const panel = document.querySelector('#panel')?.getBoundingClientRect();
+        return [box && [box.top, box.bottom], panel && [panel.top, Math.min(panel.bottom, innerHeight)]];
       });
-      check(inSheet, "the tapped hole's card is out of sight in the sheet");
+      check(
+        head && sheet && head[0] >= sheet[0] && head[1] <= sheet[1],
+        `the tapped hole's card is out of sight in the sheet: its head at ${String(head)}, the sheet at ${String(sheet)}`,
+      );
       check((await page.evaluate(() => document.scrollingElement?.scrollTop)) === 0, 'the page stayed scrolled');
       await page.click('#sheetClose');
       await page.click('#sheetOpen');
