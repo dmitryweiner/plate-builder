@@ -31,4 +31,14 @@ describe('scrollIntoContainer', () => {
     scrollIntoContainer(container, box(450, 700));
     expect(container.scrollTop).toBe(150);
   });
+
+  it('scrolls whole pixels, rounded so a target at a fraction of one still lands inside', () => {
+    // Chrome keeps scrollTop in whole pixels: 96.0625 more became 96, and the head stuck out by 1/16 px
+    const below = box(320.7, 844, 100);
+    scrollIntoContainer(below, box(900.0625, 940.0625));
+    expect(below.scrollTop).toBe(197);
+    const above = box(320.7, 844, 100);
+    scrollIntoContainer(above, box(280.2, 320.2));
+    expect(above.scrollTop).toBe(59);
+  });
 });
