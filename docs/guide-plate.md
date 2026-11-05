@@ -44,5 +44,8 @@ and + beside it for one step at a time, and a field for an exact number.
   magnets keep their edge distance from the foot of the bottom edge. A
   fillet's first layers hang over the bed a little and print well when
   small; a chamfer always does.
+
+![The door sign with a 1.5 mm chamfer](images/door-sign-edges.png)
+
 - **Rim** — a raised border along the outline, any kind of outline, with its
   width and height. Holes cut through it.

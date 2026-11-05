@@ -38,6 +38,7 @@ publishes `dist/` to GitHub Pages.
 | `plans/PLAN.md`         | milestones M0…M10, decisions, deviations |
 | `plans/PLAN-DESIGN.md`  | Case Constructor's look, element groups  |
 | `plans/PLAN-MAGNETS.md` | magnet pockets on the back (M11)         |
+| `plans/PLAN-FILLET.md`  | rounded or chamfered edges (M12)         |
 
 ## Architectural invariants
 
@@ -48,6 +49,9 @@ publishes `dist/` to GitHub Pages.
   message) passes `sanitizeState`; sanitizers never throw and are idempotent
   (fuzz-tested).
 - Manifold objects live in a `CsgScope` and are disposed.
+- The edges are no boolean: the outline's prism is one terraced mesh
+  (`edgedPrisms` in `worker/build.ts`); neighbouring terraces' insets differ
+  by at least `EDGE_MIN_GAP`, so their rings never cross.
 - No two solids in one boolean share a plane by construction (`ε` offsets);
   where unavoidable, cutters get a few microns of jitter.
 - The worker client keeps one waiting job per lane; a replaced job resolves
@@ -66,6 +70,9 @@ Measured on an M1 Mac, Chromium, worker time (`ms` of the job), with
 | export of the same, STL encoding included                                                  | 1 ms                                                    |
 | export click → file saved (main thread, download included)                                 | ~75 ms                                                  |
 | the default plate with four magnets at the corners (1036 triangles) — preview / export     | 15 ms / 8 ms                                            |
+| the default plate with a 1.5 mm fillet (1868 triangles) — preview / export                 | 16 ms / 29 ms                                           |
+| a 100 × 60 heart with a 1.5 mm fillet or chamfer (17k triangles) — preview                 | ~45 ms                                                  |
+| a cartouche vignette with its frame and a 2 mm fillet — preview / export                   | 44 ms / 104 ms                                          |
 | preview with four holes, one of each kind (100 × 60 × 6, 1300 triangles)                   | ~15 ms                                                  |
 | one raised text "PLATE BUILDER" on an arc, 8 mm (7.8k triangles) — preview                 | ~60 ms                                                  |
 | crop around a 36 mm picture and a text, padding 3, with its outline job                    | ~200 ms                                                 |
@@ -112,6 +119,7 @@ browser (service worker, layout, workers) → a step in `scripts/smoke.mjs`.
   heights),
   `holes.ts` (footprints, boxes and cutters of the hole kinds),
   `magnets.ts` (magnet layouts placed on the outline, pockets, cutters),
+  `edges.ts` (the edges' profile, terraces and slabs),
   `warnings.ts` (the warnings that need no CSG), `mesh.ts`
   (`SurfaceMesh`, normals), `stl.ts` (binary STL, file names), `validate.ts`
   (watertightness, volume, what blocks an export).

@@ -179,3 +179,15 @@ ring's vertex count and topology (thin parts vanish, islands split).
   explains the size's limit and the profile.
 - **The profile's labels**: "Rounded" / "Chamfer 45°" (ru "Скругление" /
   "Фаска 45°"), the select "Edge profile".
+- **Docs pictures**: the presets that got an edge are re-shot, and one new
+  picture shows a chamfer:
+
+  ```
+  node scripts/snap.mjs --out docs/images/keychain.png --preset keychain
+  node scripts/snap.mjs --out docs/images/medal.png --preset medal
+  node scripts/snap.mjs --out docs/images/medal-image.png --preset medal --select i1 --panel '.element-row.open'
+  node scripts/snap.mjs --out docs/images/pet-tag-phone.png --preset pet-tag --width 390 --height 844
+  node scripts/snap.mjs --out docs/images/fridge-magnet-back.png --preset fridge-magnet --swap --camera back
+  node scripts/snap.mjs --out docs/images/door-sign-edges.png --preset door-sign --swap --camera iso --panel '#plate-edgeSize' \
+    --eval "const n = document.querySelector('#plate-edgeSize-n'); n.value = '1.5'; n.dispatchEvent(new Event('change')); const p = document.querySelector('#plate-edgeProfile'); p.value = 'chamfer'; p.dispatchEvent(new Event('change'));"
+  ```
