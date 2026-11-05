@@ -156,4 +156,26 @@ ring's vertex count and topology (thin parts vanish, islands split).
 
 ## Deviations
 
-(filled in as the work goes)
+- **No cutter: the prism itself is terraced.** Planned as one more cutter
+  in the final subtraction. Built instead: the outline's prism — the base
+  and the prism that clips the reliefs — is a stack of slabs, each the
+  outline shrunk by its terrace's inset, built **directly as one mesh**
+  (walls, the ring-shaped steps between neighbours triangulated by
+  `manifold.triangulate`, the two caps), no boolean at all. Two
+  boolean versions were measured first and dropped: a union of nested
+  cores, and a union of stacked slabs — both ~10× slower (a heart with a
+  1.5 mm fillet: preview 414 ms, export 2.4 s; direct: 41 ms / 177 ms),
+  because every slab's cap is a fan of long triangles crossing every wall
+  of its neighbours. The direct mesh needs neighbouring rings not to cross:
+  terraces whose insets differ by less than `EDGE_MIN_GAP` (0.025 mm, over
+  twice the shrunk outlines' own error) are merged — near the wall a
+  fillet's insets differ by microns.
+- **Jitter** (`EDGE_JITTER`, 2.3 µm) moves every terrace's height and inset
+  off the profile's own round values: a chamfer's terraces would fall on
+  `T` under a rim, on a rim's width or on a keyhole's lip.
+- **`wallHeight` lives in `geo/state.ts`**, not `geo/edges.ts`: the
+  sanitizer needs it, and `edges.ts` imports `state.ts`.
+- **No hint under the slider**: the controls have no hint line; the guide
+  explains the size's limit and the profile.
+- **The profile's labels**: "Rounded" / "Chamfer 45°" (ru "Скругление" /
+  "Фаска 45°"), the select "Edge profile".

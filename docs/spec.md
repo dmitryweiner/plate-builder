@@ -58,6 +58,30 @@ outline): the outline is shrunk by r and grown back by r with round joins,
 so any convex corner becomes an arc of radius r and the size does not
 change. A rectangle with r = 0 keeps sharp corners.
 
+### 2.2a Edges
+
+The plate's outer top and bottom edges, all along the outline, can be
+**rounded** (a quarter circle) or **chamfered** (45°), both edges with one
+size `e` (0 = sharp, up to half the outer wall's height and 10 mm). The
+outer wall is `T`, plus the rim's or a vignette's / own SVG's frame height
+when either stands on the outline (the higher of the two): with a rim, its
+top's outer edge is the one rounded, its inner edge stays sharp.
+
+- At a distance `t < e` from the back face or from the wall's top, the
+  plate's section is the outline shrunk by the profile's inset there
+  (`e − √(e² − (e − t)²)` for a fillet, `e − t` for a chamfer); above the
+  wall by `e`. So within `e` of the outline everything is cut down to the
+  edge: the base, the rim, the frame, an image or a raised text that
+  reaches it. A thin part narrower than `2e` gets a ridge.
+- The profile is built from **terraces**, each the outline shrunk by the
+  profile's inset at the terrace's middle, each piece of the profile at most
+  0.5 mm (preview) or 0.1 mm (export, a printed layer's scale) long, 4–48
+  per edge; terraces whose insets differ by less than 0.025 mm are merged.
+  The stack is built as one mesh, not by booleans.
+- Holes, the rim's inner side and a frame's windows keep sharp edges.
+- A fillet's lowest layers overhang the bed a little; the chamfer prints
+  without any.
+
 ### 2.3 Rim
 
 An optional raised border along the outline: width 0.8–20 mm, height
@@ -236,7 +260,9 @@ triangle point down, row, column; 4 — corners, diamond, row, column.
 0.1` deep, so the magnet is flush with the back face (its hold drops fast
   with a gap). The magnets are glued in after printing.
 - **Placement**: each layout is a set of anchors in the outline's box,
-  inset by the pocket's radius and the edge (rows spread evenly). An anchor
+  inset by the pocket's radius and the edge (rows spread evenly); the edge
+  is counted from the foot of the plate's bottom edge (§2.2a), `e` in from
+  the outline, so a pocket never opens into it. An anchor
   whose pocket comes closer than the edge to the outline slides towards the
   box's middle until it fits. The 2D view and the worker place them with the
   same function on the same outline rings. Magnets take no part in a crop.
@@ -252,7 +278,9 @@ plate = ( base ∪ rim ∪ frame ∪ images ∪ raised texts ) ∩ outline prism
 - **base**: the outline extruded from z = 0 to T.
 - **outline prism**: the outline extruded from z = 0 to well above the
   highest relief; it clips everything to the plate. An element that pokes
-  out of the outline is clipped, and a warning names it.
+  out of the outline is clipped, and a warning names it. With edges (§2.2a)
+  the base and this prism are the terraced stack instead of a plain
+  extrusion: it rounds or chamfers what reaches the edge.
 - **images**: each image is a heightfield solid built in the image's own
   frame on a regular grid (§8.4), its bottom inside the base and its zero
   level `ε` below `T` (so it never shares a plane with the base's top), then
@@ -462,6 +490,7 @@ under 60 s.
 | `keyhole.thin`             | the plate is too thin for a hidden keyhole (with the T needed)           |
 | `text.thin` / `frame.thin` | strokes thinner than 0.8 mm (two nozzle widths) would not print well     |
 | `text.buried`              | a raised text is lower than the image under it                           |
+| `text.onEdge`              | a text comes within the edges' size of the outline and is cut down there |
 | `text.engraveDeep`         | engraved depth leaves less than 0.4 mm of base                           |
 | `text.arcTooLong`          | an arc text did not fit the circle and was squeezed (with %)             |
 | `text.arcLines`            | an arc text had several lines, joined into one                           |
@@ -485,8 +514,8 @@ and carry a spot for the 2D view.
   kept and offers the project file; it goes away once a save succeeds.
 - **Project file**: `*.plate.json` download and upload, the same schema
   with its version; a foreign or broken file is refused with a message. A
-  field added later (the magnets) is filled with its default when a save or
-  a file lacks it, so the version stays.
+  field added later (the magnets, the edges) is filled with its default when
+  a save or a file lacks it, so the version stays.
 - **Undo / redo** over the whole state, a drag or a slider move being one
   step.
 - **Built-in presets** (7): door sign (rectangle, two lines, two
@@ -528,7 +557,6 @@ and carry a spot for the 2D view.
 
 ## 14. Not in v1
 
-- Chamfered or rounded top edge of the plate.
 - Engraved (sunken) images; lithophanes (light through the plate).
 - Elements on the back face (except keyholes).
 - Vector fonts from font files, own font upload.

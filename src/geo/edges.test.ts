@@ -79,6 +79,7 @@ describe('edgeSlabs', () => {
     const p = plate({ thickness: 3, edgeSize: 1.5 });
     const n = edgeLevels(1.5, 'fillet', EDGE_STEP.preview).length;
     const slabs = edgeSlabs(p, EDGE_STEP.preview, 5.5);
+    // the last of the five terraces (inset 0.02) is the wall's
     expect(slabs).toHaveLength(2 * n - 1);
     expect(slabs[0].z0).toBe(0);
     expect(slabs.at(-1)?.z1).toBe(5.5);
@@ -88,6 +89,8 @@ describe('edgeSlabs', () => {
       expect(slabs[2 * n - 2 - k].inset).toBe(slabs[k].inset);
     }
     for (let k = 1; k < n; k++) expect(slabs[k].z0 + slabs[2 * n - 2 - k].z1).toBeCloseTo(3, 12);
+    // the wall is the outline itself: the plate keeps its size
+    expect(slabs[n - 1].inset).toBe(0);
   });
 
   it.each(['fillet', 'chamfer'] as const)('%s: each slab ends where the next begins; neighbours’ insets a gap apart', (edgeProfile) => {
@@ -108,6 +111,17 @@ describe('edgeSlabs', () => {
     expect(middle.z0).toBeGreaterThan(1);
   });
 
+  it('at the largest size the edges meet: no wall between them, the last terraces one slab', () => {
+    const slabs = edgeSlabs(plate({ thickness: 3, edgeSize: 1.5, edgeProfile: 'chamfer' }), EDGE_STEP.export, 3);
+    const middle = slabs[(slabs.length - 1) / 2];
+    expect(slabs).toHaveLength(2 * 22 - 1);
+    expect(middle.inset).toBeGreaterThan(0);
+    expect(middle.z0 + middle.z1).toBeCloseTo(3, 12);
+    expect(middle.z1 - middle.z0).toBeGreaterThan(0);
+    const lower = edgeSlabs(plate({ thickness: 3, edgeSize: 1.4, edgeProfile: 'chamfer' }), EDGE_STEP.export, 3);
+    expect(lower[(lower.length - 1) / 2].inset).toBe(0);
+  });
+
   it('stands on the rim’s top when there is a rim', () => {
     const slabs = edgeSlabs(plate({ thickness: 3, rim: true, rimHeight: 1, edgeSize: 1 }), EDGE_STEP.preview, 4);
     const middle = slabs[(slabs.length - 1) / 2];
@@ -118,7 +132,7 @@ describe('edgeSlabs', () => {
     // a 1 mm chamfer has slabs of 1/15 mm; one of them would end exactly on T under a 0.2 mm rim
     const p = plate({ thickness: 3, rim: true, rimHeight: 0.2, edgeSize: 1, edgeProfile: 'chamfer' });
     const slabs = edgeSlabs(p, EDGE_STEP.export, 3.2);
-    expect(slabs).toHaveLength(29);
+    expect(slabs).toHaveLength(31);
     for (const { z0, z1 } of slabs) for (const z of [z0, z1]) expect(Math.abs(z - 3)).toBeGreaterThan(EDGE_JITTER / 2);
   });
 });

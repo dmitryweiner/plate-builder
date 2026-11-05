@@ -364,6 +364,7 @@ function edgedPrisms(csg: CsgApi, scope: CsgScope, outline: CrossSection, plate:
   const ringsOf = (inset: number): Terrace['rings'] => {
     const known = shrunk.get(inset);
     if (known) return known;
+    if (inset === 0) return outline.toPolygons();
     const offset = scope.keep(outline.offset(-inset, 'Round', 2, segmentsFor(inset)));
     const rings = scope.keep(offset.simplify(CHORD_TOLERANCE / 10)).toPolygons();
     shrunk.set(inset, rings);
