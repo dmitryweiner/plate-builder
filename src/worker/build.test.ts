@@ -1,4 +1,5 @@
 import { beforeAll, describe, expect, it } from 'vitest';
+import { edgeInset } from '../geo/edges';
 import { meshNormals } from '../geo/mesh';
 import { bounds, ringArea } from '../geo/outline';
 import type { Raster } from '../geo/heightmap';
@@ -18,7 +19,17 @@ import {
 } from '../geo/state';
 import type { TextRaster } from '../geo/textShape';
 import { meshProblems, validateMesh } from '../geo/validate';
-import { buildMesh, buildPlate, gridStep, IMAGE_EPS, outlineRings, plateOutline, stateOutline, type Rasters } from './build';
+import {
+  buildMesh,
+  buildPlate,
+  gridStep,
+  IMAGE_EPS,
+  outlineRings,
+  plateOutline,
+  stateOutline,
+  type PlateMesh,
+  type Rasters,
+} from './build';
 import { CsgScope, initCSG, type CsgApi } from './csg';
 
 let csg: CsgApi;
@@ -644,5 +655,88 @@ describe('vignettes and own SVG', () => {
     const { warnings, report } = builtSilhouette(silhouetteState(), null);
     expect(warnings.map((w) => w.code)).toEqual(['outline.empty']);
     expect(meshProblems(report)).toEqual(['empty']);
+  });
+});
+
+const report = (mesh: PlateMesh) => validateMesh({ ...mesh, normals: meshNormals(mesh.positions, mesh.indices) });
+function closed(mesh: PlateMesh) {
+  const r = report(mesh);
+  return { watertight: r.watertight, problems: meshProblems(r) };
+}
+
+describe('edges', () => {
+  const ok = { watertight: true, problems: [] };
+
+  it.each(PRIMITIVE_KINDS.flatMap((kind) => [[kind, 'fillet'] as const, [kind, 'chamfer'] as const]))(
+    '%s, %s: one closed solid, as high as before',
+    (kind, edgeProfile) => {
+      const state = withPlate({ kind, width: 70, height: 45, thickness: 3, rounding: 3, edgeSize: 1.2, edgeProfile });
+      const mesh = inScope((scope) => buildMesh(csg, scope, state));
+      expect(closed(mesh)).toEqual(ok);
+      expect(report(mesh).bbox.min[2]).toBeCloseTo(0, 6);
+      expect(report(mesh).bbox.max[2]).toBeCloseTo(3, 6);
+    },
+  );
+
+  it.each(['fillet', 'chamfer'] as const)('%s on a rectangle: the profile’s volume, both faces shrunk by r', (edgeProfile) => {
+    const [w, h, t, r] = [100, 60, 3, 1.5];
+    const state = withPlate({ width: w, height: h, thickness: t, rounding: 0, edgeSize: r, edgeProfile });
+    const mesh = inScope((scope) => buildPlate(csg, scope, state, { images: [], texts: [] }, 'export').mesh);
+    expect(closed(mesh)).toEqual(ok);
+    // the smooth profile's volume: the section at z is the rectangle shrunk by the inset there
+    const n = 3000;
+    let volume = 0;
+    for (let i = 0; i < n; i++) {
+      const z = ((i + 0.5) / n) * t;
+      const inset = edgeInset(r, edgeProfile, Math.min(z, t - z));
+      volume += ((w - 2 * inset) * (h - 2 * inset) * t) / n;
+    }
+    expect(Math.abs(report(mesh).volume / volume - 1)).toBeLessThan(0.001);
+    for (const z of [0, t]) expect(faceArea(mesh, z) / ((w - 2 * r) * (h - 2 * r))).toBeCloseTo(1, 2);
+  });
+
+  it('rounds the rim’s top with a preview’s few terraces too', () => {
+    const state = withPlate({ width: 100, height: 60, thickness: 3, rounding: 4, rim: true, rimWidth: 3, rimHeight: 1, edgeSize: 2 });
+    const mesh = inScope((scope) => buildMesh(csg, scope, state));
+    expect(closed(mesh)).toEqual(ok);
+    expect(report(mesh).bbox.max[2]).toBeCloseTo(4, 6);
+    // the rim's top is narrower than its ring: its outer edge is rounded off
+    expect(faceArea(mesh, 4)).toBeLessThan(100 * 60 - 94 * 54 - 100);
+  });
+
+  it('rounds an image that reaches the edge, and a raised text there', () => {
+    const state = {
+      ...withPlate({ width: 100, height: 60, thickness: 3, rounding: 0, edgeSize: 1.5 }),
+      images: [{ ...defaultImage(defaultState(), png, 4, 4), id: 'i1', size: 110, height: 2 }],
+      texts: [{ ...defaultText(defaultState()), id: 't1', x: 40, y: 25 }],
+    };
+    const { mesh } = inScope((scope) => buildPlate(csg, scope, state, { images: [flat(255)], texts: [blockRaster(20, 8)] }, 'preview'));
+    expect(closed(mesh)).toEqual(ok);
+    // within 0.1 mm of the side the relief is cut down to the fillet: well below the wall's top
+    let side = -Infinity;
+    for (let v = 0; v < mesh.positions.length; v += 3) if (mesh.positions[v] > 49.9) side = Math.max(side, mesh.positions[v + 2]);
+    expect(side).toBeGreaterThan(1);
+    expect(side).toBeLessThan(2.5);
+    expect(topNear(mesh, 0, 0, 1)).toBeCloseTo(5, 1);
+  });
+
+  it('keeps magnets, a keyhole and an engraved text in one closed solid', () => {
+    const state = {
+      ...withPlate({ width: 100, height: 60, thickness: 6, rounding: 2, edgeSize: 2, edgeProfile: 'chamfer' }),
+      holes: [{ ...defaultHole('keyhole'), id: 'h1', y: 15 }],
+      texts: [{ ...defaultText(defaultState()), id: 't1', mode: 'engraved' as const, y: -15 }],
+      magnets: { ...defaultState().magnets, count: 4, layout: 'corners' as const },
+    };
+    const { mesh } = inScope((scope) => buildPlate(csg, scope, state, { images: [], texts: [blockRaster(20, 8)] }, 'export'));
+    expect(closed(mesh)).toEqual(ok);
+  });
+
+  it('rounds a frame and a crop', () => {
+    const framed = silhouetteState({ edgeSize: 1.5, rim: true, rimWidth: 2, rimHeight: 1 });
+    expect(builtSilhouette(framed, frameMask(60, 40, 5)).report.watertight).toBe(true);
+    expect(meshProblems(builtSilhouette(framed, frameMask(60, 40, 5)).report)).toEqual([]);
+    const crop = cropState([{ height: 1 }], { edgeSize: 1.5 });
+    const { mesh } = inScope((scope) => buildPlate(csg, scope, crop, { images: [discRaster(64, 24)], texts: [] }, 'preview'));
+    expect(closed(mesh)).toEqual(ok);
   });
 });

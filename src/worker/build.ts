@@ -2,11 +2,12 @@
 // the parts. Now: the outline with its rounded corners, extruded into the
 // base.
 //
-//   plate = ( base ∪ rim ∪ frame ∪ images ∪ raised texts ) ∩ outline prism
+//   plate = ( base ∪ rim ∪ frame ∪ images ∪ raised texts ) ∩ outline prism (or the edges' cores)
 //           − engraved texts − holes − magnet pockets
 
 import type { CrossSection, Manifold } from 'manifold-3d';
 import { elementBox } from '../geo/boxes';
+import { EDGE_STEP, edgeCores } from '../geo/edges';
 import { heightfieldMesh } from '../geo/grid';
 import { traceContours, LEVEL } from '../geo/contour';
 import { heightField, processPixels, sampleField, type Raster } from '../geo/heightmap';
@@ -300,6 +301,21 @@ function raisedBase(
   return base;
 }
 
+/**
+ * The rounded or chamfered edges (spec §2.2a) as what the solid is kept
+ * inside: the union of the nested cores of `geo/edges.ts`, each the outline
+ * shrunk by its inset; null for sharp edges.
+ */
+function edgeKeep(csg: CsgApi, scope: CsgScope, outline: CrossSection, plate: Plate, quality: Quality, top: number): Manifold | null {
+  const cores = edgeCores(plate, EDGE_STEP[quality], top).flatMap(({ inset, z0, z1 }) => {
+    const shrunk = scope.keep(outline.offset(-inset, 'Round', 2, segmentsFor(inset)));
+    // a thin part the inset swallows has no core here; an empty prism would empty the union
+    if (shrunk.isEmpty()) return [];
+    return [prismOf(scope, scope.keep(shrunk.simplify(CHORD_TOLERANCE / 10)), z0, z1)];
+  });
+  return cores.length > 0 ? scope.keep(csg.Manifold.union(cores)) : null;
+}
+
 export interface Rasters {
   /** one per `state.images` (null: not decoded) */
   images: readonly (Raster | null)[];
@@ -311,7 +327,7 @@ export interface Rasters {
 
 /**
  * The solid (spec §6):
- *   ( base ∪ images ∪ raised texts ) ∩ outline prism − engraved texts − holes − magnet pockets
+ *   ( base ∪ images ∪ raised texts ) ∩ outline prism (or the edges' cores) − engraved texts − holes − magnet pockets
  * and the warnings only the contours can tell.
  */
 export function buildSolid(
@@ -365,6 +381,8 @@ export function buildSolid(
       ...raised.map(({ text }) => text.height),
     );
   let solid = base;
+  // the edges' cores lie inside the outline prism: they clip what pokes out as well
+  const keep = state.plate.edgeSize > 0 ? edgeKeep(csg, scope, outline, state.plate, quality, top) : null;
   if (images.length > 0 || raised.length > 0) {
     const reliefs = [
       ...images.map(({ image, raster }) => imageSolid(csg, scope, image, raster, thickness, quality)),
@@ -372,8 +390,9 @@ export function buildSolid(
       ...raised.map(({ text, section }) => prismOf(scope, section, thickness / 2, thickness + text.height)),
     ];
     const additive = scope.keep(csg.Manifold.union([base, ...reliefs]));
-    const prism = scope.keep(outline.extrude(top + 1));
-    solid = scope.keep(additive.intersect(prism));
+    solid = scope.keep(additive.intersect(keep ?? scope.keep(outline.extrude(top + 1))));
+  } else if (keep) {
+    solid = scope.keep(base.intersect(keep));
   }
   const cutters = [
     // from the floor of the engraving up through everything
