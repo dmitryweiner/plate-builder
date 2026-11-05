@@ -37,6 +37,7 @@ publishes `dist/` to GitHub Pages.
 | `plans/INITIAL-IDEA.md` | the idea as first written                |
 | `plans/PLAN.md`         | milestones M0…M10, decisions, deviations |
 | `plans/PLAN-DESIGN.md`  | Case Constructor's look, element groups  |
+| `plans/PLAN-MAGNETS.md` | magnet pockets on the back (M11)         |
 
 ## Architectural invariants
 
@@ -64,6 +65,7 @@ Measured on an M1 Mac, Chromium, worker time (`ms` of the job), with
 | first preview of the default plate (100 × 60 rectangle, 204 triangles), WASM load included | 4–13 ms                                                 |
 | export of the same, STL encoding included                                                  | 1 ms                                                    |
 | export click → file saved (main thread, download included)                                 | ~75 ms                                                  |
+| the default plate with four magnets at the corners (1036 triangles) — preview / export     | 15 ms / 8 ms                                            |
 | preview with four holes, one of each kind (100 × 60 × 6, 1300 triangles)                   | ~15 ms                                                  |
 | one raised text "PLATE BUILDER" on an arc, 8 mm (7.8k triangles) — preview                 | ~60 ms                                                  |
 | crop around a 36 mm picture and a text, padding 3, with its outline job                    | ~200 ms                                                 |
@@ -109,6 +111,7 @@ browser (service worker, layout, workers) → a step in `scripts/smoke.mjs`.
   (element boxes; measured text boxes), `printHints.ts` (colour-change
   heights),
   `holes.ts` (footprints, boxes and cutters of the hole kinds),
+  `magnets.ts` (magnet layouts placed on the outline, pockets, cutters),
   `warnings.ts` (the warnings that need no CSG), `mesh.ts`
   (`SurfaceMesh`, normals), `stl.ts` (binary STL, file names), `validate.ts`
   (watertightness, volume, what blocks an export).
@@ -127,8 +130,8 @@ browser (service worker, layout, workers) → a step in `scripts/smoke.mjs`.
 - `src/render/` — `view.ts` (what the app needs from the 3D view, types
   only), `scene.ts` (Three.js; checked by the smoke, not vitest).
 - `src/ui/` — `controls.ts` (declarative slider / number / select / check
-  rows; − / + beside a slider), `plateCard.ts`, `selectedCard.ts` (the
-  cards' controls), `elementsCard.ts` (the element groups: a foldable card
+  rows; − / + beside a slider; a select's options may follow the state),
+  `plateCard.ts`, `magnetsCard.ts`, `selectedCard.ts` (the cards' controls), `elementsCard.ts` (the element groups: a foldable card
   per element, the selected one open), `presetList.ts` (the presets
   dialog's list), `warningsCard.ts`,
   `imageImport.ts` (files → grayscale + alpha PNG, decoding, height
@@ -160,8 +163,8 @@ browser (service worker, layout, workers) → a step in `scripts/smoke.mjs`.
 - `scripts/snap.mjs` — a screenshot in a given state (`--preset`, `--lang`,
   `--width/--height`, `--view`, `--camera`, `--swap`, `--select`, `--panel`,
   `--eval`); the docs' pictures come from it.
-- `scripts/preset-pictures.mjs` — draws the built-in presets' pictures into
-  `src/state/presetPictures.ts`.
+- `scripts/preset-pictures.mjs` — draws the built-in presets' pictures (a
+  star, a logo, an apple) into `src/state/presetPictures.ts`.
 - `scripts/lib/harness.mjs` — flags, vite on 5373/4373, console errors.
 - `scripts/icons.mjs` — PWA icons from `public/icon.svg`.
 - `scripts/vignettes.mjs` — the vignette catalog: `--check` (one piece with

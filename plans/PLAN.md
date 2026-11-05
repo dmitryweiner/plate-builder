@@ -383,3 +383,4 @@ sheet on a phone, offline reload.
 - **M10**: `README.ru.md` is not written (optional in the conventions).
 - **After M10**: the interface took Case Constructor's look (dark only,
   emerald) and the element groups; see `plans/PLAN-DESIGN.md`.
+- **After M10**: magnets in the back (M11); see `plans/PLAN-MAGNETS.md`.

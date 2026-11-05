@@ -86,6 +86,24 @@ export const uk: Messages = {
   keyShank: 'Діаметр стрижня гвинта',
   keySlot: 'Довжина паза',
 
+  magnetsCard: 'Магніти',
+  magnetCount: 'Кількість',
+  magnetNone: 'Немає',
+  magnetLayout: 'Розташування',
+  layoutCentre: 'У центрі',
+  layoutTop: 'Згори',
+  layoutRow: 'У ряд',
+  layoutColumn: 'Стовпчиком',
+  layoutTopCorners: 'Верхні кути',
+  layoutTriangle: 'Трикутник',
+  layoutTriangleDown: 'Трикутник вістрям донизу',
+  layoutCorners: 'Кути',
+  layoutDiamond: 'Ромб',
+  magnetDiameter: 'Діаметр магніту',
+  magnetThickness: 'Товщина магніту',
+  magnetFit: 'Зазор',
+  magnetEdge: 'Від краю',
+
   addImage: 'Додати зображення',
   imageSize: 'Розмір (довга сторона)',
   reliefHeight: 'Висота рельєфу',
@@ -148,6 +166,9 @@ export const uk: Messages = {
   meshBlocked: (problems: string) => `Сітка зіпсована (${problems}); STL не експортувати.`,
   imageFailed: (reason: string) => `Не вдалося прочитати зображення: ${reason}`,
   svgFailed: (reason: string) => `Не вдалося прочитати SVG: ${reason}`,
+  magnetPocket: (d: string, depth: string) => `Гніздо ⌀ ${d} мм завглибшки ${depth} мм, відкрите ззаду.`,
+  magnetsGlue: (count: number, d: string, h: string) =>
+    `Після друку вклейте магніти (${count} × ⌀ ${d} × ${h} мм) у гнізда на задньому боці.`,
   colourChange: (z: string) => `Зміна філаменту на Z = ${z} мм (перший шар над цією висотою).`,
   elementName: (type: 'image' | 'text' | 'hole', n: number) => `${{ image: 'Зображення', text: 'Напис', hole: 'Отвір' }[type]} ${n}`,
   warning: {
@@ -163,6 +184,10 @@ export const uk: Messages = {
     arcTooLong: (names: string, percent: number) => `${names} довший за своє коло й стиснутий до ${percent} %.`,
     arcLines: (names: string) => `${names}: по дузі йде один рядок; рядки з’єднано.`,
     buried: (names: string) => `${names} нижчий за зображення під ним і тоне в ньому.`,
+    magnetThin: (mm: number) => `Магнітам потрібна табличка завтовшки щонайменше ${mm} мм, щоб над гніздами лишилося 0,8 мм.`,
+    magnetNoRoom:
+      'Магніти не вміщаються: гніздо ближче до контуру, ніж відступ від краю, або до іншого гнізда. Допоможуть менші магніти, менший відступ чи інше розташування.',
+    magnetOverlap: (names: string) => `Гніздо магніту зачіпає ${names}.`,
   },
   meshProblem: {
     nonFinite: 'координати — не числа',

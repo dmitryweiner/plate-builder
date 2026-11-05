@@ -87,6 +87,24 @@ export const en = {
   keyShank: 'Screw shank diameter',
   keySlot: 'Slot length',
 
+  magnetsCard: 'Magnets',
+  magnetCount: 'Number',
+  magnetNone: 'None',
+  magnetLayout: 'Layout',
+  layoutCentre: 'In the middle',
+  layoutTop: 'At the top',
+  layoutRow: 'In a row',
+  layoutColumn: 'In a column',
+  layoutTopCorners: 'Top corners',
+  layoutTriangle: 'Triangle',
+  layoutTriangleDown: 'Triangle, point down',
+  layoutCorners: 'Corners',
+  layoutDiamond: 'Diamond',
+  magnetDiameter: 'Magnet diameter',
+  magnetThickness: 'Magnet thickness',
+  magnetFit: 'Fit',
+  magnetEdge: 'From the edge',
+
   addImage: 'Add image',
   imageSize: 'Size (long side)',
   reliefHeight: 'Relief height',
@@ -149,6 +167,9 @@ export const en = {
   meshBlocked: (problems: string) => `The mesh is broken (${problems}); the STL cannot be exported.`,
   imageFailed: (reason: string) => `The picture could not be read: ${reason}`,
   svgFailed: (reason: string) => `The SVG could not be read: ${reason}`,
+  magnetPocket: (d: string, depth: string) => `Pocket ⌀ ${d} mm, ${depth} mm deep, open at the back.`,
+  magnetsGlue: (count: number, d: string, h: string) =>
+    `After printing, glue the magnets (${count} × ⌀ ${d} × ${h} mm) into the pockets on the back.`,
   colourChange: (z: string) => `Change filament at Z = ${z} mm (the first layer above it).`,
   elementName: (type: 'image' | 'text' | 'hole', n: number) => `${{ image: 'Image', text: 'Text', hole: 'Hole' }[type]} ${n}`,
   warning: {
@@ -164,6 +185,10 @@ export const en = {
     arcTooLong: (names: string, percent: number) => `${names} is longer than its circle and is squeezed to ${percent} %.`,
     arcLines: (names: string) => `${names}: an arc takes one line; the lines are joined.`,
     buried: (names: string) => `${names} is lower than the image under it and is buried.`,
+    magnetThin: (mm: number) => `The magnets need a plate at least ${mm} mm thick, to leave 0.8 mm over their pockets.`,
+    magnetNoRoom:
+      'The magnets do not fit: a pocket comes closer to the outline than the edge distance, or to another pocket. Smaller magnets, a smaller distance or another layout help.',
+    magnetOverlap: (names: string) => `A magnet pocket runs into ${names}.`,
   },
   meshProblem: {
     nonFinite: 'coordinates are not numbers',

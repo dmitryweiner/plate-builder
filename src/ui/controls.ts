@@ -30,10 +30,13 @@ export interface RangeControl<T> extends Base<T> {
   set(state: T, value: number): T;
 }
 
+/** A message key, or a text shown as it is (a font's own name). */
+type Options = readonly ({ value: string; label: TextKey } | { value: string; text: string })[];
+
 export interface SelectControl<T> extends Base<T> {
   kind: 'select';
-  /** a message key, or a text shown as it is (a font's own name) */
-  options: readonly ({ value: string; label: TextKey } | { value: string; text: string })[];
+  /** may depend on the state: the magnets' layouts on their count */
+  options: Options | ((state: T) => Options);
   get(state: T): string;
   set(state: T, value: string): T;
 }
@@ -103,14 +106,24 @@ export function renderControls<T>(container: HTMLElement, controls: readonly Con
     } else if (control.kind === 'select') {
       const select = make('select');
       select.id = id;
-      for (const option of control.options) {
-        const node = make('option', undefined, 'text' in option ? option.text : o.t[option.label]);
-        node.value = option.value;
-        select.append(node);
-      }
+      const { options } = control;
+      let shown = '';
+      const fill = (list: Options): void => {
+        // made again only when the list changes: an open list would close under the person
+        const values = JSON.stringify(list.map((option) => option.value));
+        if (values === shown) return;
+        shown = values;
+        select.textContent = '';
+        for (const option of list) {
+          const node = make('option', undefined, 'text' in option ? option.text : o.t[option.label]);
+          node.value = option.value;
+          select.append(node);
+        }
+      };
       select.addEventListener('change', () => o.change(control.set(o.read(), select.value), true));
       row.append(select);
       syncers.push((state) => {
+        fill(typeof options === 'function' ? options(state) : options);
         select.value = control.get(state);
       });
     } else if (control.kind === 'textarea') {

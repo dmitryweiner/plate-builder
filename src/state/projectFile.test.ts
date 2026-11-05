@@ -25,6 +25,20 @@ describe('project file', () => {
     expect(readProjectFile(JSON.stringify({ app: 'plate-builder', version: STATE_VERSION }))).toEqual({ ok: false, reason: 'broken' });
   });
 
+  it('opens a file from before the magnets with none', () => {
+    const old: Record<string, unknown> = { ...state() };
+    delete old.magnets;
+    const read = readProjectFile(JSON.stringify({ app: 'plate-builder', version: STATE_VERSION, state: old }));
+    expect(read).toEqual({ ok: true, state: state() });
+    expect(read.ok && read.state.magnets.count).toBe(0);
+  });
+
+  it('round-trips magnets', () => {
+    const magnets = { ...state().magnets, count: 3, layout: 'triangleDown' as const, diameter: 8 };
+    const read = readProjectFile(projectFileText({ ...state(), magnets }));
+    expect(read.ok && read.state.magnets).toEqual(magnets);
+  });
+
   it('sanitises what it reads', () => {
     const text = JSON.stringify({ app: 'plate-builder', version: STATE_VERSION, state: { plate: { thickness: -5 } } });
     const read = readProjectFile(text);

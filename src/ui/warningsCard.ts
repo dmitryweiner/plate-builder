@@ -25,6 +25,9 @@ export function warningText(t: Messages, w: Warning, state: PlateState, problems
     'text.arcLines': () => t.warning.arcLines(names),
     'text.buried': () => t.warning.buried(names),
     'text.arcTooLong': () => t.warning.arcTooLong(names, mm('percent')),
+    'magnet.thin': () => t.warning.magnetThin(mm('needed')),
+    'magnet.noRoom': () => t.warning.magnetNoRoom,
+    'magnet.overlap': () => t.warning.magnetOverlap(names),
   };
   return texts[w.code]();
 }

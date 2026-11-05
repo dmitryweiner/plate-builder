@@ -10,6 +10,8 @@ size, the height and the triangle count.
 
 - Print with the **back on the bed**; no supports are needed: everything
   rises from the base, and a keyhole's channel is a short bridge.
+- **Magnets**: glue them into their pockets on the back after printing; the
+  card gives their number and size.
 - **Colour changes**: the card lists the heights where a filament change
   gives a clean second colour — the top of the base, of raised texts, of the
   rim and of the frame. Set a colour change at that Z in the slicer (the

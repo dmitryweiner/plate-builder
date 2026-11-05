@@ -18,6 +18,7 @@ import {
 import { maskRings, textRings, type TextRaster } from './geo/textShape';
 import type { Raster } from './geo/heightmap';
 import { processPixels } from './geo/heightmap';
+import { magnetPocket } from './geo/magnets';
 import { colourChanges } from './geo/printHints';
 import { stlFileName } from './geo/stl';
 import { warnings as findWarnings, type Warning } from './geo/warnings';
@@ -36,6 +37,7 @@ import { setupSheet, type NarrowQuery } from './ui/sheet';
 import { heightPicture, type ImportedImage } from './ui/imageImport';
 import { silhouetteSize, type VignetteEntry } from './ui/svgRaster';
 import { plateControls } from './ui/plateCard';
+import { magnetControls } from './ui/magnetsCard';
 import { elementControls } from './ui/selectedCard';
 import { renderWarnings } from './ui/warningsCard';
 import type { JobDone } from './worker/client';
@@ -125,6 +127,8 @@ const textKey = (x: TextElement) =>
 
 /** 12.5 → "12.5", 3 → "3": sizes without trailing zeros. */
 const mm = (value: number) => String(Number(value.toFixed(1)));
+/** A magnet's sizes and its pocket's: a fit of 0.25 shows. */
+const mm2 = (value: number) => String(Number(value.toFixed(2)));
 
 const errorText = (error: unknown) => (error instanceof Error ? error.message : String(error));
 
@@ -155,6 +159,8 @@ export function startApp({
   const localeSelect = el('locale', HTMLSelectElement);
   const status = el('status', HTMLOutputElement);
   const plateBox = el('plateControls', HTMLElement);
+  const magnetBox = el('magnetControls', HTMLElement);
+  const magnetPocketNote = el('magnetPocket', HTMLElement);
   /** the element groups: their lists, counts and add buttons */
   const groups: { type: ElementType; list: HTMLElement; count: HTMLElement; add: HTMLButtonElement; limit: number }[] = [
     {
@@ -247,6 +253,7 @@ export function startApp({
   let previewTimer: number | null = null;
   let stopped = false;
   let plateCard: ControlsHandle<PlateState> | null = null;
+  let magnetCard: ControlsHandle<PlateState> | null = null;
   let selectedControls: { id: string; kind: string; handle: ControlsHandle<PlateState> } | null = null;
   /** decoded pictures by their data URL; a failed decode stays null */
   const rasters = new Map<string, Raster | null>();
@@ -478,6 +485,10 @@ export function startApp({
     const m = t();
     measureTexts();
     plateCard?.sync(s);
+    magnetCard?.sync(s);
+    const pocket = magnetPocket(s.magnets);
+    magnetPocketNote.hidden = s.magnets.count === 0;
+    magnetPocketNote.textContent = m.magnetPocket(mm2(2 * pocket.radius), mm2(pocket.depth));
     renderPicker();
     // lists are made again only when they change: a click that blurs a field (whose change re-renders)
     // must find its button still there on mouseup
@@ -684,10 +695,12 @@ export function startApp({
   function renderHints(): void {
     const m = t();
     const { heights, gradient } = colourChanges(state());
+    const { magnets } = state();
     const lines = [
       m.printBack,
       ...(heights.length > 1 ? heights.map((z) => m.colourChange(mm(z))) : []),
       ...(gradient ? [m.gradientNote] : []),
+      ...(magnets.count > 0 ? [m.magnetsGlue(magnets.count, mm2(magnets.diameter), mm2(magnets.thickness))] : []),
     ];
     printHints.textContent = '';
     for (const line of lines) printHints.append(Object.assign(document.createElement('li'), { textContent: line }));
@@ -698,6 +711,12 @@ export function startApp({
       read: state,
       change: (next, final) => update(next, final),
       idPrefix: 'plate',
+      t: t(),
+    });
+    magnetCard = renderControls(magnetBox, magnetControls, {
+      read: state,
+      change: (next, final) => update(next, final),
+      idPrefix: 'magnet',
       t: t(),
     });
     selectedControls = null;

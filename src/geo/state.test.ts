@@ -7,6 +7,8 @@ import {
   FONT_IDS,
   HOLE_KINDS,
   LIMITS,
+  MAGNET_LAYOUT_IDS,
+  magnetLayouts,
   OUTLINE_KINDS,
   RANGES,
   sanitizeState,
@@ -27,6 +29,7 @@ function fullState(): PlateState {
       { ...defaultHole('round'), id: 'h1' },
       { ...defaultHole('keyhole'), id: 'h2' },
     ],
+    magnets: { ...state.magnets, count: 4, layout: 'diamond', diameter: 12, thickness: 3 },
   };
 }
 
@@ -87,6 +90,15 @@ function expectValid(state: PlateState): void {
     inRange(text.depth, { min: RANGES.engraveDepth.min, max: p.thickness - 0.4 + 1e-9 });
     inRange(text.arcRadius, RANGES.arcRadius);
   }
+  const m = state.magnets;
+  inRange(m.count, RANGES.magnetCount);
+  expect(Number.isInteger(m.count)).toBe(true);
+  expect(MAGNET_LAYOUT_IDS).toContain(m.layout);
+  expect(m.count === 0 || magnetLayouts(m.count).includes(m.layout)).toBe(true);
+  inRange(m.diameter, RANGES.magnetDiameter);
+  inRange(m.thickness, RANGES.magnetThickness);
+  inRange(m.fit, RANGES.magnetFit);
+  inRange(m.edge, RANGES.magnetEdge);
   for (const hole of state.holes) {
     expect(HOLE_KINDS).toContain(hole.kind);
     inRange(hole.diameter, RANGES.holeDiameter);
@@ -127,7 +139,9 @@ function randomValue(random: () => number, depth = 0): unknown {
     case 3:
       return (random() - 0.5) * 1000;
     case 4:
-      return ['', 'x', 'rubik', 'hole', 'keyhole', 'star', PNG, 'i1', 'a\nb\nc', '\u0000\u0007ab'][Math.floor(random() * 10)];
+      return ['', 'x', 'rubik', 'hole', 'keyhole', 'star', PNG, 'i1', 'a\nb\nc', '\u0000\u0007ab', 'corners', 'top'][
+        Math.floor(random() * 12)
+      ];
     case 5:
       return undefined;
     case 6:
@@ -136,10 +150,25 @@ function randomValue(random: () => number, depth = 0): unknown {
       return Array.from({ length: Math.floor(random() * 20) }, () => randomValue(random, depth + 1));
     default:
       return Object.fromEntries(
-        ['version', 'plate', 'images', 'texts', 'holes', 'kind', 'width', 'id', 'x', 'size', 'text', 'src', 'head', 'screw'].map((k) => [
-          k,
-          randomValue(random, depth + 1),
-        ]),
+        [
+          'version',
+          'plate',
+          'images',
+          'texts',
+          'holes',
+          'magnets',
+          'count',
+          'layout',
+          'kind',
+          'width',
+          'id',
+          'x',
+          'size',
+          'text',
+          'src',
+          'head',
+          'screw',
+        ].map((k) => [k, randomValue(random, depth + 1)]),
       );
   }
 }
@@ -173,6 +202,43 @@ describe('defaultState', () => {
     const a = defaultState();
     a.plate.width = 50;
     expect(defaultState().plate.width).not.toBe(50);
+  });
+});
+
+describe('magnets', () => {
+  it('are none by default, 10 × 2 mm with 0.2 mm of fit and 3 mm of edge', () => {
+    expect(defaultState().magnets).toEqual({ count: 0, layout: 'centre', diameter: 10, thickness: 2, fit: 0.2, edge: 3 });
+  });
+
+  it('offer layouts by count', () => {
+    expect(magnetLayouts(0)).toEqual([]);
+    expect(magnetLayouts(1)).toEqual(['centre', 'top']);
+    expect(magnetLayouts(2)).toEqual(['row', 'column', 'topCorners']);
+    expect(magnetLayouts(3)).toEqual(['triangle', 'triangleDown', 'row', 'column']);
+    expect(magnetLayouts(4)).toEqual(['corners', 'diamond', 'row', 'column']);
+  });
+
+  it('come back as none from a state saved before them', () => {
+    const old: Record<string, unknown> = { ...fullState() };
+    delete old.magnets;
+    expect(sanitizeState(old).magnets).toEqual(defaultState().magnets);
+    expect(sanitizeState(old).holes).toEqual(fullState().holes);
+  });
+
+  it('keep a layout the count has, else take the count’s first', () => {
+    const state = fullState();
+    const with2 = (layout: string) => sanitizeState({ ...state, magnets: { ...state.magnets, count: 2, layout } }).magnets.layout;
+    expect(with2('column')).toBe('column');
+    expect(with2('corners')).toBe('row');
+    expect(with2('blob')).toBe('row');
+    // with none, any known layout stays, to come back when magnets do
+    expect(sanitizeState({ ...state, magnets: { ...state.magnets, count: 0, layout: 'corners' } }).magnets.layout).toBe('corners');
+  });
+
+  it('clamp the count and the sizes', () => {
+    const state = fullState();
+    const m = sanitizeState({ ...state, magnets: { count: 7.4, layout: 'row', diameter: 100, thickness: 0, fit: -1, edge: 0 } }).magnets;
+    expect(m).toEqual({ count: 4, layout: 'row', diameter: 30, thickness: 0.5, fit: 0, edge: 1 });
   });
 });
 

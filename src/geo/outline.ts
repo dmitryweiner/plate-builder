@@ -48,6 +48,36 @@ export function bounds(rings: readonly Ring[]): Bounds {
   return b;
 }
 
+/** Even-odd: inside the outer ring and not inside a hole. */
+export function pointInRings([x, y]: Readonly<Point>, rings: readonly Ring[]): boolean {
+  let inside = false;
+  for (const ring of rings) {
+    for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+      const [xi, yi] = ring[i];
+      const [xj, yj] = ring[j];
+      if (yi > y !== yj > y && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi) inside = !inside;
+    }
+  }
+  return inside;
+}
+
+function pointSegmentDistance([px, py]: Readonly<Point>, [ax, ay]: Readonly<Point>, [bx, by]: Readonly<Point>): number {
+  const dx = bx - ax;
+  const dy = by - ay;
+  const len2 = dx * dx + dy * dy;
+  const t = len2 > 0 ? Math.max(0, Math.min(1, ((px - ax) * dx + (py - ay) * dy) / len2)) : 0;
+  return Math.hypot(px - (ax + t * dx), py - (ay + t * dy));
+}
+
+/** The distance from a point to the nearest edge of the rings. */
+export function distanceToRings(p: Readonly<Point>, rings: readonly Ring[]): number {
+  let best = Infinity;
+  for (const ring of rings) {
+    for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) best = Math.min(best, pointSegmentDistance(p, ring[j], ring[i]));
+  }
+  return best;
+}
+
 /** Scales and moves a ring so that its box becomes exactly width × height around the origin. */
 function fit(ring: Ring, width: number, height: number): Ring {
   const b = bounds([ring]);

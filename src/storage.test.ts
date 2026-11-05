@@ -66,6 +66,22 @@ describe('settings storage', () => {
     expect(loadSettings(storage)).toEqual({ ...DEFAULT_SETTINGS, locale: 'he' });
   });
 
+  it('opens a version 2 save from before the magnets with none, the rest kept', () => {
+    const storage = new MemoryStorage();
+    const strip = (state: ReturnType<typeof project>) => {
+      const old: Record<string, unknown> = { ...state };
+      delete old.magnets;
+      return old;
+    };
+    const raw = {
+      version: 2,
+      settings: { locale: 'ru', project: strip(project()), presets: [{ id: 'u1', name: 'Mine', state: strip(project()) }] },
+    };
+    storage.setItem(STORAGE_KEY, JSON.stringify(raw));
+    expect(loadSettings(storage)).toEqual({ locale: 'ru', project: project(), presets: [{ id: 'u1', name: 'Mine', state: project() }] });
+    expect(project().magnets.count).toBe(0);
+  });
+
   it('sanitises what it reads, field by field', () => {
     const storage = new MemoryStorage();
     const raw = {

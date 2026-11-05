@@ -3,9 +3,8 @@
 
 import { boxCorners, elementBox, toLocal } from '../geo/boxes';
 import { holeFootprint } from '../geo/holes';
-import type { Point } from '../geo/outline';
+import { pointInRings, type Point } from '../geo/outline';
 import { RANGES, type HoleKind, type PlateElement, type PlateState, type Range } from '../geo/state';
-import { pointInRings } from '../geo/warnings';
 
 export { boxCorners, elementBox, toLocal };
 
