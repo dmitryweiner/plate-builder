@@ -1,7 +1,16 @@
 // The Plate card's controls (spec §7.2): outline kind and its parameters,
-// thickness, corner rounding.
+// thickness, corner rounding, the edges.
 
-import { PRIMITIVE_KINDS, RANGES, type Plate, type PlateState, type PrimitiveKind } from '../geo/state';
+import {
+  EDGE_PROFILES,
+  PRIMITIVE_KINDS,
+  RANGES,
+  wallHeight,
+  type EdgeProfile,
+  type Plate,
+  type PlateState,
+  type PrimitiveKind,
+} from '../geo/state';
 import type { Control, TextKey } from './controls';
 
 type OfferedKind = PrimitiveKind | 'vignette' | 'svg' | 'crop';
@@ -23,6 +32,9 @@ const KIND_LABELS: Record<OfferedKind, TextKey> = {
 const OFFERED: readonly OfferedKind[] = [...PRIMITIVE_KINDS, 'vignette', 'svg', 'crop'];
 
 const setPlate = (state: PlateState, over: Partial<Plate>): PlateState => ({ ...state, plate: { ...state.plate, ...over } });
+
+const EDGE_LABELS: Record<EdgeProfile, TextKey> = { fillet: 'edgeFillet', chamfer: 'edgeChamfer' };
+const isProfile = (value: string): value is EdgeProfile => EDGE_PROFILES.some((profile) => profile === value);
 
 const isOffered = (value: string): value is OfferedKind => OFFERED.some((kind) => kind === value);
 const sized = (s: PlateState) => s.plate.kind !== 'crop';
@@ -90,6 +102,27 @@ export const plateControls: readonly Control<PlateState>[] = [
     unit: 'mm',
     get: (s) => s.plate.rounding,
     set: (s, rounding) => setPlate(s, { rounding }),
+  },
+  {
+    kind: 'range',
+    key: 'edgeSize',
+    label: 'edgeSize',
+    min: 0,
+    // the two edges must not meet
+    max: (s) => Math.min(RANGES.edgeSize.max, wallHeight(s.plate) / 2),
+    step: 0.1,
+    unit: 'mm',
+    get: (s) => s.plate.edgeSize,
+    set: (s, edgeSize) => setPlate(s, { edgeSize }),
+  },
+  {
+    kind: 'select',
+    key: 'edgeProfile',
+    label: 'edgeProfile',
+    options: EDGE_PROFILES.map((value) => ({ value, label: EDGE_LABELS[value] })),
+    when: (s) => s.plate.edgeSize > 0,
+    get: (s) => s.plate.edgeProfile,
+    set: (s, edgeProfile) => (isProfile(edgeProfile) ? setPlate(s, { edgeProfile }) : s),
   },
   {
     kind: 'range',

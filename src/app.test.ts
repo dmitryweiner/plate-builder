@@ -345,6 +345,39 @@ describe('plate card', () => {
     setInput('#plate-height-n', '20');
     expect($('#plate-rounding', HTMLInputElement).max).toBe('10');
   });
+
+  it('has the edges for every outline: the size up to half the wall, the profile once there is an edge', () => {
+    start();
+    const row = (selector: string) => $(selector, HTMLElement).closest('.row');
+    const kind = $('#plate-kind', HTMLSelectElement);
+    for (const value of [...kind.options].map((o) => o.value)) {
+      kind.value = value;
+      kind.dispatchEvent(new Event('change'));
+      expect(row('#plate-edgeSize')?.hasAttribute('hidden')).toBe(false);
+    }
+    kind.value = 'rectangle';
+    kind.dispatchEvent(new Event('change'));
+    expect($('#plate-edgeSize', HTMLInputElement).max).toBe('1.5');
+    $('#plate-rim', HTMLInputElement).click();
+    expect($('#plate-edgeSize', HTMLInputElement).max).toBe('2');
+    expect(row('#plate-edgeProfile')?.hasAttribute('hidden')).toBe(true);
+    setInput('#plate-edgeSize-n', '1');
+    expect(row('#plate-edgeProfile')?.hasAttribute('hidden')).toBe(false);
+    expect([...$('#plate-edgeProfile', HTMLSelectElement).options].map((o) => [o.value, o.text])).toEqual([
+      ['fillet', 'Rounded'],
+      ['chamfer', 'Chamfer 45°'],
+    ]);
+    const profile = $('#plate-edgeProfile', HTMLSelectElement);
+    profile.value = 'chamfer';
+    profile.dispatchEvent(new Event('change'));
+    timers.flush();
+    expect(csg.last().job).toMatchObject({ state: { plate: { edgeSize: 1, edgeProfile: 'chamfer' } } });
+    // each change is one step back
+    $('#undo', HTMLButtonElement).click();
+    expect(profile.value).toBe('fillet');
+    $('#undo', HTMLButtonElement).click();
+    expect($('#plate-edgeSize-n', HTMLInputElement).value).toBe('0');
+  });
 });
 
 describe('export', () => {
