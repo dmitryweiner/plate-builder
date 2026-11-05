@@ -4,6 +4,7 @@
 // this file turns events into calls and draws.
 
 import { holeFootprint, placeRing } from '../geo/holes';
+import { magnetFootprints } from '../geo/magnets';
 import { bounds, type Bounds, type Point, type Ring } from '../geo/outline';
 import type { ImageElement, PlateElement, PlateState, TextElement } from '../geo/state';
 import { allElements, boxCorners, elementBox, findElement, hitsElement, hitTest, replaceElement } from './elements';
@@ -348,6 +349,16 @@ export function createEditor(o: EditorOptions): EditorHandle {
       ctx.fill('nonzero');
     }
     ctx.restore();
+
+    // the magnets' pockets are in the back: dashed, as a keyhole's channel
+    ctx.setLineDash([4, 3]);
+    ctx.strokeStyle = c.edge;
+    ctx.lineWidth = 1;
+    for (const pocket of magnetFootprints(state.magnets, outline)) {
+      path([pocket]);
+      ctx.stroke();
+    }
+    ctx.setLineDash([]);
 
     for (const hole of state.holes) {
       if (!hole.visible) continue;

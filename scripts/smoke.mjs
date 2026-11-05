@@ -479,6 +479,45 @@ try {
     await context.close();
   });
 
+  await step('magnets: four at the corners, on every primitive, seen from the back, in a real STL', async () => {
+    const { page, context } = await app.open();
+    let { info } = await built(page);
+    const plain = Number(info.match(/([\d,]+) triangles/)?.[1].replace(/,/g, ''));
+    await page.selectOption('#magnet-count', '4');
+    const result = await built(page, info);
+    info = result.info;
+    check((await page.locator('#magnet-layout').inputValue()) === 'corners', 'four magnets do not take the corners');
+    check(await page.locator('#magnetPocket').isVisible(), 'no line about the pocket');
+    check(await page.locator('#warningsCard').isHidden(), 'four 10 mm magnets on 100 × 60 warn');
+    check(Number(info.match(/([\d,]+) triangles/)?.[1].replace(/,/g, '')) > plain, `no pockets in the mesh: ${info}`);
+    const ms = await exportMs(page);
+    console.log(`    100 × 60 with four magnets: preview ${result.ms} ms (${info}); export ${ms} ms`);
+    await page.click('[data-camera="back"]');
+    if (shots) await page.screenshot({ path: 'shots/magnets-back.png' });
+    // the rectangle is built already
+    for (const kind of ['ellipse', 'triangle', 'polygon', 'star', 'heart', 'shield', 'tag']) {
+      await page.selectOption('#plate-kind', kind);
+      ({ info } = await built(page, info));
+      check(await page.locator('#meshBlocked').isHidden(), `${kind} with four magnets: the mesh is blocked`);
+    }
+    await context.close();
+  });
+
+  await step('the Magnets card on a phone', async () => {
+    const { page, context } = await app.open({ viewport: VIEWPORTS.phone });
+    let { info } = await built(page);
+    if (await page.locator('#sheetOpen').isVisible()) await page.click('#sheetOpen');
+    await page.locator('#magnetsCard').scrollIntoViewIfNeeded();
+    await page.selectOption('#magnet-count', '2');
+    ({ info } = await built(page, info));
+    check(await page.locator('#magnet-layout').isVisible(), 'no layout row');
+    await setNumber(page, 'magnet-diameter', 15);
+    ({ info } = await built(page, info));
+    check(await page.locator('#meshBlocked').isHidden(), `two 15 mm magnets on a phone: ${info}`);
+    if (shots) await page.screenshot({ path: 'shots/phone-magnets.png' });
+    await context.close();
+  });
+
   await step('every catalog vignette with and without its frame, an own SVG, one with two islands', async () => {
     const { page, context } = await app.open();
     let { info } = await built(page);
