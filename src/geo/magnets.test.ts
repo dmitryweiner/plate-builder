@@ -137,6 +137,18 @@ describe('magnet positions', () => {
     ]);
   });
 
+  it('keep their edge from the foot of the plate’s bottom edge, not from the outline', () => {
+    const at = (edgeSize: number) =>
+      magnetPositions(magnets({ count: 4, layout: 'corners' }), plate, edgeSize).map(({ x, y }) => [
+        Math.round(x * 1000) / 1000,
+        Math.round(y * 1000) / 1000,
+      ]);
+    expect(at(1.5)).toEqual(at(0).map(([x, y]) => [x - Math.sign(x) * 1.5, y - Math.sign(y) * 1.5]));
+    expect(at(0)).toEqual(spots({ count: 4, layout: 'corners' }));
+    const cutters = magnetCutters(magnets({ count: 1, layout: 'top' }), plate, 2);
+    expect(cutters[0].kind === 'prism' && Math.max(...cutters[0].rings[0].map(([, y]) => y))).toBeCloseTo(30 - 3 - 2, 6);
+  });
+
   it('centre on the outline, wherever it is (a crop)', () => {
     const shifted = plate.map((ring) => ring.map(([x, y]): [number, number] => [x + 20, y - 10]));
     expect(spots({ count: 1, layout: 'centre' }, shifted)).toEqual([[20, -10]]);

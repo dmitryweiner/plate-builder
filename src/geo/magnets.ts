@@ -83,12 +83,14 @@ const HALVINGS = 20;
  * the pocket's radius and the edge. An anchor whose pocket would come closer
  * than the edge to the outline (a circle's corner, a heart's) slides towards
  * the box's middle until it fits; one that never does stays put, not fitting.
+ * The edge is counted from the foot of the plate's rounded or chamfered
+ * bottom edge (`edgeSize` in from the outline), so a pocket never opens into it.
  */
-export function magnetPositions(m: Magnets, outline: readonly Ring[]): MagnetSpot[] {
+export function magnetPositions(m: Magnets, outline: readonly Ring[], edgeSize = 0): MagnetSpot[] {
   if (m.count === 0) return [];
   const points = anchors(m.layout, m.count);
   if (!outline.some((ring) => ring.length > 0)) return points.map(() => ({ x: 0, y: 0, fits: false }));
-  const keep = magnetPocket(m).radius + m.edge;
+  const keep = magnetPocket(m).radius + m.edge + edgeSize;
   const box = bounds(outline);
   const cx = (box.minX + box.maxX) / 2;
   const cy = (box.minY + box.maxY) / 2;
@@ -118,15 +120,15 @@ export function magnetPositions(m: Magnets, outline: readonly Ring[]): MagnetSpo
 const spot = ([x, y]: Point, fits: boolean): MagnetSpot => ({ x: x + 0, y: y + 0, fits });
 
 /** Each pocket as seen from the back, plate frame. */
-export function magnetFootprints(m: Magnets, outline: readonly Ring[]): Ring[] {
+export function magnetFootprints(m: Magnets, outline: readonly Ring[], edgeSize = 0): Ring[] {
   const { radius } = magnetPocket(m);
-  return magnetPositions(m, outline).map(({ x, y }) => circle(x, y, radius));
+  return magnetPositions(m, outline, edgeSize).map(({ x, y }) => circle(x, y, radius));
 }
 
 /** The pockets' cutters: from under the back face up to the pocket's depth. */
-export function magnetCutters(m: Magnets, outline: readonly Ring[]): Cutter[] {
+export function magnetCutters(m: Magnets, outline: readonly Ring[], edgeSize = 0): Cutter[] {
   const { depth } = magnetPocket(m);
-  return magnetFootprints(m, outline).map((ring, i) => ({
+  return magnetFootprints(m, outline, edgeSize).map((ring, i) => ({
     kind: 'prism',
     rings: [ring],
     z0: -CUT_OVERSHOOT,

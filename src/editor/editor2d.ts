@@ -354,7 +354,7 @@ export function createEditor(o: EditorOptions): EditorHandle {
     ctx.setLineDash([4, 3]);
     ctx.strokeStyle = c.edge;
     ctx.lineWidth = 1;
-    for (const pocket of magnetFootprints(state.magnets, outline)) {
+    for (const pocket of magnetFootprints(state.magnets, outline, state.plate.edgeSize)) {
       path([pocket]);
       ctx.stroke();
     }

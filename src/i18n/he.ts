@@ -183,6 +183,7 @@ export const he: Messages = {
     arcTooLong: (names: string, percent: number) => `${names} ארוך מהמעגל שלו ונדחס ל־${percent}%.`,
     arcLines: (names: string) => `${names}: על קשת יש שורה אחת; השורות חוברו.`,
     buried: (names: string) => `${names} נמוך מהתמונה שמתחתיו ונבלע בה.`,
+    onEdge: (names: string) => `${names} נכנס לשוליים המעוגלים או המשופעים ונחתך יחד איתם.`,
     magnetThin: (mm: number) => `המגנטים דורשים שלט בעובי ${mm} מ״מ לפחות, כדי שיישארו 0.8 מ״מ מעל השקעים.`,
     magnetNoRoom:
       'המגנטים לא נכנסים: שקע קרוב לקו המתאר יותר מהמרחק מהשוליים, או לשקע אחר. מגנטים קטנים יותר, מרחק קטן יותר או פריסה אחרת יעזרו.',

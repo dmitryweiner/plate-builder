@@ -15,6 +15,7 @@ export type WarningCode =
   | 'keyhole.thin'
   | 'text.arcLines'
   | 'text.buried'
+  | 'text.onEdge'
   | 'relief.tall'
   | 'magnet.thin'
   | 'magnet.noRoom'
@@ -137,6 +138,11 @@ export function warnings(
     }
     const ink = textInk.get(text.id)?.map((r) => placeRing(text, r));
     inks.set(text, ink);
+    // the rounded or chamfered edges reach edgeSize in from the outline: a text there loses its own edge
+    const { edgeSize } = state.plate;
+    if (edgeSize > 0 && pointInRings(spot, outline) && Math.min(...(ink ?? [box]).map((ring) => ringsDistance(ring, outline))) < edgeSize) {
+      out.push({ code: 'text.onEdge', ids: [text.id], spot });
+    }
     for (const hole of holes) {
       const footprint = footprints.get(hole) ?? [];
       if (ink ? overlapsShape(footprint, ink) : ringsOverlap(footprint, box)) {
@@ -167,7 +173,7 @@ function magnetWarnings(
   inks: ReadonlyMap<TextElement, Ring[] | undefined>,
 ): Warning[] {
   const { magnets, plate } = state;
-  const spots = magnetPositions(magnets, outline);
+  const spots = magnetPositions(magnets, outline, plate.edgeSize);
   if (spots.length === 0) return [];
   const out: Warning[] = [];
   const { radius, depth } = magnetPocket(magnets);

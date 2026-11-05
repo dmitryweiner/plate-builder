@@ -24,6 +24,7 @@ export function warningText(t: Messages, w: Warning, state: PlateState, problems
     'mesh.invalid': () => t.meshBlocked(problems.map((p) => t.meshProblem[p]).join(', ')),
     'text.arcLines': () => t.warning.arcLines(names),
     'text.buried': () => t.warning.buried(names),
+    'text.onEdge': () => t.warning.onEdge(names),
     'text.arcTooLong': () => t.warning.arcTooLong(names, mm('percent')),
     'magnet.thin': () => t.warning.magnetThin(mm('needed')),
     'magnet.noRoom': () => t.warning.magnetNoRoom,
