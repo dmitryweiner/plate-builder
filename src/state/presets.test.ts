@@ -5,9 +5,16 @@ import { sanitizeState } from '../geo/state';
 import type { TextRaster } from '../geo/textShape';
 import { meshProblems, validateMesh } from '../geo/validate';
 import { LOCALES } from '../i18n';
-import { buildPlate } from '../worker/build';
+import { warnings } from '../geo/warnings';
+import { buildPlate, outlineRings, stateOutline } from '../worker/build';
 import { CsgScope, initCSG, type CsgApi } from '../worker/csg';
 import { BUILT_IN_PRESETS } from './presets';
+
+const preset = (id: string) => {
+  const found = BUILT_IN_PRESETS.find((p) => p.id === id);
+  if (!found) throw new Error(id);
+  return found;
+};
 
 let csg: CsgApi;
 beforeAll(async () => {
@@ -63,6 +70,25 @@ describe('built-in presets', () => {
       const { mesh } = buildPlate(csg, scope, state, rasters, 'preview');
       const report = validateMesh({ ...mesh, normals: meshNormals(mesh.positions, mesh.indices) });
       expect({ watertight: report.watertight, problems: meshProblems(report) }).toEqual({ watertight: true, problems: [] });
+    } finally {
+      scope.dispose();
+    }
+  });
+});
+
+describe('the fridge magnet', () => {
+  it('has two 10 × 2 magnets in a row that fit its crop, with no warning', () => {
+    const { state } = preset('fridge-magnet');
+    expect(state.plate.kind).toBe('crop');
+    expect(state.magnets).toMatchObject({ count: 2, layout: 'row', diameter: 10, thickness: 2 });
+    const scope = new CsgScope();
+    try {
+      const rasters = {
+        images: state.images.map((image) => opaque(image.pixelWidth, image.pixelHeight)),
+        texts: state.texts.map((text) => block(text)),
+      };
+      const { section, warnings: outlineWarnings } = stateOutline(csg, scope, state, rasters);
+      expect([...outlineWarnings, ...warnings(state, outlineRings(section))]).toEqual([]);
     } finally {
       scope.dispose();
     }

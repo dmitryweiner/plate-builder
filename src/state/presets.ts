@@ -11,12 +11,13 @@ import {
   sanitizeState,
   type HoleElement,
   type ImageElement,
+  type Magnets,
   type Plate,
   type PlateState,
   type TextElement,
 } from '../geo/state';
 import type { Locale } from '../i18n';
-import { LOGO_PICTURE, PRESET_PICTURE_PX, STAR_PICTURE } from './presetPictures';
+import { APPLE_PICTURE, LOGO_PICTURE, PRESET_PICTURE_PX, STAR_PICTURE } from './presetPictures';
 
 export interface BuiltInPreset {
   id: string;
@@ -30,6 +31,7 @@ interface Recipe {
   texts?: Partial<TextElement>[];
   holes?: Partial<HoleElement>[];
   images?: (Partial<ImageElement> & { src: string })[];
+  magnets?: Partial<Magnets>;
 }
 
 function make(recipe: Recipe): PlateState {
@@ -44,6 +46,7 @@ function make(recipe: Recipe): PlateState {
     images: (recipe.images ?? []).map((image) =>
       Object.assign(defaultImage(state, image.src, PRESET_PICTURE_PX, PRESET_PICTURE_PX), image),
     ),
+    magnets: { ...base.magnets, ...recipe.magnets },
   });
 }
 
@@ -131,6 +134,19 @@ export const BUILT_IN_PRESETS: readonly BuiltInPreset[] = [
       plate: { kind: 'rectangle', width: 120, height: 40, thickness: 3, rounding: 4 },
       images: [{ src: LOGO_PICTURE, size: 28, height: 1.2, x: -40 }],
       texts: [{ text: 'Anna Smith\nArchitect', size: 6, lineSpacing: 1.6, height: 1, align: 'left', x: 14 }],
+    }),
+  },
+  {
+    id: 'fridge-magnet',
+    names: { en: 'Fridge magnet', ru: 'Магнит на холодильник', uk: 'Магніт на холодильник', he: 'מגנט למקרר' },
+    state: make({
+      name: 'Fridge magnet',
+      plate: { kind: 'crop', padding: 3, thickness: 4, rounding: 2 },
+      images: [{ src: APPLE_PICTURE, size: 50, height: 1.5, y: 6 }],
+      // close enough under the apple for the padding to join them; as high, so it is not buried under the picture's box
+      texts: [{ text: 'HELLO!', size: 7, height: 1.5, y: -17 }],
+      // in the apple's widest part; 1.9 mm of the plate stays over them
+      magnets: { count: 2, layout: 'row', diameter: 10, thickness: 2 },
     }),
   },
 ];
