@@ -11,6 +11,7 @@ import {
   PRIMITIVE_KINDS,
   type HoleElement,
   type ImageElement,
+  type Magnets,
   type Plate,
   type PlateState,
   type TextElement,
@@ -456,6 +457,64 @@ describe('crop outline', () => {
     const report = validateMesh({ ...mesh, normals: meshNormals(mesh.positions, mesh.indices) });
     expect(report.watertight).toBe(true);
     expect(report.bbox.max[0] - report.bbox.min[0]).toBeCloseTo(30, 0);
+  });
+});
+
+/** A 100 × 60 × 3 plate, sharp corners, with magnets. */
+function plateWithMagnets(over: Partial<Magnets>, plate: Partial<Plate> = {}): PlateState {
+  const state = withPlate({ width: 100, height: 60, thickness: 3, rounding: 0, ...plate });
+  return { ...state, magnets: { ...state.magnets, count: 1, ...over } };
+}
+
+describe('magnets', () => {
+  // a 10 × 2 magnet with 0.2 of fit: a pocket of r 5.1, 2.1 deep
+  const pocket = Math.PI * 5.1 * 5.1;
+
+  it('four pockets at the corners: watertight, each a cylinder, nothing shows at the front', () => {
+    const state = plateWithMagnets({ count: 4, layout: 'corners' });
+    const { mesh, report } = holeReport(state);
+    expect(report.watertight).toBe(true);
+    expect(meshProblems(report)).toEqual([]);
+    expect(Math.abs((100 * 60 * 3 - report.volume) / (4 * pocket * 2.1) - 1)).toBeLessThan(0.01);
+    expect(faceArea(mesh, 3)).toBeCloseTo(100 * 60, 3);
+    expect(Math.abs((100 * 60 - faceArea(mesh, 0)) / (4 * pocket) - 1)).toBeLessThan(0.01);
+  });
+
+  it('no magnets cut nothing', () => {
+    expect(holeReport(plateWithMagnets({ count: 0 })).report.volume).toBeCloseTo(100 * 60 * 3, 3);
+  });
+
+  it('a pocket under a raised text and an image stays one closed solid', () => {
+    const state = {
+      ...plateWithTexts([{ height: 1 }]),
+      images: [{ ...defaultImage(defaultState(), png, 4, 4), id: 'i1', size: 30, height: 2 }],
+      magnets: { ...defaultState().magnets, count: 1, thickness: 1.4 },
+    };
+    // the pocket's top (1.5) at the image's and the text's bottom (T / 2): they are inside the base, gone in the union
+    const { report } = builtTexts(state, [blockRaster(20, 8)], [flat(255)]);
+    expect(report.watertight).toBe(true);
+    expect(meshProblems(report)).toEqual([]);
+  });
+
+  it('a pocket beside a keyhole, at its lip’s level, stays one closed solid', () => {
+    const state = {
+      ...plateWithMagnets({ count: 2, layout: 'row', thickness: 1.4 }, { thickness: 6 }),
+      holes: [{ ...defaultHole('keyhole'), id: 'h1', x: -36 }],
+    };
+    const { report } = holeReport(state);
+    expect(report.watertight).toBe(true);
+  });
+
+  it('follows a crop outline to wherever its elements are', () => {
+    const state = { ...cropState([{ height: 1, x: 20, y: 10 }]), magnets: { ...defaultState().magnets, count: 1 } };
+    const { mesh } = inScope((scope) => buildPlate(csg, scope, state, { images: [discRaster(64, 24)], texts: [] }, 'preview'));
+    // the pocket's ceiling is a face at its depth, around the outline's centre
+    let near = 0;
+    for (let v = 0; v < mesh.positions.length; v += 3) {
+      const [x, y, z] = [mesh.positions[v], mesh.positions[v + 1], mesh.positions[v + 2]];
+      if (Math.abs(z - 2.1) < 0.01 && Math.abs(Math.hypot(x - 20, y - 10) - 5.1) < 0.01) near++;
+    }
+    expect(near).toBeGreaterThan(8);
   });
 });
 

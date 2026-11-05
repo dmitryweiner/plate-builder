@@ -37,6 +37,7 @@ publishes `dist/` to GitHub Pages.
 | `plans/INITIAL-IDEA.md` | the idea as first written                |
 | `plans/PLAN.md`         | milestones M0…M10, decisions, deviations |
 | `plans/PLAN-DESIGN.md`  | Case Constructor's look, element groups  |
+| `plans/PLAN-MAGNETS.md` | magnet pockets on the back (M11)         |
 
 ## Architectural invariants
 

@@ -772,6 +772,66 @@ describe('crop and rim', () => {
   });
 });
 
+function pick(selector: string, value: string) {
+  const select = $(selector, HTMLSelectElement);
+  select.value = value;
+  select.dispatchEvent(new Event('change'));
+}
+const magnetRow = (id: string) => $(`#${id}`, HTMLElement).closest('.row');
+const layouts = () => [...$('#magnet-layout', HTMLSelectElement).options].map((o) => o.value);
+
+describe('magnets card', () => {
+  it('shows the number alone at none; with magnets, their sizes, the layouts of the number and the pocket', () => {
+    start();
+    expect([...$('#magnet-count', HTMLSelectElement).options].map((o) => o.textContent)).toEqual(['None', '1', '2', '3', '4']);
+    for (const id of ['magnet-layout', 'magnet-diameter', 'magnet-thickness', 'magnet-fit', 'magnet-edge']) {
+      expect(magnetRow(id)?.hasAttribute('hidden')).toBe(true);
+    }
+    expect($('#magnetPocket', HTMLElement).hidden).toBe(true);
+    pick('#magnet-count', '4');
+    for (const id of ['magnet-layout', 'magnet-diameter', 'magnet-thickness', 'magnet-fit', 'magnet-edge']) {
+      expect(magnetRow(id)?.hasAttribute('hidden')).toBe(false);
+    }
+    expect(layouts()).toEqual(['corners', 'diamond', 'row', 'column']);
+    expect($('#magnet-layout', HTMLSelectElement).value).toBe('corners');
+    expect(text('#magnetPocket')).toBe('Pocket ⌀ 10.2 mm, 2.1 mm deep, open at the back.');
+    setInput('#magnet-diameter-n', '12');
+    expect(text('#magnetPocket')).toBe('Pocket ⌀ 12.2 mm, 2.1 mm deep, open at the back.');
+    timers.flush();
+    expect(csg.last().job).toMatchObject({ state: { magnets: { count: 4, layout: 'corners', diameter: 12 } } });
+  });
+
+  it('keeps the layout the new number has, else takes its first', () => {
+    start();
+    pick('#magnet-count', '3');
+    pick('#magnet-layout', 'row');
+    pick('#magnet-count', '4');
+    expect($('#magnet-layout', HTMLSelectElement).value).toBe('row');
+    pick('#magnet-count', '1');
+    expect(layouts()).toEqual(['centre', 'top']);
+    expect($('#magnet-layout', HTMLSelectElement).value).toBe('centre');
+  });
+
+  it('is one undo step a change, says to glue the magnets in and warns about a thin plate', () => {
+    start();
+    pick('#magnet-count', '2');
+    expect(hints()).toContain('After printing, glue the magnets (2 × ⌀ 10 × 2 mm) into the pockets on the back.');
+    setInput('#plate-thickness-n', '2.5');
+    expect(text('#warningList li span')).toBe('The magnets need a plate at least 2.9 mm thick, to leave 0.8 mm over their pockets.');
+    $('#undo', HTMLButtonElement).click();
+    $('#undo', HTMLButtonElement).click();
+    expect($('#magnet-count', HTMLSelectElement).value).toBe('0');
+    expect(hints()).toEqual(['Print with the back on the bed; no supports needed.']);
+  });
+
+  it('translates its rows and layouts', () => {
+    start(['ru']);
+    pick('#magnet-count', '2');
+    expect(text('#magnetsCard h2')).toBe('Магниты');
+    expect([...$('#magnet-layout', HTMLSelectElement).options].map((o) => o.textContent)).toEqual(['В ряд', 'Столбиком', 'Верхние углы']);
+  });
+});
+
 describe('cards', () => {
   it('give every control its own id', () => {
     start();

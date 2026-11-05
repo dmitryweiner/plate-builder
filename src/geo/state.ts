@@ -1,5 +1,5 @@
-// The project's schema: the plate, its images, texts and holes (spec §2–§5),
-// the defaults and the sanitiser.
+// The project's schema: the plate, its images, texts, holes and magnets
+// (spec §2–§5a), the defaults and the sanitiser.
 //
 // Everything from outside — the UI, localStorage, a project file, a worker
 // message — passes sanitizeState. It never throws, it is idempotent, and its
@@ -38,6 +38,39 @@ export type PrimitiveKind = (typeof PRIMITIVE_KINDS)[number];
 
 export const HOLE_KINDS = ['round', 'slot', 'countersunk', 'keyhole'] as const;
 export type HoleKind = (typeof HOLE_KINDS)[number];
+
+/** Where the magnets go (spec §5a), every count's layouts; the first is the count's default. */
+export const MAGNET_LAYOUT_IDS = [
+  'centre',
+  'top',
+  'row',
+  'column',
+  'topCorners',
+  'triangle',
+  'triangleDown',
+  'corners',
+  'diamond',
+] as const;
+export type MagnetLayout = (typeof MAGNET_LAYOUT_IDS)[number];
+
+const LAYOUTS_BY_COUNT: readonly (readonly MagnetLayout[])[] = [
+  [],
+  ['centre', 'top'],
+  ['row', 'column', 'topCorners'],
+  ['triangle', 'triangleDown', 'row', 'column'],
+  ['corners', 'diamond', 'row', 'column'],
+];
+
+/** The layouts a number of magnets offers; none for 0. */
+export function magnetLayouts(count: number): readonly MagnetLayout[] {
+  return LAYOUTS_BY_COUNT[count] ?? [];
+}
+
+/** The layout kept when the count changes: the same if the new count has it, else the count's first. */
+export function layoutFor(count: number, layout: MagnetLayout): MagnetLayout {
+  const offered = magnetLayouts(count);
+  return offered.length === 0 || offered.includes(layout) ? layout : offered[0];
+}
 
 /** Bundled fonts (spec §4): Rubik (Latin, Cyrillic, Hebrew), Oswald, PT Serif, Comfortaa, Marck Script (Latin, Cyrillic), Frank Ruhl Libre (Latin, Hebrew). */
 export const FONT_IDS = ['rubik', 'oswald', 'ptSerif', 'comfortaa', 'marckScript', 'frankRuhl'] as const;
@@ -99,6 +132,13 @@ export const RANGES = {
   /** less than the head */
   keyShank: { min: 2, max: 10, def: 4 },
   keySlot: { min: 4, max: 40, def: 10 },
+  magnetCount: { min: 0, max: 4, def: 0, int: true },
+  magnetDiameter: { min: 3, max: 30, def: 10 },
+  magnetThickness: { min: 0.5, max: 10, def: 2 },
+  /** added to the diameter: room for glue and the printer's tolerance */
+  magnetFit: { min: 0, max: 1, def: 0.2 },
+  /** material between a pocket and the outline */
+  magnetEdge: { min: 1, max: 30, def: 3 },
 } as const satisfies Record<string, Range>;
 
 export const LIMITS = {
@@ -206,6 +246,17 @@ export interface HoleElement extends Placed {
 
 export type PlateElement = ImageElement | TextElement | HoleElement;
 
+/** Round magnets set into the back (spec §5a): one size, placed by a layout. */
+export interface Magnets {
+  /** 0: none */
+  count: number;
+  layout: MagnetLayout;
+  diameter: number;
+  thickness: number;
+  fit: number;
+  edge: number;
+}
+
 export interface PlateState {
   version: typeof STATE_VERSION;
   /** the project's name, also the exported file's */
@@ -214,6 +265,7 @@ export interface PlateState {
   images: ImageElement[];
   texts: TextElement[];
   holes: HoleElement[];
+  magnets: Magnets;
 }
 
 export function defaultPlate(): Plate {
@@ -238,8 +290,19 @@ export function defaultPlate(): Plate {
   };
 }
 
+export function defaultMagnets(): Magnets {
+  return {
+    count: RANGES.magnetCount.def,
+    layout: 'centre',
+    diameter: RANGES.magnetDiameter.def,
+    thickness: RANGES.magnetThickness.def,
+    fit: RANGES.magnetFit.def,
+    edge: RANGES.magnetEdge.def,
+  };
+}
+
 export function defaultState(): PlateState {
-  return { version: STATE_VERSION, name: 'plate', plate: defaultPlate(), images: [], texts: [], holes: [] };
+  return { version: STATE_VERSION, name: 'plate', plate: defaultPlate(), images: [], texts: [], holes: [], magnets: defaultMagnets() };
 }
 
 const placed = (): Omit<Placed, 'id'> => ({ visible: true, x: 0, y: 0, rotation: 0 });
@@ -456,6 +519,20 @@ function sanitizeHole(e: Fields): HoleElement {
   };
 }
 
+/** A state saved before magnets has none: the field's absence is "no magnets". */
+function sanitizeMagnets(input: unknown): Magnets {
+  const m = isRecord(input) ? input : {};
+  const count = num(m.count, RANGES.magnetCount);
+  return {
+    count,
+    layout: layoutFor(count, oneOf(m.layout, MAGNET_LAYOUT_IDS, magnetLayouts(count)[0] ?? 'centre')),
+    diameter: num(m.diameter, RANGES.magnetDiameter),
+    thickness: num(m.thickness, RANGES.magnetThickness),
+    fit: num(m.fit, RANGES.magnetFit),
+    edge: num(m.edge, RANGES.magnetEdge),
+  };
+}
+
 function list<T>(value: unknown, limit: number, item: (fields: Fields) => T | null): T[] {
   if (!Array.isArray(value)) return [];
   const out: T[] = [];
@@ -509,5 +586,6 @@ export function sanitizeState(input: unknown): PlateState {
       't',
     ),
     holes: assignIds(list(input.holes, LIMITS.holes, sanitizeHole), 'h'),
+    magnets: sanitizeMagnets(input.magnets),
   };
 }

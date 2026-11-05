@@ -3,7 +3,7 @@
 // base.
 //
 //   plate = ( base ∪ rim ∪ frame ∪ images ∪ raised texts ) ∩ outline prism
-//           − engraved texts − holes
+//           − engraved texts − holes − magnet pockets
 
 import type { CrossSection, Manifold } from 'manifold-3d';
 import { elementBox } from '../geo/boxes';
@@ -11,6 +11,7 @@ import { heightfieldMesh } from '../geo/grid';
 import { traceContours, LEVEL } from '../geo/contour';
 import { heightField, processPixels, sampleField, type Raster } from '../geo/heightmap';
 import { holeCutters, type Cutter } from '../geo/holes';
+import { magnetCutters } from '../geo/magnets';
 import { CHORD_TOLERANCE, primitiveOutline, ringArea, segmentsFor, type Ring } from '../geo/outline';
 import { PRIMITIVE_KINDS, type ImageElement, type Plate, type PlateState, type PrimitiveKind, type TextElement } from '../geo/state';
 import { maskRings, textRings, type TextRaster } from '../geo/textShape';
@@ -310,7 +311,7 @@ export interface Rasters {
 
 /**
  * The solid (spec §6):
- *   ( base ∪ images ∪ raised texts ) ∩ outline prism − engraved texts − holes
+ *   ( base ∪ images ∪ raised texts ) ∩ outline prism − engraved texts − holes − magnet pockets
  * and the warnings only the contours can tell.
  */
 export function buildSolid(
@@ -380,6 +381,8 @@ export function buildSolid(
     ...state.holes
       .filter((hole) => hole.visible)
       .flatMap((hole) => holeCutters(hole, thickness, top).map((cutter) => cutterSolid(csg, scope, cutter))),
+    // placed on the outline as built: the outline job gives the 2D view the same rings
+    ...magnetCutters(state.magnets, outlineRings(outline)).map((cutter) => cutterSolid(csg, scope, cutter)),
   ];
   if (cutters.length > 0) solid = scope.keep(solid.subtract(scope.keep(csg.Manifold.union(cutters))));
   return { solid, warnings };

@@ -186,3 +186,43 @@ describe('textarea', () => {
     ]);
   });
 });
+
+describe('select with options from the state', () => {
+  it('rebuilds its options when the state offers others, keeping the chosen one', () => {
+    const offered: Control<Demo> = {
+      kind: 'select',
+      key: 'pick',
+      label: 'outline',
+      options: (s) =>
+        s.on
+          ? [
+              { value: 'a', label: 'kindRectangle' },
+              { value: 'b', label: 'kindStar' },
+            ]
+          : [{ value: 'a', label: 'kindRectangle' }],
+      get: (s) => s.kind,
+      set: (s, kind) => ({ ...s, kind }),
+    };
+    const container = document.createElement('div');
+    document.body.append(container);
+    const handle = renderControls(container, [offered], {
+      read: () => state,
+      change: (next) => (state = next),
+      idPrefix: 'demo',
+      t: messages.en,
+    });
+    const select = document.getElementById('demo-pick');
+    if (!(select instanceof HTMLSelectElement)) throw new Error('no select');
+    const values = () => [...select.options].map((o) => o.value);
+    expect(values()).toEqual(['a']);
+    state = { ...state, on: true, kind: 'b' };
+    handle.sync(state);
+    expect(values()).toEqual(['a', 'b']);
+    expect(select.value).toBe('b');
+    expect(select.options[1]?.textContent).toBe('Star');
+    // the same list again: the nodes stay
+    const node = select.options[0];
+    handle.sync(state);
+    expect(select.options[0]).toBe(node);
+  });
+});

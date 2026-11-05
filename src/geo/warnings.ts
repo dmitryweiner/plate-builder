@@ -3,9 +3,10 @@
 // carries a spot for the 2D view to frame.
 
 import { boxCorners } from './boxes';
-import { holeFootprint, keyholeMinThickness, placeRing } from './holes';
-import type { Point, Ring } from './outline';
-import type { HoleElement, PlateState } from './state';
+import { circle, holeFootprint, keyholeMinThickness, placeRing } from './holes';
+import { magnetMinThickness, magnetPocket, magnetPositions } from './magnets';
+import { distanceToRings, pointInRings, type Point, type Ring } from './outline';
+import { ENGRAVE_FLOOR, type HoleElement, type PlateState, type TextElement } from './state';
 
 export type WarningCode =
   | 'element.outside'
@@ -15,6 +16,9 @@ export type WarningCode =
   | 'text.arcLines'
   | 'text.buried'
   | 'relief.tall'
+  | 'magnet.thin'
+  | 'magnet.noRoom'
+  | 'magnet.overlap'
   // the last build's mesh check failed: export is blocked
   | 'mesh.invalid'
   // found by the worker, which has the contours
@@ -39,36 +43,12 @@ export const TALL_RELIEF = 3;
 /** Material a hole needs around it, mm (two nozzle widths and a half). */
 export const HOLE_EDGE_MIN = 2;
 
-/** Even-odd: inside the outer ring and not inside a hole. */
-export function pointInRings([x, y]: Readonly<Point>, rings: readonly Ring[]): boolean {
-  let inside = false;
-  for (const ring of rings) {
-    for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
-      const [xi, yi] = ring[i];
-      const [xj, yj] = ring[j];
-      if (yi > y !== yj > y && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi) inside = !inside;
-    }
-  }
-  return inside;
-}
-
-function pointSegmentDistance([px, py]: Readonly<Point>, [ax, ay]: Readonly<Point>, [bx, by]: Readonly<Point>): number {
-  const dx = bx - ax;
-  const dy = by - ay;
-  const len2 = dx * dx + dy * dy;
-  const t = len2 > 0 ? Math.max(0, Math.min(1, ((px - ax) * dx + (py - ay) * dy) / len2)) : 0;
-  return Math.hypot(px - (ax + t * dx), py - (ay + t * dy));
-}
+/** Material between two magnets' pockets, mm. */
+export const MAGNET_GAP = 1;
 
 /** The smallest distance from a vertex of `a` to an edge of `b`. */
 function oneWay(a: Ring, b: readonly Ring[]): number {
-  let best = Infinity;
-  for (const p of a) {
-    for (const ring of b) {
-      for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) best = Math.min(best, pointSegmentDistance(p, ring[j], ring[i]));
-    }
-  }
-  return best;
+  return Math.min(...a.map((p) => distanceToRings(p, b)));
 }
 
 /** The gap between a ring and a set of rings (0 when edges touch); exact for polygons that do not cross. */
@@ -147,6 +127,7 @@ export function warnings(
   for (const e of boxed) {
     if (!boxCorners(e).every((p) => pointInRings(p, outline))) out.push({ code: 'element.outside', ids: [e.id], spot: [e.x, e.y] });
   }
+  const inks = new Map<TextElement, Ring[] | undefined>();
   for (const text of texts) {
     const box = boxCorners(text);
     const spot: Point = [text.x, text.y];
@@ -155,6 +136,7 @@ export function warnings(
       out.push({ code: 'text.buried', ids: [text.id], spot });
     }
     const ink = textInk.get(text.id)?.map((r) => placeRing(text, r));
+    inks.set(text, ink);
     for (const hole of holes) {
       const footprint = footprints.get(hole) ?? [];
       if (ink ? overlapsShape(footprint, ink) : ringsOverlap(footprint, box)) {
@@ -162,6 +144,7 @@ export function warnings(
       }
     }
   }
+  out.push(...magnetWarnings(state, outline, holes, footprints, inks));
   const { plate } = state;
   const relief = Math.max(
     0,
@@ -172,5 +155,40 @@ export function warnings(
   );
   if (relief > TALL_RELIEF * plate.thickness + 1e-9)
     out.push({ code: 'relief.tall', ids: [], params: { times: Math.round((relief / plate.thickness) * 10) / 10 }, spot: [0, 0] });
+  return out;
+}
+
+/** magnet.thin, magnet.noRoom, magnet.overlap: each once, at the first magnet it is about. */
+function magnetWarnings(
+  state: PlateState,
+  outline: readonly Ring[],
+  holes: readonly HoleElement[],
+  footprints: ReadonlyMap<HoleElement, Ring>,
+  inks: ReadonlyMap<TextElement, Ring[] | undefined>,
+): Warning[] {
+  const { magnets, plate } = state;
+  const spots = magnetPositions(magnets, outline);
+  if (spots.length === 0) return [];
+  const out: Warning[] = [];
+  const { radius, depth } = magnetPocket(magnets);
+  const needed = magnetMinThickness(magnets);
+  if (plate.thickness < needed) out.push({ code: 'magnet.thin', ids: [], params: { needed }, spot: [spots[0].x, spots[0].y] });
+  const crowded = spots.find(
+    (a, i) => !a.fits || spots.some((b, j) => j > i && Math.hypot(a.x - b.x, a.y - b.y) < 2 * radius + MAGNET_GAP),
+  );
+  if (crowded) out.push({ code: 'magnet.noRoom', ids: [], spot: [crowded.x, crowded.y] });
+  const pockets = spots.map(({ x, y }) => circle(x, y, radius));
+  for (const hole of holes) {
+    const footprint = footprints.get(hole) ?? [];
+    const at = pockets.findIndex((pocket) => ringsOverlap(pocket, footprint));
+    if (at >= 0) out.push({ code: 'magnet.overlap', ids: [hole.id], spot: [spots[at].x, spots[at].y] });
+  }
+  // an engraving's floor too close to a pocket's ceiling: a micron of slack for 3 − 0.5 − 2.1
+  for (const [text, ink] of inks) {
+    if (text.mode !== 'engraved' || plate.thickness - text.depth - depth >= ENGRAVE_FLOOR - 1e-9) continue;
+    const box = boxCorners(text);
+    const at = pockets.findIndex((pocket) => (ink ? overlapsShape(pocket, ink) : ringsOverlap(pocket, box)));
+    if (at >= 0) out.push({ code: 'magnet.overlap', ids: [text.id], spot: [spots[at].x, spots[at].y] });
+  }
   return out;
 }

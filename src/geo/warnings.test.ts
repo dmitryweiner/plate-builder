@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { primitiveOutline } from './outline';
+import { pointInRings, primitiveOutline } from './outline';
 import {
   defaultHole,
   defaultImage,
@@ -7,10 +7,11 @@ import {
   defaultText,
   type HoleElement,
   type ImageElement,
+  type Magnets,
   type PlateState,
   type TextElement,
 } from './state';
-import { pointInRings, ringsDistance, ringsOverlap, warnings } from './warnings';
+import { ringsDistance, ringsOverlap, warnings } from './warnings';
 
 /** A 100 × 60 rectangle, 3 mm thick, with the given holes. */
 function plate(holes: Partial<HoleElement>[], thickness = 3): PlateState {
@@ -140,6 +141,51 @@ describe('relief.tall', () => {
     expect(tall(6)).toEqual([]);
     const rim = plate([], 1);
     expect(codes({ ...rim, plate: { ...rim.plate, rim: true, rimHeight: 3.5 } })).toEqual(['relief.tall']);
+  });
+});
+
+const withMagnets = (over: Partial<Magnets>, extra: Partial<PlateState> = {}, thickness = 3): PlateState => {
+  const state = plate([], thickness);
+  return { ...state, magnets: { ...state.magnets, count: 1, ...over }, ...extra };
+};
+
+const oneHole = (x: number, visible = true) => ({ holes: [{ ...defaultHole('round'), id: 'h1', x, visible }] });
+const oneText = (over: Partial<TextElement>) => ({ texts: [{ ...defaultText(defaultState()), id: 't1', ...over }] });
+
+describe('warnings of magnets', () => {
+  it('has none for a 10 × 2 magnet in the middle of a 3 mm plate, or four at the corners', () => {
+    expect(codes(withMagnets({}))).toEqual([]);
+    expect(codes(withMagnets({ count: 4, layout: 'corners' }))).toEqual([]);
+  });
+
+  it('magnet.thin: less than 0.8 mm over a pocket, with the thickness needed', () => {
+    const [w] = warnings(withMagnets({ count: 2, layout: 'row' }, {}, 2.5), outline);
+    expect(w).toMatchObject({ code: 'magnet.thin', ids: [], params: { needed: 2.9 } });
+    expect(w?.spot[0]).toBeCloseTo(-41.9);
+    expect(codes(withMagnets({}, {}, 2.9))).toEqual([]);
+  });
+
+  it('magnet.noRoom: a pocket that does not fit with its edge, or two too close', () => {
+    expect(codes(withMagnets({ diameter: 30, edge: 30 }))).toEqual(['magnet.noRoom']);
+    // 30 mm pockets 23.8 mm apart, one over the other
+    expect(codes(withMagnets({ count: 4, layout: 'corners', diameter: 30 }))).toEqual(['magnet.noRoom']);
+    expect(codes(withMagnets({ count: 2, layout: 'row', diameter: 30 }))).toEqual([]);
+  });
+
+  it('magnet.overlap: a pocket that crosses a hole, not one beside it', () => {
+    expect(warnings(withMagnets({}, oneHole(0)), outline)).toEqual([expect.objectContaining({ code: 'magnet.overlap', ids: ['h1'] })]);
+    expect(codes(withMagnets({}, oneHole(10)))).toEqual([]);
+    expect(codes(withMagnets({}, oneHole(0, false)))).toEqual([]);
+  });
+
+  it('magnet.overlap: an engraving that leaves less than 0.4 mm over a pocket', () => {
+    // T 3, the pocket 2.1 deep: an engraving 0.6 deep leaves 0.3
+    expect(warnings(withMagnets({}, oneText({ mode: 'engraved', depth: 0.6 })), outline)).toEqual([
+      expect.objectContaining({ code: 'magnet.overlap', ids: ['t1'] }),
+    ]);
+    expect(codes(withMagnets({}, oneText({ mode: 'engraved', depth: 0.5 })))).toEqual([]);
+    expect(codes(withMagnets({}, oneText({ mode: 'engraved', depth: 0.6, x: -35 })))).toEqual([]);
+    expect(codes(withMagnets({}, oneText({ mode: 'raised' })))).toEqual([]);
   });
 });
 
