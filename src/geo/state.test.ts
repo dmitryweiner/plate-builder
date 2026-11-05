@@ -4,6 +4,7 @@ import {
   defaultImage,
   defaultState,
   defaultText,
+  EDGE_PROFILES,
   FONT_IDS,
   HOLE_KINDS,
   LIMITS,
@@ -13,6 +14,7 @@ import {
   RANGES,
   sanitizeState,
   STATE_VERSION,
+  wallHeight,
   type PlateState,
 } from './state';
 
@@ -23,6 +25,7 @@ function fullState(): PlateState {
   const state = defaultState();
   return {
     ...state,
+    plate: { ...state.plate, edgeSize: 1, edgeProfile: 'chamfer' },
     images: [{ ...defaultImage(state, PNG, 64, 32), id: 'i1' }],
     texts: [{ ...defaultText(state), id: 't1' }],
     holes: [
@@ -57,6 +60,8 @@ function expectValid(state: PlateState): void {
   inRange(p.rimHeight, RANGES.rimHeight);
   inRange(p.frameHeight, RANGES.frameHeight);
   inRange(p.padding, RANGES.padding);
+  inRange(p.edgeSize, { min: 0, max: wallHeight(p) / 2 });
+  expect(EDGE_PROFILES).toContain(p.edgeProfile);
   expect(state.images.length).toBeLessThanOrEqual(LIMITS.images);
   expect(state.texts.length).toBeLessThanOrEqual(LIMITS.texts);
   expect(state.holes.length).toBeLessThanOrEqual(LIMITS.holes);
@@ -239,6 +244,51 @@ describe('magnets', () => {
     const state = fullState();
     const m = sanitizeState({ ...state, magnets: { count: 7.4, layout: 'row', diameter: 100, thickness: 0, fit: -1, edge: 0 } }).magnets;
     expect(m).toEqual({ count: 4, layout: 'row', diameter: 30, thickness: 0.5, fit: 0, edge: 1 });
+  });
+});
+
+function sanitizedPlate(over: Record<string, unknown>) {
+  const state = defaultState();
+  return sanitizeState({ ...state, plate: { ...state.plate, ...over } }).plate;
+}
+
+describe('edges', () => {
+  it('are sharp by default, a fillet when made', () => {
+    expect(defaultState().plate.edgeSize).toBe(0);
+    expect(defaultState().plate.edgeProfile).toBe('fillet');
+  });
+
+  it('stand on a wall of T, plus the rim or the frame of a vignette or own SVG, the higher', () => {
+    const p = defaultState().plate;
+    expect(wallHeight({ ...p, thickness: 3 })).toBe(3);
+    expect(wallHeight({ ...p, thickness: 3, rim: true, rimHeight: 1 })).toBe(4);
+    // a frame only stands on a vignette's or an own SVG's outline
+    expect(wallHeight({ ...p, thickness: 3, frame: true, frameHeight: 2 })).toBe(3);
+    expect(wallHeight({ ...p, kind: 'vignette', thickness: 3, frame: true, frameHeight: 2 })).toBe(5);
+    expect(wallHeight({ ...p, kind: 'svg', thickness: 3, frame: true, frameHeight: 2, rim: true, rimHeight: 1 })).toBe(5);
+    expect(wallHeight({ ...p, kind: 'svg', thickness: 3, frame: false, frameHeight: 2, rim: true, rimHeight: 1 })).toBe(4);
+  });
+
+  it('are at most half the wall high, so the two edges never meet', () => {
+    expect(sanitizedPlate({ thickness: 3, edgeSize: 5 }).edgeSize).toBe(1.5);
+    expect(sanitizedPlate({ thickness: 3, rim: true, rimHeight: 1, edgeSize: 5 }).edgeSize).toBe(2);
+    expect(sanitizedPlate({ thickness: 20, edgeSize: 50 }).edgeSize).toBe(RANGES.edgeSize.max);
+    expect(sanitizedPlate({ thickness: 3, edgeSize: -1 }).edgeSize).toBe(0);
+  });
+
+  it('take a fillet for an unknown profile', () => {
+    expect(sanitizedPlate({ edgeProfile: 'bevel' }).edgeProfile).toBe('fillet');
+    expect(sanitizedPlate({ edgeProfile: 'chamfer' }).edgeProfile).toBe('chamfer');
+  });
+
+  it('come back sharp from a state saved before them', () => {
+    const old = fullState();
+    const plate: Record<string, unknown> = { ...old.plate };
+    delete plate.edgeSize;
+    delete plate.edgeProfile;
+    const read = sanitizeState({ ...old, plate });
+    expect(read.plate).toEqual({ ...old.plate, edgeSize: 0, edgeProfile: 'fillet' });
+    expect(read.holes).toEqual(old.holes);
   });
 });
 

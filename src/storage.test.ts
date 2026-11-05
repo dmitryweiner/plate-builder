@@ -82,6 +82,23 @@ describe('settings storage', () => {
     expect(project().magnets.count).toBe(0);
   });
 
+  it('opens a save from before the edges with sharp ones, the rest kept', () => {
+    const storage = new MemoryStorage();
+    const strip = (state: ReturnType<typeof project>) => {
+      const plate: Record<string, unknown> = { ...state.plate };
+      delete plate.edgeSize;
+      delete plate.edgeProfile;
+      return { ...state, plate };
+    };
+    const edged = { ...project(), plate: { ...project().plate, edgeSize: 0, edgeProfile: 'fillet' as const } };
+    const raw = {
+      version: 2,
+      settings: { locale: 'uk', project: strip(project()), presets: [{ id: 'u1', name: 'Mine', state: strip(project()) }] },
+    };
+    storage.setItem(STORAGE_KEY, JSON.stringify(raw));
+    expect(loadSettings(storage)).toEqual({ locale: 'uk', project: edged, presets: [{ id: 'u1', name: 'Mine', state: edged }] });
+  });
+
   it('sanitises what it reads, field by field', () => {
     const storage = new MemoryStorage();
     const raw = {

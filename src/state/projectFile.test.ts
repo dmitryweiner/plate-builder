@@ -33,6 +33,21 @@ describe('project file', () => {
     expect(read.ok && read.state.magnets.count).toBe(0);
   });
 
+  it('opens a file from before the edges with sharp ones', () => {
+    const plate: Record<string, unknown> = { ...state().plate };
+    delete plate.edgeSize;
+    delete plate.edgeProfile;
+    const read = readProjectFile(JSON.stringify({ app: 'plate-builder', version: STATE_VERSION, state: { ...state(), plate } }));
+    expect(read).toEqual({ ok: true, state: state() });
+    expect(read.ok && [read.state.plate.edgeSize, read.state.plate.edgeProfile]).toEqual([0, 'fillet']);
+  });
+
+  it('round-trips the edges', () => {
+    const plate = { ...state().plate, edgeSize: 1.2, edgeProfile: 'chamfer' as const };
+    const read = readProjectFile(projectFileText({ ...state(), plate }));
+    expect(read.ok && read.state.plate).toEqual(plate);
+  });
+
   it('round-trips magnets', () => {
     const magnets = { ...state().magnets, count: 3, layout: 'triangleDown' as const, diameter: 8 };
     const read = readProjectFile(projectFileText({ ...state(), magnets }));
