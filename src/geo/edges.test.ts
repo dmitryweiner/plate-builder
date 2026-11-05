@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { CUT_OVERSHOOT } from './holes';
-import { EDGE_JITTER, EDGE_STEP, edgeCores, edgeInset, edgeLevels } from './edges';
+import { EDGE_JITTER, EDGE_MIN_GAP, EDGE_STEP, edgeInset, edgeLevels, edgeSlabs } from './edges';
 import { defaultPlate, type Plate } from './state';
 
 const plate = (over: Partial<Plate>): Plate => ({ ...defaultPlate(), ...over });
@@ -71,39 +70,55 @@ describe('edgeLevels', () => {
   });
 });
 
-describe('edgeCores', () => {
+describe('edgeSlabs', () => {
   it('has none for a sharp plate', () => {
-    expect(edgeCores(plate({ edgeSize: 0 }), EDGE_STEP.export, 5)).toEqual([]);
+    expect(edgeSlabs(plate({ edgeSize: 0 }), EDGE_STEP.export, 5)).toEqual([]);
   });
 
-  it('nests: the first from below the back to above the top, the others narrower in height, wider in plan', () => {
+  it('stacks the bottom edge, the wall and the top edge, from the back face up to the given height', () => {
     const p = plate({ thickness: 3, edgeSize: 1.5 });
-    const top = 4.5;
-    const cores = edgeCores(p, EDGE_STEP.preview, top);
-    expect(cores).toHaveLength(edgeLevels(1.5, 'fillet', EDGE_STEP.preview).length);
-    expect(cores[0].z0).toBe(-CUT_OVERSHOOT);
-    expect(cores[0].z1).toBe(top + 1);
-    for (let k = 1; k < cores.length; k++) {
-      const { z0, z1, inset } = cores[k];
-      // symmetric about the wall's middle: the bottom edge mirrors the top one
-      expect(z0 + z1).toBeCloseTo(3, 12);
-      expect(z0).toBeGreaterThan(cores[k - 1].z0);
-      expect(z1).toBeLessThan(cores[k - 1].z1);
-      expect(inset).toBeLessThan(cores[k - 1].inset);
-      expect(z1 - z0).toBeGreaterThan(0);
+    const n = edgeLevels(1.5, 'fillet', EDGE_STEP.preview).length;
+    const slabs = edgeSlabs(p, EDGE_STEP.preview, 5.5);
+    expect(slabs).toHaveLength(2 * n - 1);
+    expect(slabs[0].z0).toBe(0);
+    expect(slabs.at(-1)?.z1).toBe(5.5);
+    // the widest is the wall's, in the middle; the top edge mirrors the bottom one about the wall's middle
+    for (let k = 0; k < n - 1; k++) {
+      expect(slabs[k].inset).toBeGreaterThan(slabs[k + 1].inset);
+      expect(slabs[2 * n - 2 - k].inset).toBe(slabs[k].inset);
+    }
+    for (let k = 1; k < n; k++) expect(slabs[k].z0 + slabs[2 * n - 2 - k].z1).toBeCloseTo(3, 12);
+  });
+
+  it.each(['fillet', 'chamfer'] as const)('%s: each slab ends where the next begins; neighbours’ insets a gap apart', (edgeProfile) => {
+    const slabs = edgeSlabs(plate({ thickness: 3, edgeSize: 1.5, edgeProfile }), EDGE_STEP.export, 3);
+    for (let k = 0; k + 1 < slabs.length; k++) {
+      expect(slabs[k].z1).toBe(slabs[k + 1].z0);
+      expect(slabs[k].z1).toBeGreaterThan(slabs[k].z0);
+      expect(Math.abs(slabs[k].inset - slabs[k + 1].inset)).toBeGreaterThanOrEqual(EDGE_MIN_GAP - 1e-12);
     }
   });
 
+  it('merges a fillet’s terraces near the wall, where their insets differ by microns', () => {
+    const slabs = edgeSlabs(plate({ thickness: 3, edgeSize: 1.5 }), EDGE_STEP.export, 3);
+    expect(slabs.length).toBeLessThan(2 * edgeLevels(1.5, 'fillet', EDGE_STEP.export).length - 1);
+    // the profile still ends at r from each face: the wall's slab starts within the last terraces
+    const middle = slabs[(slabs.length - 1) / 2];
+    expect(middle.z0).toBeLessThan(1.5);
+    expect(middle.z0).toBeGreaterThan(1);
+  });
+
   it('stands on the rim’s top when there is a rim', () => {
-    const cores = edgeCores(plate({ thickness: 3, rim: true, rimHeight: 1, edgeSize: 1 }), EDGE_STEP.preview, 4);
-    for (const { z0, z1 } of cores.slice(1)) expect(z0 + z1).toBeCloseTo(4, 12);
+    const slabs = edgeSlabs(plate({ thickness: 3, rim: true, rimHeight: 1, edgeSize: 1 }), EDGE_STEP.preview, 4);
+    const middle = slabs[(slabs.length - 1) / 2];
+    expect(middle.z0 + middle.z1).toBeCloseTo(4, 12);
   });
 
   it('keeps its levels off the plate’s own planes', () => {
     // a 1 mm chamfer has slabs of 1/15 mm; one of them would end exactly on T under a 0.2 mm rim
     const p = plate({ thickness: 3, rim: true, rimHeight: 0.2, edgeSize: 1, edgeProfile: 'chamfer' });
-    const cores = edgeCores(p, EDGE_STEP.export, 3.2);
-    expect(cores).toHaveLength(15);
-    for (const { z0, z1 } of cores) for (const z of [z0, z1]) expect(Math.abs(z - 3)).toBeGreaterThan(EDGE_JITTER / 2);
+    const slabs = edgeSlabs(p, EDGE_STEP.export, 3.2);
+    expect(slabs).toHaveLength(29);
+    for (const { z0, z1 } of slabs) for (const z of [z0, z1]) expect(Math.abs(z - 3)).toBeGreaterThan(EDGE_JITTER / 2);
   });
 });

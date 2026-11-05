@@ -1,6 +1,6 @@
 // The plate's outer top and bottom edges (spec §2.2a) as plain data: the
-// profile, its terraces and the cores the worker intersects the solid with.
-// No CSG here.
+// profile, its terraces and the slabs the worker stacks into the plate's
+// prism. No CSG here.
 //
 // At a distance t from the back face (or from the wall's top) the plate's
 // section is the outline shrunk by the profile's inset at t. The profile is
@@ -9,12 +9,12 @@
 // between the shrunk outlines (shrinking changes a ring's vertex count and
 // topology), and the slabs are as thin as a printed layer.
 //
-// The solid is kept inside the union of n nested cores: core k is the
-// outline shrunk by slab k's inset, over the heights where the profile
-// shrinks it no more than that. Each core has its own walls and its own
-// heights, so no two share a plane by construction.
+// The worker builds the stack as one mesh, not as a union of prisms: the
+// union is slow (every slab's cap is a fan of long triangles that crosses
+// every wall of its neighbours). Two neighbours' outlines are then the
+// inner and outer rings of the step between them, so they must not touch:
+// their insets differ by at least EDGE_MIN_GAP.
 
-import { CUT_OVERSHOOT } from './holes';
 import { wallHeight, type EdgeProfile, type Plate } from './state';
 
 /** The longest piece of the profile between two terraces, mm: a preview's, an export's (a printed layer's scale). */
@@ -60,24 +60,47 @@ export function edgeLevels(size: number, profile: EdgeProfile, step: number): Ed
   });
 }
 
-export interface EdgeCore {
+export interface EdgeSlab {
   inset: number;
   z0: number;
   z1: number;
 }
 
 /**
- * The nested cores the solid is kept inside, widest-in-height first: the
- * first runs from below the back face to above `top` (it trims what stands
- * over the wall too), core k from the end of slab k − 1 at the bottom to its
- * mirror at the wall's top.
+ * The least difference of two neighbouring slabs' insets, mm: more than
+ * twice the shrunk outlines' own error (their arcs' chords, CHORD_TOLERANCE,
+ * and their simplification), so the two rings never cross.
  */
-export function edgeCores(plate: Plate, step: number, top: number): EdgeCore[] {
-  const levels = edgeLevels(plate.edgeSize, plate.edgeProfile, step);
+export const EDGE_MIN_GAP = 0.025;
+
+/**
+ * The slabs of the plate's prism up to z1, bottom to top, each ending where
+ * the next begins: the bottom edge's terraces from the back face, the wall
+ * between the edges, the top edge's terraces; the last one up to z1 (the
+ * wall's top for the base, above the reliefs for the prism that clips them).
+ */
+export function edgeSlabs(plate: Plate, step: number, z1: number): EdgeSlab[] {
+  // terraces closer than the gap are one: near the wall a fillet's insets differ by microns
+  const levels: EdgeLevel[] = [];
+  for (const level of edgeLevels(plate.edgeSize, plate.edgeProfile, step)) {
+    const last = levels.at(-1);
+    if (last && last.inset - level.inset < EDGE_MIN_GAP) last.t = level.t;
+    else levels.push({ ...level });
+  }
+  if (levels.length === 0) return [];
   const wall = wallHeight(plate);
-  return levels.map(({ inset }, k): EdgeCore => {
-    if (k === 0) return { inset: inset + EDGE_JITTER, z0: -CUT_OVERSHOOT, z1: top + 1 };
-    const t = levels[k - 1].t + EDGE_JITTER;
-    return { inset: inset + EDGE_JITTER, z0: t, z1: wall - t };
-  });
+  const n = levels.length;
+  const insets = levels.map(({ inset }) => inset + EDGE_JITTER);
+  // where slab k ends at the bottom; the wall's slab spans both edges' last terraces
+  const ends = levels.slice(0, n - 1).map(({ t }) => t + EDGE_JITTER);
+  const bottom = insets.map((inset, k): EdgeSlab => ({
+    inset,
+    z0: k === 0 ? 0 : ends[k - 1],
+    z1: k < n - 1 ? ends[k] : wall - ends[k - 1],
+  }));
+  const top = insets
+    .slice(0, n - 1)
+    .map((inset, k): EdgeSlab => ({ inset, z0: wall - ends[k], z1: k === 0 ? z1 : wall - ends[k - 1] }))
+    .toReversed();
+  return [...bottom, ...top];
 }

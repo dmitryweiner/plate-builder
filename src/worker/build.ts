@@ -2,12 +2,12 @@
 // the parts. Now: the outline with its rounded corners, extruded into the
 // base.
 //
-//   plate = ( base ∪ rim ∪ frame ∪ images ∪ raised texts ) ∩ outline prism (or the edges' cores)
+//   plate = ( base ∪ rim ∪ frame ∪ images ∪ raised texts ) ∩ outline prism (edges rounded or chamfered)
 //           − engraved texts − holes − magnet pockets
 
 import type { CrossSection, Manifold } from 'manifold-3d';
 import { elementBox } from '../geo/boxes';
-import { EDGE_STEP, edgeCores } from '../geo/edges';
+import { EDGE_STEP, edgeSlabs } from '../geo/edges';
 import { heightfieldMesh } from '../geo/grid';
 import { traceContours, LEVEL } from '../geo/contour';
 import { heightField, processPixels, sampleField, type Raster } from '../geo/heightmap';
@@ -190,11 +190,11 @@ export function gridStep(image: Pick<ImageElement, 'size' | 'pixelWidth' | 'pixe
   return Math.max(0.1, Math.min(pixel, 0.2));
 }
 
-function meshSolid(csg: CsgApi, scope: CsgScope, mesh: { positions: Float32Array; indices: Uint32Array }): Manifold {
+function meshSolid(csg: CsgApi, scope: CsgScope, mesh: { positions: Float32Array; indices: Uint32Array }, what = 'a relief'): Manifold {
   const input = new csg.Mesh({ numProp: 3, vertProperties: mesh.positions, triVerts: mesh.indices });
   const solid = scope.keep(csg.Manifold.ofMesh(input));
   const status = solid.status();
-  if (status !== 'NoError') throw new Error(`a relief is not a closed solid (${status})`);
+  if (status !== 'NoError') throw new Error(`${what} is not a closed solid (${status})`);
   return solid;
 }
 
@@ -267,12 +267,13 @@ function raisedBase(
   csg: CsgApi,
   scope: CsgScope,
   outline: CrossSection,
+  prism: (z1: number) => Manifold,
   thickness: number,
   rim: { width: number; height: number } | null,
   frame: { section: CrossSection; height: number } | null,
 ): Manifold {
   const high = Math.max(rim?.height ?? 0, frame?.height ?? 0);
-  const tall = scope.keep(outline.extrude(thickness + high));
+  const tall = prism(thickness + high);
   if (!rim && !frame) return tall;
   // offsetting arcs leaves vertices closer than a float32 tells apart: simplified
   const inset = rim
@@ -301,19 +302,82 @@ function raisedBase(
   return base;
 }
 
+const reversed = <T>(rings: readonly T[][]): T[][] => rings.map((ring) => ring.toReversed());
+
+interface Terrace {
+  inset: number;
+  z0: number;
+  z1: number;
+  /** the shrunk outline, outer rings counter-clockwise */
+  rings: [number, number][][];
+}
+
 /**
- * The rounded or chamfered edges (spec §2.2a) as what the solid is kept
- * inside: the union of the nested cores of `geo/edges.ts`, each the outline
- * shrunk by its inset; null for sharp edges.
+ * A stack of terraces as one mesh, built directly: each slab's walls, the
+ * step between two neighbours (the ring between their outlines, up where
+ * the upper one is narrower, down where it is wider), the two caps. A
+ * union of the slabs' prisms would be the same solid, many times slower.
  */
-function edgeKeep(csg: CsgApi, scope: CsgScope, outline: CrossSection, plate: Plate, quality: Quality, top: number): Manifold | null {
-  const cores = edgeCores(plate, EDGE_STEP[quality], top).flatMap(({ inset, z0, z1 }) => {
-    const shrunk = scope.keep(outline.offset(-inset, 'Round', 2, segmentsFor(inset)));
-    // a thin part the inset swallows has no core here; an empty prism would empty the union
-    if (shrunk.isEmpty()) return [];
-    return [prismOf(scope, scope.keep(shrunk.simplify(CHORD_TOLERANCE / 10)), z0, z1)];
-  });
-  return cores.length > 0 ? scope.keep(csg.Manifold.union(cores)) : null;
+function terraceSolid(csg: CsgApi, scope: CsgScope, terraces: readonly Terrace[]): Manifold {
+  const positions: number[] = [];
+  const triangles: number[] = [];
+  const ringsAt = (rings: Terrace['rings'], z: number): number[][] =>
+    rings.map((ring) =>
+      ring.map(([x, y]) => {
+        positions.push(x, y, z);
+        return positions.length / 3 - 1;
+      }),
+    );
+  // a flat region given by its rings, on the vertices each ring has here; facing up or down
+  const face = (rings: Terrace['rings'], ids: number[][], up: boolean) => {
+    const flat = ids.flat();
+    for (const [a, b, c] of csg.triangulate(rings)) triangles.push(flat[a], up ? flat[b] : flat[c], up ? flat[c] : flat[b]);
+  };
+  let below: { inset: number; rings: Terrace['rings']; ids: number[][] } | null = null;
+  for (const terrace of terraces) {
+    const bottom = ringsAt(terrace.rings, terrace.z0);
+    const top = ringsAt(terrace.rings, terrace.z1);
+    bottom.forEach((ring, r) => {
+      for (let i = 0; i < ring.length; i++) {
+        const j = (i + 1) % ring.length;
+        triangles.push(ring[i], ring[j], top[r][j], ring[i], top[r][j], top[r][i]);
+      }
+    });
+    if (!below) face(terrace.rings, bottom, false);
+    else if (terrace.inset > below.inset) face([...below.rings, ...reversed(terrace.rings)], [...below.ids, ...reversed(bottom)], true);
+    else face([...terrace.rings, ...reversed(below.rings)], [...bottom, ...reversed(below.ids)], false);
+    below = { inset: terrace.inset, rings: terrace.rings, ids: top };
+  }
+  if (below) face(below.rings, below.ids, true);
+  return meshSolid(csg, scope, { positions: Float32Array.from(positions), indices: Uint32Array.from(triangles) }, 'the edges’ terraces');
+}
+
+/**
+ * The outline's prisms from the back face up to a height, with the edges
+ * (spec §2.2a) rounded or chamfered: the slabs of `geo/edges.ts` as one
+ * terraced mesh. The shrunk outlines are shared by every prism asked for;
+ * sharp edges give plain extrusions.
+ */
+function edgedPrisms(csg: CsgApi, scope: CsgScope, outline: CrossSection, plate: Plate, quality: Quality): (z1: number) => Manifold {
+  if (plate.edgeSize <= 0) return (z1) => prismOf(scope, outline, 0, z1);
+  const shrunk = new Map<number, Terrace['rings']>();
+  const ringsOf = (inset: number): Terrace['rings'] => {
+    const known = shrunk.get(inset);
+    if (known) return known;
+    const offset = scope.keep(outline.offset(-inset, 'Round', 2, segmentsFor(inset)));
+    const rings = scope.keep(offset.simplify(CHORD_TOLERANCE / 10)).toPolygons();
+    shrunk.set(inset, rings);
+    return rings;
+  };
+  return (z1) => {
+    // a thin part the inset swallows has no slab there: its stack starts higher, or ends lower
+    const terraces = edgeSlabs(plate, EDGE_STEP[quality], z1).flatMap((slab) => {
+      const rings = ringsOf(slab.inset);
+      return rings.length > 0 ? [{ ...slab, rings }] : [];
+    });
+    // only an empty outline has no terrace at all
+    return terraces.length > 0 ? terraceSolid(csg, scope, terraces) : prismOf(scope, outline, 0, z1);
+  };
 }
 
 export interface Rasters {
@@ -327,7 +391,7 @@ export interface Rasters {
 
 /**
  * The solid (spec §6):
- *   ( base ∪ images ∪ raised texts ) ∩ outline prism (or the edges' cores) − engraved texts − holes − magnet pockets
+ *   ( base ∪ images ∪ raised texts ) ∩ outline prism − engraved texts − holes − magnet pockets
  * and the warnings only the contours can tell.
  */
 export function buildSolid(
@@ -345,10 +409,13 @@ export function buildSolid(
     const { min, max } = frame.bounds();
     warnings.push({ code: 'frame.thin', ids: [], spot: [(min[0] + max[0]) / 2, (min[1] + max[1]) / 2] });
   }
+  // the outline's prisms, with the edges rounded or chamfered
+  const prism = edgedPrisms(csg, scope, outline, state.plate, quality);
   const base = raisedBase(
     csg,
     scope,
     outline,
+    prism,
     thickness,
     rim ? { width: rimWidth, height: rimHeight } : null,
     frame ? { section: frame, height: frameHeight } : null,
@@ -381,8 +448,6 @@ export function buildSolid(
       ...raised.map(({ text }) => text.height),
     );
   let solid = base;
-  // the edges' cores lie inside the outline prism: they clip what pokes out as well
-  const keep = state.plate.edgeSize > 0 ? edgeKeep(csg, scope, outline, state.plate, quality, top) : null;
   if (images.length > 0 || raised.length > 0) {
     const reliefs = [
       ...images.map(({ image, raster }) => imageSolid(csg, scope, image, raster, thickness, quality)),
@@ -390,9 +455,8 @@ export function buildSolid(
       ...raised.map(({ text, section }) => prismOf(scope, section, thickness / 2, thickness + text.height)),
     ];
     const additive = scope.keep(csg.Manifold.union([base, ...reliefs]));
-    solid = scope.keep(additive.intersect(keep ?? scope.keep(outline.extrude(top + 1))));
-  } else if (keep) {
-    solid = scope.keep(base.intersect(keep));
+    // its edges trim whatever reaches them
+    solid = scope.keep(additive.intersect(prism(top + 1)));
   }
   const cutters = [
     // from the floor of the engraving up through everything
