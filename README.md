@@ -18,9 +18,10 @@ browser, offline included.
 - Texts in six bundled fonts (Latin, Cyrillic, Hebrew), several lines,
   raised or engraved, on an arc.
 - Holes: round, slot, countersunk, hidden keyhole from the back.
+- Magnets in the back (a fridge magnet): 1 to 4, their size and a layout.
 - A 2D editor (drag, scale, turn, snap; touch too) and a 3D preview; undo
   and redo; warnings with a "show"; colour-change heights for the slicer.
-- Projects kept in the browser, project files, six built-in presets and
+- Projects kept in the browser, project files, seven built-in presets and
   your own; English, Russian, Ukrainian and Hebrew.
 
 The user guide is in [docs/](docs/README.md); the specification in

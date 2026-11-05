@@ -10,7 +10,7 @@ import { buildPlate, outlineRings, stateOutline } from '../worker/build';
 import { CsgScope, initCSG, type CsgApi } from '../worker/csg';
 import { BUILT_IN_PRESETS } from './presets';
 
-const preset = (id: string) => {
+const presetById = (id: string) => {
   const found = BUILT_IN_PRESETS.find((p) => p.id === id);
   if (!found) throw new Error(id);
   return found;
@@ -78,7 +78,7 @@ describe('built-in presets', () => {
 
 describe('the fridge magnet', () => {
   it('has two 10 × 2 magnets in a row that fit its crop, with no warning', () => {
-    const { state } = preset('fridge-magnet');
+    const { state } = presetById('fridge-magnet');
     expect(state.plate.kind).toBe('crop');
     expect(state.magnets).toMatchObject({ count: 2, layout: 'row', diameter: 10, thickness: 2 });
     const scope = new CsgScope();

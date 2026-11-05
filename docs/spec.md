@@ -215,11 +215,38 @@ Up to 16 holes, each cutting through everything above it.
 - Position, rotation (slots and keyholes; a keyhole's slot points towards
   its rotation, up by default — the plate hangs down from the screw).
 
+## 5a. Magnets
+
+Up to 4 round magnets of one size, set into the back face (`state.magnets`;
+not elements: they are placed by a layout, not one by one).
+
+| Parameter | Range     | Default | What                                                   |
+| --------- | --------- | ------- | ------------------------------------------------------ |
+| count     | 0–4       | 0       | 0: no magnets                                          |
+| layout    | by count  | first   | see below; a count change keeps it if the count has it |
+| diameter  | 3–30 mm   | 10      | the magnet's                                           |
+| thickness | 0.5–10 mm | 2       | the magnet's                                           |
+| fit       | 0–1 mm    | 0.2     | added to the diameter                                  |
+| edge      | 1–30 mm   | 3       | material between a pocket and the outline              |
+
+Layouts: 1 — centre, top; 2 — row, column, top corners; 3 — triangle,
+triangle point down, row, column; 4 — corners, diamond, row, column.
+
+- **Pocket**: a cylinder of `diameter + fit` open at the back, `thickness +
+0.1` deep, so the magnet is flush with the back face (its hold drops fast
+  with a gap). The magnets are glued in after printing.
+- **Placement**: each layout is a set of anchors in the outline's box,
+  inset by the pocket's radius and the edge (rows spread evenly). An anchor
+  whose pocket comes closer than the edge to the outline slides towards the
+  box's middle until it fits. The 2D view and the worker place them with the
+  same function on the same outline rings. Magnets take no part in a crop.
+- The 2D view draws the pockets dashed; they cannot be selected.
+
 ## 6. How the solid is made
 
 ```
 plate = ( base ∪ rim ∪ frame ∪ images ∪ raised texts ) ∩ outline prism
-        − engraved texts − holes
+        − engraved texts − holes − magnet pockets
 ```
 
 - **base**: the outline extruded from z = 0 to T.
@@ -234,6 +261,9 @@ plate = ( base ∪ rim ∪ frame ∪ images ∪ raised texts ) ∩ outline prism
   just inside the base to their heights.
 - **engraved texts**: contours extruded from `T − depth` to above the top.
 - **holes**: cutters as in §5.
+- **magnet pockets**: cylinders from below the back face to their depth
+  (§5a), each a micron deeper than the one before, so no two cutters share
+  a plane.
 - Booleans are done once at the end: one union of everything additive, one
   intersection, one subtraction of the union of cutters.
 
@@ -341,6 +371,7 @@ src/geo/       pure core: no DOM, no Three.js, no WASM
   grid.ts        heightfield mesh of an image on a grid
   textLayout.ts  line layout, arc bending of contours
   holes.ts       hole cutters as solids' specs
+  magnets.ts     magnet layouts on the outline, pocket cutters
   warnings.ts    the warnings that need no CSG
   stl.ts         binary STL encoder
   validate.ts    watertightness and degeneracy checks
@@ -415,25 +446,30 @@ under 60 s.
     it)". Images are a gradient, so for them the hint says a colour change
     gives bands, not a picture. A single STL plus this hint is the only
     multi-colour support in v1.
+  - **Magnets**: glue them into the pockets after printing (their number and
+    size).
 - Export is blocked while the mesh check fails; the message says why.
 
 ## 10. Warnings
 
-| Code                       | When                                                                    |
-| -------------------------- | ----------------------------------------------------------------------- |
-| `outline.islands`          | the outline (crop, SVG) has more than one piece                         |
-| `outline.empty`            | crop with nothing to crop around, or an SVG with no filled area         |
-| `element.outside`          | an element pokes out of the outline and is clipped                      |
-| `element.overlap`          | two holes overlap, or a hole crosses a text                             |
-| `hole.nearEdge`            | less than 2 mm of material between a hole and the outline               |
-| `keyhole.thin`             | the plate is too thin for a hidden keyhole (with the T needed)          |
-| `text.thin` / `frame.thin` | strokes thinner than 0.8 mm (two nozzle widths) would not print well    |
-| `text.buried`              | a raised text is lower than the image under it                          |
-| `text.engraveDeep`         | engraved depth leaves less than 0.4 mm of base                          |
-| `text.arcTooLong`          | an arc text did not fit the circle and was squeezed (with %)            |
-| `text.arcLines`            | an arc text had several lines, joined into one                          |
-| `relief.tall`              | the relief is more than 3 × T (a tall thin relief on a thin base warps) |
-| `mesh.invalid`             | the mesh check failed (blocks export)                                   |
+| Code                       | When                                                                     |
+| -------------------------- | ------------------------------------------------------------------------ |
+| `outline.islands`          | the outline (crop, SVG) has more than one piece                          |
+| `outline.empty`            | crop with nothing to crop around, or an SVG with no filled area          |
+| `element.outside`          | an element pokes out of the outline and is clipped                       |
+| `element.overlap`          | two holes overlap, or a hole crosses a text                              |
+| `hole.nearEdge`            | less than 2 mm of material between a hole and the outline                |
+| `keyhole.thin`             | the plate is too thin for a hidden keyhole (with the T needed)           |
+| `text.thin` / `frame.thin` | strokes thinner than 0.8 mm (two nozzle widths) would not print well     |
+| `text.buried`              | a raised text is lower than the image under it                           |
+| `text.engraveDeep`         | engraved depth leaves less than 0.4 mm of base                           |
+| `text.arcTooLong`          | an arc text did not fit the circle and was squeezed (with %)             |
+| `text.arcLines`            | an arc text had several lines, joined into one                           |
+| `relief.tall`              | the relief is more than 3 × T (a tall thin relief on a thin base warps)  |
+| `magnet.thin`              | less than 0.8 mm over a magnet's pocket (with the T needed)              |
+| `magnet.noRoom`            | a pocket does not fit with its edge, or two pockets are under 1 mm apart |
+| `magnet.overlap`           | a pocket crosses a hole, or an engraving leaves under 0.4 mm over it     |
+| `mesh.invalid`             | the mesh check failed (blocks export)                                    |
 
 Thin strokes are found in the worker: the contour shrunk by 0.4 mm and grown
 back loses more than 5 % of its area. Warnings name the element ("Text 2")
@@ -448,14 +484,17 @@ and carry a spot for the 2D view.
   refuses to save (quota, private mode), a banner says the project is not
   kept and offers the project file; it goes away once a save succeeds.
 - **Project file**: `*.plate.json` download and upload, the same schema
-  with its version; a foreign or broken file is refused with a message.
+  with its version; a foreign or broken file is refused with a message. A
+  field added later (the magnets) is filled with its default when a save or
+  a file lacks it, so the version stays.
 - **Undo / redo** over the whole state, a drag or a slider move being one
   step.
-- **Built-in presets** (5–6): door sign (rectangle, two lines, two
+- **Built-in presets** (7): door sign (rectangle, two lines, two
   countersunk holes), keychain (crop around a name, round hole), pet tag
   (circle, arc text, small hole), house number (vignette with frame, a big
   number, two keyholes), medal (circle, image, arc text, rim), name plate
-  with a logo. Their pictures are drawn for the project (no third-party
+  with a logo, fridge magnet (crop around an apple and a text, two
+  magnets). Their pictures are drawn for the project (no third-party
   images). A first visit opens the first preset.
 - **User presets**: "save as preset", rename, delete; kept in storage like
   the project.
@@ -483,6 +522,7 @@ and carry a spot for the 2D view.
 | Images                | 8, ≤ 512 px stored, files up to 20 MB on input             |
 | Texts                 | 10 blocks, 10 lines, 300 characters each                   |
 | Holes                 | 16                                                         |
+| Magnets               | 4                                                          |
 | Highest relief        | 10 mm above the base                                       |
 | Raster for text / SVG | 10 px/mm, ≤ 4096 px per side (coarser beyond, with a note) |
 
@@ -493,7 +533,8 @@ and carry a spot for the 2D view.
 - Elements on the back face (except keyholes).
 - Vector fonts from font files, own font upload.
 - Multi-part STL or 3MF for multi-material printers.
-- Magnets, stands, mounting accessories.
+- Stands, mounting accessories; magnets other than round ones, or placed
+  one by one, or closed inside the plate (§5a).
 - Curved or bent plates.
 
 ## 15. Borrowed from siblings

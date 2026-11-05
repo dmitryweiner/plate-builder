@@ -63,14 +63,14 @@ with a failing test.
 - **Not draggable**: the 2D view draws the pockets dashed (hidden, as a
   keyhole's channel), they cannot be selected. The back camera of the 3D
   view shows them.
-- **Warnings** (spec §10), found on the main thread, spot at the magnet:
+- **Warnings** (spec §10), found on the main thread, spot at the magnet;
+  none blocks export (only `mesh.invalid` does):
   - `magnet.thin` — less than 0.8 mm of front skin over a pocket (with the
     thickness needed), as `keyhole.thin`.
   - `magnet.noRoom` — a pocket does not fit inside the outline with its
     edge even at the centre, or two pockets come closer than 1 mm.
   - `magnet.overlap` — a pocket overlaps a hole, or an engraved text's
     floor comes within 0.4 mm of a pocket's ceiling.
-    None blocks export; only `mesh.invalid` does.
 - **Storage**: the field is new and the sanitiser fills it with "no
   magnets", so a saved project, a user preset or a `*.plate.json` without it
   opens unchanged. `STATE_VERSION` and `VERSION` in `src/storage.ts` stay:
@@ -136,4 +136,25 @@ with a failing test.
 
 ## Deviations
 
-_Recorded here as they happen._
+- **Storage**: no version bump, as planned above. `STATE_VERSION` and
+  `VERSION` stay; a v2 save, a user preset and a project file without
+  `magnets` load with none, everything else kept (tests in
+  `storage.test.ts`, `projectFile.test.ts`, `state.test.ts`). Spec §11
+  says so.
+- **Pocket jitter**: a micron per magnet (the first 2.101 mm deep, the next
+  2.102…), not "a few microns".
+- **`pointInRings`** moved from `geo/warnings.ts` to `geo/outline.ts` with
+  a new `distanceToRings`: `magnets.ts` needs them, and `warnings.ts`
+  imports `magnets.ts`.
+- **2D view**: the pockets are drawn over the images and texts, not under
+  them, as a keyhole is: under a picture they would be hidden.
+- **Print hint** (not planned): the Export card says to glue the magnets in
+  after printing, with their number and size.
+- **Smoke timing**: the magnet step prints the preview and export times on
+  every run instead of a `--measure` row; four magnets on the default plate
+  cost 15 ms / 8 ms.
+- **Preset**: the text stands 1.5 mm high, as the apple does, and close
+  under it: lower, it is `text.buried` under the picture's box; further
+  down, the crop falls into two islands (seen in the browser, not in the
+  Node test, whose rasters are squares). The Node test now also checks the
+  outline's own warnings.
