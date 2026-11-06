@@ -136,6 +136,18 @@ const errorText = (error: unknown) => (error instanceof Error ? error.message : 
 const typing = (target: EventTarget | null) =>
   target instanceof HTMLInputElement || target instanceof HTMLSelectElement || target instanceof HTMLTextAreaElement;
 
+/** Fields that hold typed text and so have an undo of their own; a slider, a check box or a select has none. */
+const NO_TEXT = new Set(['range', 'checkbox', 'radio', 'color', 'file', 'button', 'submit', 'reset']);
+const textEntry = (target: EventTarget | null) =>
+  target instanceof HTMLTextAreaElement || (target instanceof HTMLInputElement && !NO_TEXT.has(target.type));
+
+/** The letter of a Ctrl/⌘ shortcut: on a non-Latin layout (Cyrillic, Hebrew) the key's place on the keyboard. */
+const shortcutLetter = (event: KeyboardEvent) => {
+  const key = event.key.toLowerCase();
+  if (/^[a-z]$/.test(key)) return key;
+  return /^Key[A-Z]$/.test(event.code) ? event.code.slice(3).toLowerCase() : key;
+};
+
 /** What the view and the export card show about the last build. */
 type Build =
   { state: 'idle' } | { state: 'building' } | { state: 'done'; mesh: MeshResult; ms: number } | { state: 'failed'; reason: string };
@@ -921,20 +933,21 @@ export function startApp({
       }
       return;
     }
-    if (typing(event.target)) return;
     const mod = event.ctrlKey || event.metaKey;
-    const key = event.key.toLowerCase();
-    if (mod && key === 'z') {
+    const letter = mod && !textEntry(event.target) ? shortcutLetter(event) : null;
+    if (letter === 'z') {
       event.preventDefault();
       if (event.shiftKey) redo();
       else undo();
       return;
     }
-    if (mod && key === 'y') {
+    if (letter === 'y') {
       event.preventDefault();
       redo();
       return;
     }
+    if (typing(event.target)) return;
+    const key = event.key.toLowerCase();
     if (!selected) return;
     const step = event.shiftKey ? NUDGE_MM * 10 : NUDGE_MM;
     const arrows: Record<string, [number, number]> = {
@@ -950,7 +963,7 @@ export function startApp({
     } else if (key === 'delete' || key === 'backspace') {
       event.preventDefault();
       remove(selected);
-    } else if (mod && key === 'd') {
+    } else if (mod && shortcutLetter(event) === 'd') {
       event.preventDefault();
       duplicate(selected);
     } else if (key === 'escape') {

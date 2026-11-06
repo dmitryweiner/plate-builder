@@ -589,6 +589,40 @@ describe('history', () => {
     expect($('#plate-width-n', HTMLInputElement).value).toBe('130');
   });
 
+  it('undoes with Ctrl+Z on a non-Latin keyboard layout', () => {
+    start();
+    setInput('#plate-width-n', '130');
+    press('я', { code: 'KeyZ', ctrlKey: true });
+    expect($('#plate-width-n', HTMLInputElement).value).toBe('100');
+    press('н', { code: 'KeyY', ctrlKey: true });
+    expect($('#plate-width-n', HTMLInputElement).value).toBe('130');
+    $('#addHole', HTMLButtonElement).click();
+    press('в', { code: 'KeyD', ctrlKey: true });
+    expect(document.querySelectorAll('.element-row')).toHaveLength(2);
+  });
+
+  it('undoes with Ctrl+Z while a slider, a check box or a select has the focus', () => {
+    start();
+    setInput('#plate-width-n', '130');
+    setInput('#plate-width-n', '140');
+    setInput('#plate-width-n', '150');
+    const keyOn = (selector: string) =>
+      $(selector, HTMLElement).dispatchEvent(new KeyboardEvent('keydown', { key: 'z', ctrlKey: true, bubbles: true }));
+    keyOn('#plate-width');
+    expect($('#plate-width-n', HTMLInputElement).value).toBe('140');
+    keyOn('#plate-kind');
+    expect($('#plate-width-n', HTMLInputElement).value).toBe('130');
+    keyOn('#snapping');
+    expect($('#plate-width-n', HTMLInputElement).value).toBe('100');
+  });
+
+  it("leaves Ctrl+Z in a text or number field to the field's own undo", () => {
+    start();
+    setInput('#plate-width-n', '130');
+    $('#plate-width-n', HTMLInputElement).dispatchEvent(new KeyboardEvent('keydown', { key: 'z', ctrlKey: true, bubbles: true }));
+    expect($('#plate-width-n', HTMLInputElement).value).toBe('130');
+  });
+
   it('undo of an added hole removes it and its selection', () => {
     start();
     $('#addHole', HTMLButtonElement).click();
