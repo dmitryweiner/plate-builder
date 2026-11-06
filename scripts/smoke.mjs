@@ -687,6 +687,10 @@ try {
       check(warned.length === 0, `${id} has warnings: ${warned.join(', ')}`);
       if (shots) await page.screenshot({ path: `shots/preset-${id}.png` });
     }
+    // New: the blank rectangle, nothing on it
+    await page.click('#newPlate');
+    info = await builtAs(page, '100 × 60');
+    check((await page.locator('.element-row').count()) === 0, 'New left elements on the plate');
     await context.close();
   });
 

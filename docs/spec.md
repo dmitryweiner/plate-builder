@@ -313,8 +313,9 @@ cards with uppercase titles.
 
 - **Top bar**: the brand; the project's name, which opens the **presets**
   dialog (built-in and own presets; closed by ✕, Esc or a click beside
-  it; a pick closes it); 💾 save as preset, 📂 open a project file, ⬇️ save
-  it, ↶ ↷ undo and redo; 🌐 the language. On a phone it takes two lines:
+  it; a pick closes it); 📄 new (an empty 100 × 60 rectangle), 💾 save
+  as preset, 📂 open a project file, ⬇️ save it, ↶ ↷ undo and redo; 🌐
+  the language. On a phone it takes two lines:
   the brand and the language, then the name and the buttons.
 - **Phone (mobile first)**: the view fills the screen; the panel is a
   bottom sheet that can be pulled up, as in Case Constructor. A switch

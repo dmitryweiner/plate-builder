@@ -112,7 +112,12 @@ input {
 .topbar-tools {
   order: 4;
   display: flex;
-  gap: 6px;
+  gap: 4px;
+}
+/* six buttons on a 360 px phone leave the project's name some room */
+.topbar-tools .tool-button {
+  min-inline-size: 36px;
+  padding-inline: 4px;
 }
 .lang-field select {
   max-inline-size: 130px;
@@ -148,6 +153,10 @@ input {
   }
   .topbar-tools {
     order: 2;
+    gap: 6px;
+  }
+  .topbar-tools .tool-button {
+    min-inline-size: 40px;
   }
   .lang-field {
     order: 4;
