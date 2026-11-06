@@ -3,6 +3,7 @@
 // (mouse, pen and touch alike). The maths is in gestures.ts and view.ts;
 // this file turns events into calls and draws.
 
+import { edgeOn } from '../geo/edges';
 import { holeFootprint, placeRing } from '../geo/holes';
 import { magnetFootprints } from '../geo/magnets';
 import { bounds, type Bounds, type Point, type Ring } from '../geo/outline';
@@ -354,7 +355,7 @@ export function createEditor(o: EditorOptions): EditorHandle {
     ctx.setLineDash([4, 3]);
     ctx.strokeStyle = c.edge;
     ctx.lineWidth = 1;
-    for (const pocket of magnetFootprints(state.magnets, outline)) {
+    for (const pocket of magnetFootprints(state.magnets, outline, edgeOn(state.plate, 'bottom'))) {
       path([pocket]);
       ctx.stroke();
     }

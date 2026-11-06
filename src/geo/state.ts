@@ -36,6 +36,13 @@ export const PRIMITIVE_KINDS = [
 ] as const satisfies readonly OutlineKind[];
 export type PrimitiveKind = (typeof PRIMITIVE_KINDS)[number];
 
+/** The profile of the plate's outer top and bottom edges (spec §2.2a). */
+export const EDGE_PROFILES = ['fillet', 'chamfer'] as const;
+export type EdgeProfile = (typeof EDGE_PROFILES)[number];
+/** Which of the plate's outer edges are rounded or chamfered (spec §2.2a). */
+export const EDGE_SIDES = ['both', 'top', 'bottom'] as const;
+export type EdgeSides = (typeof EDGE_SIDES)[number];
+
 export const HOLE_KINDS = ['round', 'slot', 'countersunk', 'keyhole'] as const;
 export type HoleKind = (typeof HOLE_KINDS)[number];
 
@@ -97,6 +104,8 @@ export const RANGES = {
   sides: { min: 5, max: 12, def: 6, int: true },
   points: { min: 4, max: 12, def: 5, int: true },
   innerRatio: { min: 0.2, max: 0.9, def: 0.5 },
+  /** the upper limit is half the outer wall's height (wallHeight) */
+  edgeSize: { min: 0, max: 10, def: 0 },
   rimWidth: { min: 0.8, max: 20, def: 3 },
   rimHeight: { min: 0.2, max: 10, def: 1 },
   frameHeight: { min: 0.2, max: 10, def: 1 },
@@ -181,6 +190,19 @@ export interface Plate {
   rim: boolean;
   rimWidth: number;
   rimHeight: number;
+  /** the outer edges' fillet radius or chamfer leg; 0 = sharp */
+  edgeSize: number;
+  edgeProfile: EdgeProfile;
+  edgeSides: EdgeSides;
+}
+
+/**
+ * The height of the plate's outer wall, mm: T, plus the rim or a vignette's
+ * or own SVG's frame standing on the outline, the higher of the two.
+ */
+export function wallHeight(plate: Pick<Plate, 'kind' | 'thickness' | 'rim' | 'rimHeight' | 'frame' | 'frameHeight'>): number {
+  const framed = plate.frame && (plate.kind === 'vignette' || plate.kind === 'svg');
+  return plate.thickness + Math.max(plate.rim ? plate.rimHeight : 0, framed ? plate.frameHeight : 0);
 }
 
 interface Placed {
@@ -287,6 +309,9 @@ export function defaultPlate(): Plate {
     rim: false,
     rimWidth: RANGES.rimWidth.def,
     rimHeight: RANGES.rimHeight.def,
+    edgeSize: RANGES.edgeSize.def,
+    edgeProfile: 'fillet',
+    edgeSides: 'both',
   };
 }
 
@@ -423,7 +448,7 @@ function sanitizePlate(input: unknown): Plate {
   const width = num(p.width, RANGES.plateSize, RANGES.plateSize.max);
   const height = num(p.height, { ...RANGES.plateSize, def: d.height });
   const vignette = typeof p.vignette === 'string' && /^[a-z0-9-]{1,64}$/.test(p.vignette) ? p.vignette : '';
-  return {
+  const plate = {
     kind: oneOf(p.kind, OUTLINE_KINDS, d.kind),
     width,
     height,
@@ -441,6 +466,13 @@ function sanitizePlate(input: unknown): Plate {
     rim: bool(p.rim, d.rim),
     rimWidth: num(p.rimWidth, RANGES.rimWidth),
     rimHeight: num(p.rimHeight, RANGES.rimHeight),
+  };
+  return {
+    ...plate,
+    // the two edges must not meet
+    edgeSize: num(p.edgeSize, RANGES.edgeSize, Math.min(RANGES.edgeSize.max, wallHeight(plate) / 2)),
+    edgeProfile: oneOf(p.edgeProfile, EDGE_PROFILES, d.edgeProfile),
+    edgeSides: oneOf(p.edgeSides, EDGE_SIDES, d.edgeSides),
   };
 }
 

@@ -3,6 +3,7 @@
 // carries a spot for the 2D view to frame.
 
 import { boxCorners } from './boxes';
+import { edgeOn } from './edges';
 import { circle, holeFootprint, keyholeMinThickness, placeRing } from './holes';
 import { magnetMinThickness, magnetPocket, magnetPositions } from './magnets';
 import { distanceToRings, pointInRings, type Point, type Ring } from './outline';
@@ -15,6 +16,7 @@ export type WarningCode =
   | 'keyhole.thin'
   | 'text.arcLines'
   | 'text.buried'
+  | 'text.onEdge'
   | 'relief.tall'
   | 'magnet.thin'
   | 'magnet.noRoom'
@@ -137,6 +139,11 @@ export function warnings(
     }
     const ink = textInk.get(text.id)?.map((r) => placeRing(text, r));
     inks.set(text, ink);
+    // the rounded or chamfered top edge reaches edgeSize in from the outline: a text there loses its own edge
+    const edgeSize = edgeOn(state.plate, 'top');
+    if (edgeSize > 0 && pointInRings(spot, outline) && Math.min(...(ink ?? [box]).map((ring) => ringsDistance(ring, outline))) < edgeSize) {
+      out.push({ code: 'text.onEdge', ids: [text.id], spot });
+    }
     for (const hole of holes) {
       const footprint = footprints.get(hole) ?? [];
       if (ink ? overlapsShape(footprint, ink) : ringsOverlap(footprint, box)) {
@@ -167,7 +174,7 @@ function magnetWarnings(
   inks: ReadonlyMap<TextElement, Ring[] | undefined>,
 ): Warning[] {
   const { magnets, plate } = state;
-  const spots = magnetPositions(magnets, outline);
+  const spots = magnetPositions(magnets, outline, edgeOn(plate, 'bottom'));
   if (spots.length === 0) return [];
   const out: Warning[] = [];
   const { radius, depth } = magnetPocket(magnets);

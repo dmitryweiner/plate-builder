@@ -76,6 +76,33 @@ describe('built-in presets', () => {
   });
 });
 
+describe('edges of the presets', () => {
+  it.each([
+    ['keychain', 0.8],
+    ['pet-tag', 0.8],
+    ['medal', 0.8],
+    ['fridge-magnet', 1],
+    ['door-sign', 0],
+    ['house-number', 0],
+    ['name-plate', 0],
+  ] as const)('%s: a %s mm fillet, no text on it', (id, edgeSize) => {
+    const { state } = presetById(id);
+    expect([state.plate.edgeSize, state.plate.edgeProfile]).toEqual([edgeSize, 'fillet']);
+    const scope = new CsgScope();
+    try {
+      const rasters = {
+        images: state.images.map((image) => opaque(image.pixelWidth, image.pixelHeight)),
+        texts: state.texts.map((text) => block(text)),
+        silhouette: state.plate.kind === 'vignette' ? frame(state.plate.width, state.plate.height) : null,
+      };
+      const { section } = stateOutline(csg, scope, state, rasters);
+      expect(warnings(state, outlineRings(section)).map((w) => w.code)).not.toContain('text.onEdge');
+    } finally {
+      scope.dispose();
+    }
+  });
+});
+
 describe('the fridge magnet', () => {
   it('has two 10 × 2 magnets in a row that fit its crop, with no warning', () => {
     const { state } = presetById('fridge-magnet');

@@ -69,7 +69,7 @@ export const BUILT_IN_PRESETS: readonly BuiltInPreset[] = [
     names: { en: 'Keychain', ru: 'Брелок', uk: 'Брелок', he: 'מחזיק מפתחות' },
     state: make({
       name: 'Keychain',
-      plate: { kind: 'crop', padding: 4, thickness: 3, rounding: 2 },
+      plate: { kind: 'crop', padding: 4, thickness: 3, rounding: 2, edgeSize: 0.8 },
       texts: [
         { text: 'ALEX', size: 10, height: 1.5, x: 8 },
         // the letter O as a ring around the key ring's hole, close enough for the padding to join them
@@ -83,7 +83,7 @@ export const BUILT_IN_PRESETS: readonly BuiltInPreset[] = [
     names: { en: 'Pet tag', ru: 'Жетон для питомца', uk: 'Жетон для улюбленця', he: 'תג לחיית מחמד' },
     state: make({
       name: 'Pet tag',
-      plate: { kind: 'ellipse', width: 40, height: 40, thickness: 2, rounding: 0 },
+      plate: { kind: 'ellipse', width: 40, height: 40, thickness: 2, rounding: 0, edgeSize: 0.8 },
       texts: [
         // big enough for strokes of two nozzle widths
         { text: 'BUDDY', size: 5, height: 0.8, arc: true, arcRadius: 14, arcSide: 'inside' },
@@ -120,7 +120,7 @@ export const BUILT_IN_PRESETS: readonly BuiltInPreset[] = [
     names: { en: 'Medal', ru: 'Медаль', uk: 'Медаль', he: 'מדליה' },
     state: make({
       name: 'Medal',
-      plate: { kind: 'ellipse', width: 60, height: 60, thickness: 3, rounding: 0, rim: true, rimWidth: 2, rimHeight: 1 },
+      plate: { kind: 'ellipse', width: 60, height: 60, thickness: 3, rounding: 0, rim: true, rimWidth: 2, rimHeight: 1, edgeSize: 0.8 },
       images: [{ src: STAR_PICTURE, size: 28, height: 1.5, y: -2 }],
       texts: [{ text: 'CHAMPION', size: 4, height: 1, arc: true, arcRadius: 20, arcSide: 'outside' }],
       holes: [{ kind: 'round', diameter: 3, y: 25.5 }],
@@ -141,7 +141,7 @@ export const BUILT_IN_PRESETS: readonly BuiltInPreset[] = [
     names: { en: 'Fridge magnet', ru: 'Магнит на холодильник', uk: 'Магніт на холодильник', he: 'מגנט למקרר' },
     state: make({
       name: 'Fridge magnet',
-      plate: { kind: 'crop', padding: 3, thickness: 4, rounding: 2 },
+      plate: { kind: 'crop', padding: 3, thickness: 4, rounding: 2, edgeSize: 1 },
       images: [{ src: APPLE_PICTURE, size: 50, height: 1.5, y: 6 }],
       // close enough under the apple for the padding to join them; as high, so it is not buried under the picture's box
       texts: [{ text: 'HELLO!', size: 7, height: 1.5, y: -17 }],

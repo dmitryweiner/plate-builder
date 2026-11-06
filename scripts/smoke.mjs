@@ -479,6 +479,55 @@ try {
     await context.close();
   });
 
+  await step('edges: a fillet and a chamfer on every kind, top / bottom only, with a rim, on a vignette, in a real STL', async () => {
+    const { page, context } = await app.open();
+    let { info } = await built(page);
+    const plain = Number(info.match(/([\d,]+) triangles/)?.[1].replace(/,/g, ''));
+    await setNumber(page, 'plate-edgeSize', 1.5);
+    const result = await built(page, info);
+    info = result.info;
+    check(info.startsWith('100 × 60 × 3 mm'), `a 1.5 mm fillet changes the size: ${info}`);
+    check(Number(info.match(/([\d,]+) triangles/)?.[1].replace(/,/g, '')) > plain, `no terraces in the mesh: ${info}`);
+    check(await page.locator('#plate-edgeProfile').isVisible(), 'no profile row');
+    const ms = await exportMs(page);
+    console.log(`    100 × 60 with a 1.5 mm fillet: preview ${result.ms} ms (${info}); export ${ms} ms`);
+    if (shots) await page.screenshot({ path: 'shots/edges-fillet.png' });
+    for (const profile of ['fillet', 'chamfer']) {
+      await page.selectOption('#plate-edgeProfile', profile);
+      for (const kind of ['ellipse', 'triangle', 'polygon', 'star', 'heart', 'shield', 'tag', 'rectangle']) {
+        await page.selectOption('#plate-kind', kind);
+        const made = await built(page, info);
+        info = made.info;
+        check(await page.locator('#meshBlocked').isHidden(), `${kind} with a 1.5 mm ${profile}: the mesh is blocked`);
+        if (kind === 'heart') console.log(`    heart with a 1.5 mm ${profile}: preview ${made.ms} ms (${info})`);
+      }
+    }
+    // top only and bottom only are mirror images, the same mesh info: each after both
+    for (const sides of ['top', 'both', 'bottom', 'both']) {
+      await page.selectOption('#plate-edgeSides', sides);
+      ({ info } = await built(page, info));
+      // one edge reaches the outline; two at half the wall meet before it
+      const size = sides === 'both' ? '99.7 × 59.7 × 3 mm' : '100 × 60 × 3 mm';
+      check(info.startsWith(size) && (await page.locator('#meshBlocked').isHidden()), `a ${sides} chamfer: ${info}`);
+    }
+    await page.check('#plate-rim');
+    await setNumber(page, 'plate-edgeSize', 2);
+    ({ info } = await built(page, info));
+    check(info.includes('× 4 mm') && (await page.locator('#meshBlocked').isHidden()), `a 2 mm chamfer with a rim: ${info}`);
+    await page.uncheck('#plate-rim');
+    await page.selectOption('#plate-edgeProfile', 'fillet');
+    await page.selectOption('#plate-kind', 'vignette');
+    const [id] = await page.locator('.vignette').evaluateAll((nodes) => nodes.map((n) => n.dataset.id));
+    await page.click(`.vignette[data-id="${id}"]`);
+    const vignette = await built(page, info);
+    check(await page.locator('#meshBlocked').isHidden(), `${id} with a fillet: ${vignette.info}`);
+    console.log(
+      `    ${id} with its frame and a 2 mm fillet: preview ${vignette.ms} ms (${vignette.info}); export ${await exportMs(page)} ms`,
+    );
+    if (shots) await page.screenshot({ path: 'shots/edges-vignette.png' });
+    await context.close();
+  });
+
   await step('magnets: four at the corners, on every primitive, seen from the back, in a real STL', async () => {
     const { page, context } = await app.open();
     let { info } = await built(page);

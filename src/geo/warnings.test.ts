@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { boxCorners } from './boxes';
 import { pointInRings, primitiveOutline } from './outline';
 import {
   defaultHole,
@@ -8,6 +9,7 @@ import {
   type HoleElement,
   type ImageElement,
   type Magnets,
+  type Plate,
   type PlateState,
   type TextElement,
 } from './state';
@@ -104,11 +106,28 @@ const image = (over: Partial<ImageElement>): ImageElement => ({
   ...over,
 });
 
+function edged(y: number, edgeSize: number, edgeSides: Plate['edgeSides'] = 'both'): PlateState {
+  const state = withText({ y });
+  return { ...state, plate: { ...state.plate, edgeSize, edgeSides } };
+}
+
 describe('warnings of texts and images', () => {
   it('text.arcLines: an arc text of several lines, not one line or a straight block', () => {
     expect(codes(withText({ arc: true, text: 'a\nb' }))).toEqual(['text.arcLines']);
     expect(codes(withText({ arc: true, text: 'ab' }))).toEqual([]);
     expect(codes(withText({ arc: false, text: 'a\nb' }))).toEqual([]);
+  });
+
+  it('text.onEdge: a text within the rounded edge’s reach of the outline, not one further in', () => {
+    const half = Math.max(...boxCorners({ ...defaultText(defaultState()), id: 't1' }).map(([, y]) => y));
+    // the box's top 1 mm from the plate's side at y = 30
+    expect(warnings(edged(29 - half, 1.5), outline)).toEqual([expect.objectContaining({ code: 'text.onEdge', ids: ['t1'] })]);
+    expect(codes(edged(29 - half, 0.9))).toEqual([]);
+    expect(codes(edged(29 - half, 0))).toEqual([]);
+    expect(codes(edged(0, 1.5))).toEqual([]);
+    // only the top edge reaches a text
+    expect(codes(edged(29 - half, 1.5, 'top'))).toEqual(['text.onEdge']);
+    expect(codes(edged(29 - half, 1.5, 'bottom'))).toEqual([]);
   });
 
   it('text.buried: a raised text lower than an image under it', () => {
@@ -170,6 +189,16 @@ describe('warnings of magnets', () => {
     // 30 mm pockets 23.8 mm apart, one over the other
     expect(codes(withMagnets({ count: 4, layout: 'corners', diameter: 30 }))).toEqual(['magnet.noRoom']);
     expect(codes(withMagnets({ count: 2, layout: 'row', diameter: 30 }))).toEqual([]);
+  });
+
+  it('magnet.noRoom counts the edge from the foot of the plate’s bottom edge', () => {
+    // a 30.2 mm pocket with 14 mm of edge keeps 29.1 of the 30 to the side; 1.5 mm of fillet is too much
+    const state = withMagnets({ diameter: 30, edge: 14 });
+    expect(codes(state)).toEqual([]);
+    expect(codes({ ...state, plate: { ...state.plate, edgeSize: 1.5 } })).toEqual(['magnet.noRoom']);
+    // a top edge only leaves the back face's outline to the pockets
+    expect(codes({ ...state, plate: { ...state.plate, edgeSize: 1.5, edgeSides: 'top' } })).toEqual([]);
+    expect(codes({ ...state, plate: { ...state.plate, edgeSize: 1.5, edgeSides: 'bottom' } })).toEqual(['magnet.noRoom']);
   });
 
   it('magnet.overlap: a pocket that crosses a hole, not one beside it', () => {
