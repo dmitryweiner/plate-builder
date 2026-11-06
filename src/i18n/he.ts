@@ -150,6 +150,7 @@ export const he: Messages = {
   printBack: 'הדפיסו כשהצד האחורי על המשטח; אין צורך בתמיכות.',
   gradientNote: 'תמונות הן מעבר הדרגתי: החלפת צבע עליהן תיתן פסים, לא תמונה.',
   projectName: 'שם',
+  newPlate: 'שלט חדש',
   saveProject: 'שמירת קובץ הפרויקט',
   openProject: 'פתיחת קובץ פרויקט…',
   presetsHeading: 'תבניות',

@@ -1,14 +1,14 @@
 import { beforeAll, describe, expect, it } from 'vitest';
 import type { Raster } from '../geo/heightmap';
 import { meshNormals } from '../geo/mesh';
-import { sanitizeState } from '../geo/state';
+import { defaultPlate, sanitizeState } from '../geo/state';
 import type { TextRaster } from '../geo/textShape';
 import { meshProblems, validateMesh } from '../geo/validate';
 import { LOCALES } from '../i18n';
 import { warnings } from '../geo/warnings';
 import { buildPlate, outlineRings, stateOutline } from '../worker/build';
 import { CsgScope, initCSG, type CsgApi } from '../worker/csg';
-import { BUILT_IN_PRESETS } from './presets';
+import { BLANK_PRESET, BUILT_IN_PRESETS } from './presets';
 
 const presetById = (id: string) => {
   const found = BUILT_IN_PRESETS.find((p) => p.id === id);
@@ -73,6 +73,17 @@ describe('built-in presets', () => {
     } finally {
       scope.dispose();
     }
+  });
+});
+
+describe('the blank preset', () => {
+  it('is the default rectangle with nothing on it, named in every language', () => {
+    const { state } = BLANK_PRESET;
+    expect(sanitizeState(state)).toEqual(state);
+    expect(state.plate).toEqual(defaultPlate());
+    expect([state.texts, state.images, state.holes, state.magnets.count]).toEqual([[], [], [], 0]);
+    expect(BUILT_IN_PRESETS.map((p) => p.id)).not.toContain(BLANK_PRESET.id);
+    for (const locale of LOCALES) expect(BLANK_PRESET.names[locale]).toBeTruthy();
   });
 });
 

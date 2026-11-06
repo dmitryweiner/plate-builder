@@ -50,6 +50,13 @@ function make(recipe: Recipe): PlateState {
   });
 }
 
+/** What the top bar's New opens: the default rectangle with nothing on it; not in the presets' list. */
+export const BLANK_PRESET: BuiltInPreset = {
+  id: 'blank',
+  names: { en: 'New plate', ru: 'Новая табличка', uk: 'Нова табличка', he: 'שלט חדש' },
+  state: make({ name: 'New plate', plate: {} }),
+};
+
 export const BUILT_IN_PRESETS: readonly BuiltInPreset[] = [
   {
     id: 'door-sign',

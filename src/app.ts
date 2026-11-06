@@ -26,7 +26,7 @@ import { detectLocale, direction, isLocale, messages, staticText, type Locale, t
 import type { CameraPreset, SceneHandle } from './render/view';
 import { addHole, addText, duplicateElement, nudgeElement, removeElement, toggleVisible } from './state/edit';
 import { History } from './state/history';
-import { BUILT_IN_PRESETS } from './state/presets';
+import { BLANK_PRESET, BUILT_IN_PRESETS } from './state/presets';
 import { projectFileName, projectFileText, readProjectFile } from './state/projectFile';
 import { loadSettings, saveSettings, type KeyValueStorage, type Settings } from './storage';
 import { renderControls, type ControlsHandle } from './ui/controls';
@@ -218,6 +218,7 @@ export function startApp({
   const presetsDialog = el('presets', HTMLElement);
   const presetsClose = el('presetsClose', HTMLButtonElement);
   const savePresetButton = el('savePreset', HTMLButtonElement);
+  const newPlateButton = el('newPlate', HTMLButtonElement);
   const buildProgress = el('buildProgress', HTMLProgressElement);
   const printHints = el('printHints', HTMLElement);
   const undoButton = el('undo', HTMLButtonElement);
@@ -675,6 +676,7 @@ export function startApp({
     saveTimer = timers.set(persist, SAVE_DELAY_MS);
   };
 
+  const newPlate = () => openProject(BLANK_PRESET.state, BLANK_PRESET.id);
   const saveProjectFile = () => download(projectFileName(state().name), new TextEncoder().encode(projectFileText(state())).buffer);
   const pickProject = () => projectFile.click();
   const onProjectFile = () => {
@@ -1048,6 +1050,7 @@ export function startApp({
   projectFile.addEventListener('change', onProjectFile);
   projectName.addEventListener('change', onProjectName);
   savePresetButton.addEventListener('click', savePreset);
+  newPlateButton.addEventListener('click', newPlate);
   presetsOpen.addEventListener('click', openPresets);
   presetsClose.addEventListener('click', closePresets);
   presetsDialog.addEventListener('click', onPresetsBackdrop);
@@ -1085,6 +1088,7 @@ export function startApp({
     projectFile.removeEventListener('change', onProjectFile);
     projectName.removeEventListener('change', onProjectName);
     savePresetButton.removeEventListener('click', savePreset);
+    newPlateButton.removeEventListener('click', newPlate);
     presetsOpen.removeEventListener('click', openPresets);
     presetsClose.removeEventListener('click', closePresets);
     presetsDialog.removeEventListener('click', onPresetsBackdrop);

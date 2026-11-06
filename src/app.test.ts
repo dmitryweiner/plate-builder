@@ -1163,6 +1163,21 @@ describe('projects, presets, storage', () => {
     expect($('.preset-row[data-id="medal"] .preset-changed', HTMLElement).textContent).toBe('changed');
   });
 
+  it('New opens an empty rectangle plate, one undo step', () => {
+    storage = new MemoryStorage();
+    start();
+    const first = $('.topbar-tools button', HTMLButtonElement);
+    expect(first.id).toBe('newPlate');
+    expect(first.getAttribute('aria-label')).toBe('New plate');
+    first.click();
+    expect($('#projectName', HTMLInputElement).value).toBe('New plate');
+    expect($('#plate-kind', HTMLSelectElement).value).toBe('rectangle');
+    expect([$('#plate-width-n', HTMLInputElement).value, $('#plate-height-n', HTMLInputElement).value]).toEqual(['100', '60']);
+    expect(document.querySelectorAll('.element-row')).toHaveLength(0);
+    $('#undo', HTMLButtonElement).click();
+    expect($('#projectName', HTMLInputElement).value).toBe('Door sign');
+  });
+
   it('saves, renames, opens and deletes a user preset, kept in storage', () => {
     start();
     setInput('#plate-width-n', '111');

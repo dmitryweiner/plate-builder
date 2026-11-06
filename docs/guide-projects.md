@@ -4,6 +4,8 @@ The plate you work on is kept in the browser and comes back on the next
 visit. If the browser refuses to keep it (its storage is full, or a private
 window), a banner says so: save the project file instead.
 
+- **📄 New plate** — the first button in the top bar: an empty 100 × 60
+  rectangle, nothing on it. It is one undo step, as opening a project is.
 - **Name** — the project's name, in the Export card; files are named after
   it, and the top bar shows it.
 - **⬇️ Save project file** / **📂 Open project file…** in the top bar — a

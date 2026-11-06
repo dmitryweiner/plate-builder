@@ -151,6 +151,7 @@ export const en = {
   printBack: 'Print with the back on the bed; no supports needed.',
   gradientNote: 'Images are a gradient: a colour change across them gives bands, not a picture.',
   projectName: 'Name',
+  newPlate: 'New plate',
   saveProject: 'Save project file',
   openProject: 'Open project file…',
   presetsHeading: 'Presets',
