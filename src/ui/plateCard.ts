@@ -3,10 +3,12 @@
 
 import {
   EDGE_PROFILES,
+  EDGE_SIDES,
   PRIMITIVE_KINDS,
   RANGES,
   wallHeight,
   type EdgeProfile,
+  type EdgeSides,
   type Plate,
   type PlateState,
   type PrimitiveKind,
@@ -35,6 +37,8 @@ const setPlate = (state: PlateState, over: Partial<Plate>): PlateState => ({ ...
 
 const EDGE_LABELS: Record<EdgeProfile, TextKey> = { fillet: 'edgeFillet', chamfer: 'edgeChamfer' };
 const isProfile = (value: string): value is EdgeProfile => EDGE_PROFILES.some((profile) => profile === value);
+const SIDE_LABELS: Record<EdgeSides, TextKey> = { both: 'edgeBoth', top: 'edgeTop', bottom: 'edgeBottom' };
+const isSides = (value: string): value is EdgeSides => EDGE_SIDES.some((sides) => sides === value);
 
 const isOffered = (value: string): value is OfferedKind => OFFERED.some((kind) => kind === value);
 const sized = (s: PlateState) => s.plate.kind !== 'crop';
@@ -123,6 +127,15 @@ export const plateControls: readonly Control<PlateState>[] = [
     when: (s) => s.plate.edgeSize > 0,
     get: (s) => s.plate.edgeProfile,
     set: (s, edgeProfile) => (isProfile(edgeProfile) ? setPlate(s, { edgeProfile }) : s),
+  },
+  {
+    kind: 'select',
+    key: 'edgeSides',
+    label: 'edgeSides',
+    options: EDGE_SIDES.map((value) => ({ value, label: SIDE_LABELS[value] })),
+    when: (s) => s.plate.edgeSize > 0,
+    get: (s) => s.plate.edgeSides,
+    set: (s, edgeSides) => (isSides(edgeSides) ? setPlate(s, { edgeSides }) : s),
   },
   {
     kind: 'range',

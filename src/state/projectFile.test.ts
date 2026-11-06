@@ -37,13 +37,14 @@ describe('project file', () => {
     const plate: Record<string, unknown> = { ...state().plate };
     delete plate.edgeSize;
     delete plate.edgeProfile;
+    delete plate.edgeSides;
     const read = readProjectFile(JSON.stringify({ app: 'plate-builder', version: STATE_VERSION, state: { ...state(), plate } }));
     expect(read).toEqual({ ok: true, state: state() });
-    expect(read.ok && [read.state.plate.edgeSize, read.state.plate.edgeProfile]).toEqual([0, 'fillet']);
+    expect(read.ok && [read.state.plate.edgeSize, read.state.plate.edgeProfile, read.state.plate.edgeSides]).toEqual([0, 'fillet', 'both']);
   });
 
   it('round-trips the edges', () => {
-    const plate = { ...state().plate, edgeSize: 1.2, edgeProfile: 'chamfer' as const };
+    const plate = { ...state().plate, edgeSize: 1.2, edgeProfile: 'chamfer' as const, edgeSides: 'bottom' as const };
     const read = readProjectFile(projectFileText({ ...state(), plate }));
     expect(read.ok && read.state.plate).toEqual(plate);
   });

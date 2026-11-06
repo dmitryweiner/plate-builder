@@ -9,6 +9,7 @@ import {
   type HoleElement,
   type ImageElement,
   type Magnets,
+  type Plate,
   type PlateState,
   type TextElement,
 } from './state';
@@ -105,9 +106,9 @@ const image = (over: Partial<ImageElement>): ImageElement => ({
   ...over,
 });
 
-function edged(y: number, edgeSize: number): PlateState {
+function edged(y: number, edgeSize: number, edgeSides: Plate['edgeSides'] = 'both'): PlateState {
   const state = withText({ y });
-  return { ...state, plate: { ...state.plate, edgeSize } };
+  return { ...state, plate: { ...state.plate, edgeSize, edgeSides } };
 }
 
 describe('warnings of texts and images', () => {
@@ -124,6 +125,9 @@ describe('warnings of texts and images', () => {
     expect(codes(edged(29 - half, 0.9))).toEqual([]);
     expect(codes(edged(29 - half, 0))).toEqual([]);
     expect(codes(edged(0, 1.5))).toEqual([]);
+    // only the top edge reaches a text
+    expect(codes(edged(29 - half, 1.5, 'top'))).toEqual(['text.onEdge']);
+    expect(codes(edged(29 - half, 1.5, 'bottom'))).toEqual([]);
   });
 
   it('text.buried: a raised text lower than an image under it', () => {
@@ -192,6 +196,9 @@ describe('warnings of magnets', () => {
     const state = withMagnets({ diameter: 30, edge: 14 });
     expect(codes(state)).toEqual([]);
     expect(codes({ ...state, plate: { ...state.plate, edgeSize: 1.5 } })).toEqual(['magnet.noRoom']);
+    // a top edge only leaves the back face's outline to the pockets
+    expect(codes({ ...state, plate: { ...state.plate, edgeSize: 1.5, edgeSides: 'top' } })).toEqual([]);
+    expect(codes({ ...state, plate: { ...state.plate, edgeSize: 1.5, edgeSides: 'bottom' } })).toEqual(['magnet.noRoom']);
   });
 
   it('magnet.overlap: a pocket that crosses a hole, not one beside it', () => {

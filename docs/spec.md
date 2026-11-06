@@ -61,17 +61,18 @@ change. A rectangle with r = 0 keeps sharp corners.
 ### 2.2a Edges
 
 The plate's outer top and bottom edges, all along the outline, can be
-**rounded** (a quarter circle) or **chamfered** (45°), both edges with one
-size `e` (0 = sharp, up to half the outer wall's height and 10 mm). The
+**rounded** (a quarter circle) or **chamfered** (45°) with one size `e`
+(0 = sharp, up to half the outer wall's height and 10 mm): both edges, the
+top one only or the bottom one only, the other staying sharp. The
 outer wall is `T`, plus the rim's or a vignette's / own SVG's frame height
 when either stands on the outline (the higher of the two): with a rim, its
 top's outer edge is the one rounded, its inner edge stays sharp.
 
-- At a distance `t < e` from the back face or from the wall's top, the
-  plate's section is the outline shrunk by the profile's inset there
+- At a distance `t < e` from the back face or from the wall's top (where
+  that edge is rounded), the plate's section is the outline shrunk by the profile's inset there
   (`e − √(e² − (e − t)²)` for a fillet, `e − t` for a chamfer); above the
-  wall by `e`. So within `e` of the outline everything is cut down to the
-  edge: the base, the rim, the frame, an image or a raised text that
+  wall by `e` with a top edge. So within `e` of the outline everything is
+  cut down to the top edge: the base, the rim, the frame, an image or a raised text that
   reaches it. A thin part narrower than `2e` gets a ridge.
 - The profile is built from **terraces**, each the outline shrunk by the
   profile's inset at the terrace's middle, each piece of the profile at most
@@ -80,7 +81,7 @@ top's outer edge is the one rounded, its inner edge stays sharp.
   The stack is built as one mesh, not by booleans.
 - Holes, the rim's inner side and a frame's windows keep sharp edges.
 - A fillet's lowest layers overhang the bed a little; the chamfer prints
-  without any.
+  without any; with the top edge only, the whole back face lies on the bed.
 
 ### 2.3 Rim
 
@@ -262,7 +263,8 @@ triangle point down, row, column; 4 — corners, diamond, row, column.
 - **Placement**: each layout is a set of anchors in the outline's box,
   inset by the pocket's radius and the edge (rows spread evenly); the edge
   is counted from the foot of the plate's bottom edge (§2.2a), `e` in from
-  the outline, so a pocket never opens into it. An anchor
+  the outline when the bottom edge is rounded, so a pocket never opens into
+  it. An anchor
   whose pocket comes closer than the edge to the outline slides towards the
   box's middle until it fits. The 2D view and the worker place them with the
   same function on the same outline rings. Magnets take no part in a crop.
@@ -490,7 +492,7 @@ under 60 s.
 | `keyhole.thin`             | the plate is too thin for a hidden keyhole (with the T needed)           |
 | `text.thin` / `frame.thin` | strokes thinner than 0.8 mm (two nozzle widths) would not print well     |
 | `text.buried`              | a raised text is lower than the image under it                           |
-| `text.onEdge`              | a text comes within the edges' size of the outline and is cut down there |
+| `text.onEdge`              | a text comes within the top edge's size of the outline and is cut there  |
 | `text.engraveDeep`         | engraved depth leaves less than 0.4 mm of base                           |
 | `text.arcTooLong`          | an arc text did not fit the circle and was squeezed (with %)             |
 | `text.arcLines`            | an arc text had several lines, joined into one                           |

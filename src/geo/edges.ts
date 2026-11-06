@@ -1,6 +1,6 @@
-// The plate's outer top and bottom edges (spec §2.2a) as plain data: the
-// profile, its terraces and the slabs the worker stacks into the plate's
-// prism. No CSG here.
+// The plate's outer top and bottom edges (spec §2.2a), both or one of them,
+// as plain data: the profile, its terraces and the slabs the worker stacks
+// into the plate's prism. No CSG here.
 //
 // At a distance t from the back face (or from the wall's top) the plate's
 // section is the outline shrunk by the profile's inset at t. The profile is
@@ -34,6 +34,11 @@ export function edgeInset(size: number, profile: EdgeProfile, t: number): number
   if (profile === 'chamfer') return size - d;
   // the circle's centre is at (inset r, t r)
   return size - Math.sqrt(Math.max(0, size * size - (size - d) ** 2));
+}
+
+/** The edge's size on one face of the plate: 0 where that face's edge is sharp. */
+export function edgeOn(plate: Pick<Plate, 'edgeSize' | 'edgeSides'>, face: 'top' | 'bottom'): number {
+  return plate.edgeSides === 'both' || plate.edgeSides === face ? plate.edgeSize : 0;
 }
 
 export interface EdgeLevel {
@@ -77,7 +82,7 @@ export const EDGE_MIN_GAP = 0.025;
  * The slabs of the plate's prism up to z1, bottom to top, each ending where
  * the next begins: the bottom edge's terraces from the back face, the wall
  * between the edges (the outline itself, inset 0, unless the edges meet),
- * the top edge's terraces;
+ * the top edge's terraces; a sharp face has none, its wall goes up to it;
  * the last one up to z1 (the wall's top for the base, above the reliefs for
  * the prism that clips them).
  */
@@ -94,18 +99,24 @@ export function edgeSlabs(plate: Plate, step: number, z1: number): EdgeSlab[] {
   if (levels.length === 0) return [];
   const wall = wallHeight(plate);
   const ends = levels.map(({ t }) => t + EDGE_JITTER);
+  const lower = edgeOn(plate, 'bottom') > 0;
+  const upper = edgeOn(plate, 'top') > 0;
   // at the largest size the two edges meet: their last terraces are one slab, and the outline is never reached
-  const meet = wall - 2 * (ends.at(-1) ?? 0) < EDGE_MIN_GAP;
+  const meet = lower && upper && wall - 2 * (ends.at(-1) ?? 0) < EDGE_MIN_GAP;
   const terraces = meet ? levels.slice(0, -1) : levels;
   const m = terraces.length;
   const middle: EdgeSlab = {
     inset: meet ? levels[levels.length - 1].inset + EDGE_JITTER : 0,
-    z0: m === 0 ? 0 : ends[m - 1],
-    z1: m === 0 ? z1 : wall - ends[m - 1],
+    z0: m === 0 || !lower ? 0 : ends[m - 1],
+    z1: m === 0 || !upper ? z1 : wall - ends[m - 1],
   };
-  const bottom = terraces.map(({ inset }, k): EdgeSlab => ({ inset: inset + EDGE_JITTER, z0: k === 0 ? 0 : ends[k - 1], z1: ends[k] }));
-  const top = terraces
-    .map(({ inset }, k): EdgeSlab => ({ inset: inset + EDGE_JITTER, z0: wall - ends[k], z1: k === 0 ? z1 : wall - ends[k - 1] }))
-    .toReversed();
+  const bottom = lower
+    ? terraces.map(({ inset }, k): EdgeSlab => ({ inset: inset + EDGE_JITTER, z0: k === 0 ? 0 : ends[k - 1], z1: ends[k] }))
+    : [];
+  const top = upper
+    ? terraces
+        .map(({ inset }, k): EdgeSlab => ({ inset: inset + EDGE_JITTER, z0: wall - ends[k], z1: k === 0 ? z1 : wall - ends[k - 1] }))
+        .toReversed()
+    : [];
   return [...bottom, middle, ...top];
 }

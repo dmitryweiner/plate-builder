@@ -39,6 +39,9 @@ export type PrimitiveKind = (typeof PRIMITIVE_KINDS)[number];
 /** The profile of the plate's outer top and bottom edges (spec §2.2a). */
 export const EDGE_PROFILES = ['fillet', 'chamfer'] as const;
 export type EdgeProfile = (typeof EDGE_PROFILES)[number];
+/** Which of the plate's outer edges are rounded or chamfered (spec §2.2a). */
+export const EDGE_SIDES = ['both', 'top', 'bottom'] as const;
+export type EdgeSides = (typeof EDGE_SIDES)[number];
 
 export const HOLE_KINDS = ['round', 'slot', 'countersunk', 'keyhole'] as const;
 export type HoleKind = (typeof HOLE_KINDS)[number];
@@ -187,9 +190,10 @@ export interface Plate {
   rim: boolean;
   rimWidth: number;
   rimHeight: number;
-  /** the outer top and bottom edges' fillet radius or chamfer leg; 0 = sharp */
+  /** the outer edges' fillet radius or chamfer leg; 0 = sharp */
   edgeSize: number;
   edgeProfile: EdgeProfile;
+  edgeSides: EdgeSides;
 }
 
 /**
@@ -307,6 +311,7 @@ export function defaultPlate(): Plate {
     rimHeight: RANGES.rimHeight.def,
     edgeSize: RANGES.edgeSize.def,
     edgeProfile: 'fillet',
+    edgeSides: 'both',
   };
 }
 
@@ -467,6 +472,7 @@ function sanitizePlate(input: unknown): Plate {
     // the two edges must not meet
     edgeSize: num(p.edgeSize, RANGES.edgeSize, Math.min(RANGES.edgeSize.max, wallHeight(plate) / 2)),
     edgeProfile: oneOf(p.edgeProfile, EDGE_PROFILES, d.edgeProfile),
+    edgeSides: oneOf(p.edgeSides, EDGE_SIDES, d.edgeSides),
   };
 }
 

@@ -479,7 +479,7 @@ try {
     await context.close();
   });
 
-  await step('edges: a fillet and a chamfer on every kind, with a rim, on a vignette, in a real STL', async () => {
+  await step('edges: a fillet and a chamfer on every kind, top / bottom only, with a rim, on a vignette, in a real STL', async () => {
     const { page, context } = await app.open();
     let { info } = await built(page);
     const plain = Number(info.match(/([\d,]+) triangles/)?.[1].replace(/,/g, ''));
@@ -501,6 +501,14 @@ try {
         check(await page.locator('#meshBlocked').isHidden(), `${kind} with a 1.5 mm ${profile}: the mesh is blocked`);
         if (kind === 'heart') console.log(`    heart with a 1.5 mm ${profile}: preview ${made.ms} ms (${info})`);
       }
+    }
+    // top only and bottom only are mirror images, the same mesh info: each after both
+    for (const sides of ['top', 'both', 'bottom', 'both']) {
+      await page.selectOption('#plate-edgeSides', sides);
+      ({ info } = await built(page, info));
+      // one edge reaches the outline; two at half the wall meet before it
+      const size = sides === 'both' ? '99.7 × 59.7 × 3 mm' : '100 × 60 × 3 mm';
+      check(info.startsWith(size) && (await page.locator('#meshBlocked').isHidden()), `a ${sides} chamfer: ${info}`);
     }
     await page.check('#plate-rim');
     await setNumber(page, 'plate-edgeSize', 2);

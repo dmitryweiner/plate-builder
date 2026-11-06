@@ -7,7 +7,7 @@
 
 import type { CrossSection, Manifold } from 'manifold-3d';
 import { elementBox } from '../geo/boxes';
-import { EDGE_STEP, edgeSlabs } from '../geo/edges';
+import { EDGE_STEP, edgeOn, edgeSlabs } from '../geo/edges';
 import { heightfieldMesh } from '../geo/grid';
 import { traceContours, LEVEL } from '../geo/contour';
 import { heightField, processPixels, sampleField, type Raster } from '../geo/heightmap';
@@ -466,7 +466,7 @@ export function buildSolid(
       .filter((hole) => hole.visible)
       .flatMap((hole) => holeCutters(hole, thickness, top).map((cutter) => cutterSolid(csg, scope, cutter))),
     // placed on the outline as built: the outline job gives the 2D view the same rings
-    ...magnetCutters(state.magnets, outlineRings(outline), state.plate.edgeSize).map((cutter) => cutterSolid(csg, scope, cutter)),
+    ...magnetCutters(state.magnets, outlineRings(outline), edgeOn(state.plate, 'bottom')).map((cutter) => cutterSolid(csg, scope, cutter)),
   ];
   if (cutters.length > 0) solid = scope.keep(solid.subtract(scope.keep(csg.Manifold.union(cutters))));
   return { solid, warnings };

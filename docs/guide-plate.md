@@ -36,14 +36,16 @@ and + beside it for one step at a time, and a field for an exact number.
   and the plate keeps its size. On a crop, rounding is capped at the padding,
   so it never eats thin strokes the padding did not cover.
 - **Edge fillet** rounds the plate's outer top and bottom edges, all along
-  the outline; **Edge profile** makes them a 45° **chamfer** instead. The
-  size goes up to half the outer wall's height (1.5 mm on a 3 mm plate).
-  With a rim or a raised frame, the rounded edge is the top of that, on the
-  outside. Whatever reaches the edge — a picture to the plate's side, a text
-  close to it — is cut down with it; a text there gets a warning. The
+  the outline; **Edge profile** makes them a 45° **chamfer** instead, and
+  **Edges** picks top and bottom, the top only or the bottom only. The size
+  goes up to half the outer wall's height (1.5 mm on a 3 mm plate). With a
+  rim or a raised frame, the rounded edge is the top of that, on the
+  outside. Whatever reaches the top edge — a picture to the plate's side, a
+  text close to it — is cut down with it; a text there gets a warning. The
   magnets keep their edge distance from the foot of the bottom edge. A
   fillet's first layers hang over the bed a little and print well when
-  small; a chamfer always does.
+  small; a chamfer always does — or round the top only, and the whole back
+  face lies flat on the bed.
 
 ![The door sign with a 1.5 mm chamfer](images/door-sign-edges.png)
 

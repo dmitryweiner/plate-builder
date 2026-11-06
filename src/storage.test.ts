@@ -88,9 +88,10 @@ describe('settings storage', () => {
       const plate: Record<string, unknown> = { ...state.plate };
       delete plate.edgeSize;
       delete plate.edgeProfile;
+      delete plate.edgeSides;
       return { ...state, plate };
     };
-    const edged = { ...project(), plate: { ...project().plate, edgeSize: 0, edgeProfile: 'fillet' as const } };
+    const edged = { ...project(), plate: { ...project().plate, edgeSize: 0, edgeProfile: 'fillet' as const, edgeSides: 'both' as const } };
     const raw = {
       version: 2,
       settings: { locale: 'uk', project: strip(project()), presets: [{ id: 'u1', name: 'Mine', state: strip(project()) }] },

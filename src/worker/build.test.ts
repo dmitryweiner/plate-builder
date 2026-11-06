@@ -695,6 +695,20 @@ describe('edges', () => {
     for (const z of [0, t]) expect(faceArea(mesh, z) / ((w - 2 * r) * (h - 2 * r))).toBeCloseTo(1, 2);
   });
 
+  it.each([
+    ['top', [0, 1]],
+    ['bottom', [1, 0]],
+  ] as const)('only the %s edge: that face shrunk by r, the other the whole outline', (edgeSides, [shrunkBottom, shrunkTop]) => {
+    const [w, h, t, r] = [100, 60, 3, 1.5];
+    const state = withPlate({ width: w, height: h, thickness: t, rounding: 0, edgeSize: r, edgeSides });
+    const mesh = inScope((scope) => buildPlate(csg, scope, state, { images: [], texts: [] }, 'export').mesh);
+    expect(closed(mesh)).toEqual(ok);
+    const area = (shrunk: number) => (w - 2 * r * shrunk) * (h - 2 * r * shrunk);
+    expect(faceArea(mesh, 0) / area(shrunkBottom)).toBeCloseTo(1, 2);
+    expect(faceArea(mesh, t) / area(shrunkTop)).toBeCloseTo(1, 2);
+    expect(report(mesh).bbox.max[2]).toBeCloseTo(t, 6);
+  });
+
   it('rounds the rim’s top with a preview’s few terraces too', () => {
     const state = withPlate({ width: 100, height: 60, thickness: 3, rounding: 4, rim: true, rimWidth: 3, rimHeight: 1, edgeSize: 2 });
     const mesh = inScope((scope) => buildMesh(csg, scope, state));

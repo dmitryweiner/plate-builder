@@ -361,8 +361,15 @@ describe('plate card', () => {
     $('#plate-rim', HTMLInputElement).click();
     expect($('#plate-edgeSize', HTMLInputElement).max).toBe('2');
     expect(row('#plate-edgeProfile')?.hasAttribute('hidden')).toBe(true);
+    expect(row('#plate-edgeSides')?.hasAttribute('hidden')).toBe(true);
     setInput('#plate-edgeSize-n', '1');
     expect(row('#plate-edgeProfile')?.hasAttribute('hidden')).toBe(false);
+    expect(row('#plate-edgeSides')?.hasAttribute('hidden')).toBe(false);
+    expect([...$('#plate-edgeSides', HTMLSelectElement).options].map((o) => [o.value, o.text])).toEqual([
+      ['both', 'Top and bottom'],
+      ['top', 'Top only'],
+      ['bottom', 'Bottom only'],
+    ]);
     expect([...$('#plate-edgeProfile', HTMLSelectElement).options].map((o) => [o.value, o.text])).toEqual([
       ['fillet', 'Rounded'],
       ['chamfer', 'Chamfer 45°'],
@@ -372,7 +379,14 @@ describe('plate card', () => {
     profile.dispatchEvent(new Event('change'));
     timers.flush();
     expect(csg.last().job).toMatchObject({ state: { plate: { edgeSize: 1, edgeProfile: 'chamfer' } } });
+    const sides = $('#plate-edgeSides', HTMLSelectElement);
+    sides.value = 'top';
+    sides.dispatchEvent(new Event('change'));
+    timers.flush();
+    expect(csg.last().job).toMatchObject({ state: { plate: { edgeSize: 1, edgeProfile: 'chamfer', edgeSides: 'top' } } });
     // each change is one step back
+    $('#undo', HTMLButtonElement).click();
+    expect(sides.value).toBe('both');
     $('#undo', HTMLButtonElement).click();
     expect(profile.value).toBe('fillet');
     $('#undo', HTMLButtonElement).click();

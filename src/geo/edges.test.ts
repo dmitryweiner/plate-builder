@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { EDGE_JITTER, EDGE_MIN_GAP, EDGE_STEP, edgeInset, edgeLevels, edgeSlabs } from './edges';
+import { EDGE_JITTER, EDGE_MIN_GAP, EDGE_STEP, edgeInset, edgeLevels, edgeOn, edgeSlabs } from './edges';
 import { defaultPlate, type Plate } from './state';
 
 const plate = (over: Partial<Plate>): Plate => ({ ...defaultPlate(), ...over });
@@ -70,6 +70,19 @@ describe('edgeLevels', () => {
   });
 });
 
+describe('edgeOn', () => {
+  it('is the size on a rounded face, 0 on a sharp one', () => {
+    expect([edgeOn(plate({ edgeSize: 1 }), 'top'), edgeOn(plate({ edgeSize: 1 }), 'bottom')]).toEqual([1, 1]);
+    expect([edgeOn(plate({ edgeSize: 1, edgeSides: 'top' }), 'top'), edgeOn(plate({ edgeSize: 1, edgeSides: 'top' }), 'bottom')]).toEqual([
+      1, 0,
+    ]);
+    expect([
+      edgeOn(plate({ edgeSize: 1, edgeSides: 'bottom' }), 'top'),
+      edgeOn(plate({ edgeSize: 1, edgeSides: 'bottom' }), 'bottom'),
+    ]).toEqual([0, 1]);
+  });
+});
+
 describe('edgeSlabs', () => {
   it('has none for a sharp plate', () => {
     expect(edgeSlabs(plate({ edgeSize: 0 }), EDGE_STEP.export, 5)).toEqual([]);
@@ -126,6 +139,25 @@ describe('edgeSlabs', () => {
     const slabs = edgeSlabs(plate({ thickness: 3, rim: true, rimHeight: 1, edgeSize: 1 }), EDGE_STEP.preview, 4);
     const middle = slabs[(slabs.length - 1) / 2];
     expect(middle.z0 + middle.z1).toBeCloseTo(4, 12);
+  });
+
+  it('stacks only the top edge on a wall from the back face, or only the bottom edge under a wall to the top', () => {
+    const both = edgeSlabs(plate({ thickness: 3, edgeSize: 1.5 }), EDGE_STEP.preview, 5.5);
+    const n = (both.length + 1) / 2;
+    const top = edgeSlabs(plate({ thickness: 3, edgeSize: 1.5, edgeSides: 'top' }), EDGE_STEP.preview, 5.5);
+    expect(top).toEqual([{ ...both[n - 1], z0: 0 }, ...both.slice(n)]);
+    const bottom = edgeSlabs(plate({ thickness: 3, edgeSize: 1.5, edgeSides: 'bottom' }), EDGE_STEP.preview, 5.5);
+    expect(bottom).toEqual([...both.slice(0, n - 1), { ...both[n - 1], z1: 5.5 }]);
+    // the back face, or the top, is the outline itself
+    expect(top[0].inset).toBe(0);
+    expect(bottom.at(-1)?.inset).toBe(0);
+  });
+
+  it('one edge at the largest size never meets the other face', () => {
+    const slabs = edgeSlabs(plate({ thickness: 3, edgeSize: 1.5, edgeProfile: 'chamfer', edgeSides: 'top' }), EDGE_STEP.export, 3);
+    expect(slabs).toHaveLength(23);
+    expect(slabs[0]).toMatchObject({ inset: 0, z0: 0 });
+    expect(slabs[0].z1).toBeCloseTo(1.5, 2);
   });
 
   it('keeps its levels off the plate’s own planes', () => {

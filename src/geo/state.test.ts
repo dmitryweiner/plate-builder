@@ -5,6 +5,7 @@ import {
   defaultState,
   defaultText,
   EDGE_PROFILES,
+  EDGE_SIDES,
   FONT_IDS,
   HOLE_KINDS,
   LIMITS,
@@ -25,7 +26,7 @@ function fullState(): PlateState {
   const state = defaultState();
   return {
     ...state,
-    plate: { ...state.plate, edgeSize: 1, edgeProfile: 'chamfer' },
+    plate: { ...state.plate, edgeSize: 1, edgeProfile: 'chamfer', edgeSides: 'top' },
     images: [{ ...defaultImage(state, PNG, 64, 32), id: 'i1' }],
     texts: [{ ...defaultText(state), id: 't1' }],
     holes: [
@@ -62,6 +63,7 @@ function expectValid(state: PlateState): void {
   inRange(p.padding, RANGES.padding);
   inRange(p.edgeSize, { min: 0, max: wallHeight(p) / 2 });
   expect(EDGE_PROFILES).toContain(p.edgeProfile);
+  expect(EDGE_SIDES).toContain(p.edgeSides);
   expect(state.images.length).toBeLessThanOrEqual(LIMITS.images);
   expect(state.texts.length).toBeLessThanOrEqual(LIMITS.texts);
   expect(state.holes.length).toBeLessThanOrEqual(LIMITS.holes);
@@ -256,6 +258,7 @@ describe('edges', () => {
   it('are sharp by default, a fillet when made', () => {
     expect(defaultState().plate.edgeSize).toBe(0);
     expect(defaultState().plate.edgeProfile).toBe('fillet');
+    expect(defaultState().plate.edgeSides).toBe('both');
   });
 
   it('stand on a wall of T, plus the rim or the frame of a vignette or own SVG, the higher', () => {
@@ -276,6 +279,12 @@ describe('edges', () => {
     expect(sanitizedPlate({ thickness: 3, edgeSize: -1 }).edgeSize).toBe(0);
   });
 
+  it('are on both faces for unknown sides', () => {
+    expect(sanitizedPlate({ edgeSides: 'left' }).edgeSides).toBe('both');
+    expect(sanitizedPlate({ edgeSides: 'top' }).edgeSides).toBe('top');
+    expect(sanitizedPlate({ edgeSides: 'bottom' }).edgeSides).toBe('bottom');
+  });
+
   it('take a fillet for an unknown profile', () => {
     expect(sanitizedPlate({ edgeProfile: 'bevel' }).edgeProfile).toBe('fillet');
     expect(sanitizedPlate({ edgeProfile: 'chamfer' }).edgeProfile).toBe('chamfer');
@@ -286,8 +295,9 @@ describe('edges', () => {
     const plate: Record<string, unknown> = { ...old.plate };
     delete plate.edgeSize;
     delete plate.edgeProfile;
+    delete plate.edgeSides;
     const read = sanitizeState({ ...old, plate });
-    expect(read.plate).toEqual({ ...old.plate, edgeSize: 0, edgeProfile: 'fillet' });
+    expect(read.plate).toEqual({ ...old.plate, edgeSize: 0, edgeProfile: 'fillet', edgeSides: 'both' });
     expect(read.holes).toEqual(old.holes);
   });
 });

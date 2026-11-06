@@ -107,8 +107,7 @@ ring's vertex count and topology (thin parts vanish, islands split).
 
 ## Not in this work
 
-- Different sizes or profiles for the top and the bottom edge, or only one
-  of them.
+- Different sizes or profiles for the top and the bottom edge.
 - Rounded edges of holes, of the rim's inner side, of a frame's windows,
   of texts.
 - Different sizes along the outline.
@@ -191,3 +190,13 @@ ring's vertex count and topology (thin parts vanish, islands split).
   node scripts/snap.mjs --out docs/images/door-sign-edges.png --preset door-sign --swap --camera iso --panel '#plate-edgeSize' \
     --eval "const n = document.querySelector('#plate-edgeSize-n'); n.value = '1.5'; n.dispatchEvent(new Event('change')); const p = document.querySelector('#plate-edgeProfile'); p.value = 'chamfer'; p.dispatchEvent(new Event('change'));"
   ```
+
+- **One edge or both** (asked for in review, 2026-11-06; the table's
+  "always both" no longer holds): `plate.edgeSides`, `'both' | 'top' |
+'bottom'`, default `'both'`; the select "Edges" ("Рёбра": "Сверху и
+  снизу" / "Только сверху" / "Только снизу") after the profile, shown when
+  the size is above 0. A sharp face's wall goes straight up to it (or down
+  to it) in `edgeSlabs`. `edgeOn(plate, face)` gives the size on one face:
+  the magnets keep their edge from the bottom one, `text.onEdge` looks at
+  the top one. The size keeps its cap at half the wall either way. Saves
+  and files without the field open with both edges, so no `VERSION` bump.
