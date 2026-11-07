@@ -110,7 +110,9 @@ function maskSection(csg: CsgApi, scope: CsgScope, mask: TextRaster): CrossSecti
 /**
  * The crop outline (spec §2.4): the elements' masks unioned, grown by the
  * padding with round joins, their holes filled (outer contours only), then
- * corner rounding.
+ * corner rounding. The holes are filled before the padding too: the result
+ * is the same, and a JPEG's noise around the threshold is thousands of
+ * them, seconds of round joins.
  */
 function cropOutline(csg: CsgApi, scope: CsgScope, state: PlateState, rasters: Rasters): { section: CrossSection; warnings: Warning[] } {
   const masks: CrossSection[] = [];
@@ -125,7 +127,8 @@ function cropOutline(csg: CsgApi, scope: CsgScope, state: PlateState, rasters: R
     if (made) masks.push(made.section);
   });
   if (masks.length === 0) return emptyOutline(csg, scope);
-  const union = scope.keep(csg.CrossSection.union(masks));
+  const union = fillHoles(csg, scope, scope.keep(csg.CrossSection.union(masks)));
+  if (!union) return emptyOutline(csg, scope);
   const { padding } = state.plate;
   const padded = padding > 0 ? scope.keep(union.offset(padding, 'Round', 2, segmentsFor(padding))) : union;
   const filled = fillHoles(csg, scope, padded);
@@ -183,11 +186,22 @@ export const IMAGE_EPS = 0.01;
 
 export type Quality = 'preview' | 'export';
 
-/** The grid step of an image (spec §8.4): 0.5 mm for a preview; for an export its pixel size, within 0.1…0.2 mm. */
+/** A preview's cells per image: a 100 mm square at 0.5 mm, what one cost before the step followed the size. */
+export const PREVIEW_CELLS = 40_000;
+
+/**
+ * The grid step of an image (spec §8.4): for an export its pixel size,
+ * within 0.1…0.2 mm; for a preview PREVIEW_CELLS cells over the picture,
+ * no coarser than 0.5 mm and no finer than the export. A fixed 0.5 mm
+ * turned a small picture's thin strokes into grain.
+ */
 export function gridStep(image: Pick<ImageElement, 'size' | 'pixelWidth' | 'pixelHeight'>, quality: Quality): number {
-  if (quality === 'preview') return 0.5;
-  const pixel = image.size / Math.max(image.pixelWidth, image.pixelHeight);
-  return Math.max(0.1, Math.min(pixel, 0.2));
+  const long = Math.max(image.pixelWidth, image.pixelHeight);
+  const pixel = image.size / long;
+  const fine = Math.max(0.1, Math.min(pixel, 0.2));
+  if (quality === 'export') return fine;
+  const area = image.size * ((image.size * Math.min(image.pixelWidth, image.pixelHeight)) / long);
+  return Math.max(fine, Math.min(0.5, Math.sqrt(area / PREVIEW_CELLS)));
 }
 
 function meshSolid(csg: CsgApi, scope: CsgScope, mesh: { positions: Float32Array; indices: Uint32Array }, what = 'a relief'): Manifold {

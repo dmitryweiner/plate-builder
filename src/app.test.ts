@@ -2,7 +2,7 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { startApp, PREVIEW_DELAY_MS, type AppOptions, type Timers } from './app';
+import { startApp, PREVIEW_DELAY_MS, PROGRESS_DELAY_MS, type AppOptions, type Timers } from './app';
 import { LOCALE_NAMES, LOCALES } from './i18n';
 import type { CameraPreset, SceneHandle, ViewMesh } from './render/view';
 import { DEFAULT_SETTINGS, loadSettings, saveSettings, type KeyValueStorage } from './storage';
@@ -88,6 +88,14 @@ class ManualTimers implements Timers {
     const due = [...this.pending.values()];
     this.pending.clear();
     for (const { fn } of due) fn();
+  }
+  /** Runs only the timers set for `ms`. */
+  run(ms: number) {
+    for (const [id, timer] of this.pending) {
+      if (timer.ms !== ms) continue;
+      this.pending.delete(id);
+      timer.fn();
+    }
   }
 }
 
@@ -1017,13 +1025,36 @@ describe('export card and warnings', () => {
     expect(item.querySelector('button')).toBeNull();
   });
 
-  it('shows a progress bar while a build or an export runs', async () => {
+  it('shows a bar over the 3D view once a build or an outline has run a while, never for a quick one', async () => {
     start();
-    timers.flush();
-    expect($('#buildProgress', HTMLElement).hidden).toBe(false);
+    const bar = $('#buildProgress', HTMLElement);
+    const answerOutlines = async () => {
+      for (const job of outlineJobs()) job.settle(null);
+      await settle();
+    };
+    await answerOutlines();
+    // the first preview, at once
+    timers.run(0);
+    expect(bar.hidden).toBe(true);
+    timers.run(PROGRESS_DELAY_MS);
+    expect(bar.hidden).toBe(false);
     csg.last().settle({ result: meshResult(), ms: 1 });
     await settle();
-    expect($('#buildProgress', HTMLElement).hidden).toBe(true);
+    expect(bar.hidden).toBe(true);
+    // a quick build ends before the delay: nothing is left to show the bar
+    setInput('#plate-width', '120');
+    await answerOutlines();
+    timers.run(PREVIEW_DELAY_MS);
+    csg.last().settle({ result: meshResult(), ms: 1 });
+    await settle();
+    timers.run(PROGRESS_DELAY_MS);
+    expect(bar.hidden).toBe(true);
+    // the outline (a crop's new edges) alone, before its preview starts
+    setInput('#plate-width', '130');
+    timers.run(PROGRESS_DELAY_MS);
+    expect(bar.hidden).toBe(false);
+    await answerOutlines();
+    expect(bar.hidden).toBe(true);
     $('#downloadStl', HTMLButtonElement).click();
     expect($('#exportProgress', HTMLElement).hidden).toBe(false);
   });

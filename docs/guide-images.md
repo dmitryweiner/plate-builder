@@ -29,4 +29,9 @@ engraved image is not in this version.
 
 A picture of 512 pixels on a 150 mm plate is 0.3 mm per pixel — finer than a
 0.4 mm nozzle prints. Exports use a grid of the picture's pixel size (0.1 to
-0.2 mm); the preview a coarser 0.5 mm grid.
+0.2 mm); the preview a coarser one, of up to 0.5 mm on a big picture.
+
+Fine line art wants room: a stroke of a few pixels on a 35 mm picture is
+0.3 mm wide, thinner than the nozzle, and prints as a blur whatever the
+STL. Make such a picture larger, or thicken its lines with a little
+smoothing and a lower white point.

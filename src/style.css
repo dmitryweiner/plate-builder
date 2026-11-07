@@ -741,6 +741,10 @@ footer a {
   .sheet-open {
     display: none;
   }
+  /* just above the status */
+  .view-progress {
+    inset-block-end: 32px;
+  }
   /* a pointer, not a finger: Case Constructor's density */
   select {
     min-block-size: 30px;
@@ -869,11 +873,33 @@ footer a {
 .progress[hidden] {
   display: none;
 }
+/* Case Constructor's bar over the view: a running stripe, there being no share done to show */
 .view-progress {
   position: absolute;
-  inset-block-start: 0;
-  inset-inline: 0;
-  margin: 0;
+  inset-inline: 12px;
+  /* above the settings button of a phone */
+  inset-block-end: 64px;
+  block-size: 6px;
+  border-radius: 3px;
+  background: rgb(148 160 173 / 25%);
+  overflow: hidden;
+  pointer-events: none;
+}
+.view-progress > div {
+  position: absolute;
+  inset-block: 0;
+  inline-size: 30%;
+  border-radius: inherit;
+  background: var(--accent);
+  animation: progress-run 1.1s ease-in-out infinite;
+}
+@keyframes progress-run {
+  from {
+    inset-inline-start: -30%;
+  }
+  to {
+    inset-inline-start: 100%;
+  }
 }
 .card h3 {
   margin-block: 12px 4px;

@@ -379,8 +379,9 @@ Interaction (pointer events, so mouse, pen and touch alike):
 
 Three.js, orbit controls, the plate lying on a grid, a light from above at
 a low angle so a 0.2 mm relief is readable. The mesh is the worker's
-preview build (§8.4). While a build runs, the previous mesh stays with a
-thin progress bar. Camera presets: front, iso, back (to check keyholes).
+preview build (§8.4). While a build or an outline job runs, the previous
+mesh stays, and once the job has run 300 ms a bar at the bottom of the view
+shows a running stripe (a quick build never flickers it). Camera presets: front, iso, back (to check keyholes).
 
 ## 8. Architecture
 
@@ -441,8 +442,11 @@ replaced by a fresher one; a running one cannot be stopped):
 | `outline` | on every change of the plate or of an element that shapes the crop | outline polygons, rim and frame contours, island count |
 | `mesh`    | 250 ms after the last change (preview) / on Export (full)          | mesh, warnings, check result, timings                  |
 
-The image grid step: **preview** 0.5 mm, **export** the smaller of the
-image's pixel size and 0.2 mm, never below 0.1 mm. Flat runs of the grid
+The image grid step: **export** the smaller of the image's pixel size and
+0.2 mm, never below 0.1 mm; **preview** 40 000 cells over the picture (a
+100 mm square at 0.5 mm), never coarser than 0.5 mm nor finer than the
+export's step — a fixed 0.5 mm turned a small picture's thin strokes into
+grain. Flat runs of the grid
 (h = 0 and equal heights) are merged before meshing where it does not
 break the manifold. An export job is never evicted by previews.
 

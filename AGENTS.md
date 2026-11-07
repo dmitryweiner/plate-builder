@@ -76,9 +76,10 @@ Measured on an M1 Mac, Chromium, worker time (`ms` of the job), with
 | preview with four holes, one of each kind (100 × 60 × 6, 1300 triangles)                   | ~15 ms                                                  |
 | one raised text "PLATE BUILDER" on an arc, 8 mm (7.8k triangles) — preview                 | ~60 ms                                                  |
 | crop around a 36 mm picture and a text, padding 3, with its outline job                    | ~200 ms                                                 |
-| **reference plate** (spec §8.4: 100 × 60, a 512 px image, two texts) — preview             | 150 ms (target 500)                                     |
-| the same — export                                                                          | 2.1 s (target 5)                                        |
-| 100 × 60 plate, one 512 px image of 55 mm — preview (0.5 mm grid, 25k triangles)           | 120 ms                                                  |
+| crop around a 37 mm line-art JPEG (threshold 10 %, its dark background's noise) — preview  | 360 ms (7 s before the mask's holes were filled first)  |
+| **reference plate** (spec §8.4: 100 × 60, a 512 px image, two texts) — preview             | 380 ms (target 500)                                     |
+| the same — export                                                                          | 1.9 s (target 5)                                        |
+| 100 × 60 plate, one 512 px image of 55 mm — preview (0.275 mm grid, 81k triangles)         | 300 ms                                                  |
 | the same — export (0.107 mm grid, the pixel size; ~530k triangles)                         | 1.6 s                                                   |
 | 300 × 300 plate, one 512 px image of 290 mm — preview (675k triangles)                     | 2.0 s                                                   |
 | the same — export (0.2 mm grid, ~4.2M triangles)                                           | 14.5 s                                                  |

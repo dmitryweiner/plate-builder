@@ -45,6 +45,8 @@ import type { Job, JobResult, MeshResult } from './worker/protocol';
 
 /** The pause after the last edit before a preview is built (spec §8.4). */
 export const PREVIEW_DELAY_MS = 250;
+/** A build or an outline runs this long before the bar over the 3D view shows: a quick one would only flicker it. */
+export const PROGRESS_DELAY_MS = 300;
 /** The pause after the last edit before the project is saved to the browser's storage. */
 export const SAVE_DELAY_MS = 1000;
 /** Arrow keys move the selected element this far, mm; with Shift ten times as far (spec §7.3). */
@@ -219,7 +221,7 @@ export function startApp({
   const presetsClose = el('presetsClose', HTMLButtonElement);
   const savePresetButton = el('savePreset', HTMLButtonElement);
   const newPlateButton = el('newPlate', HTMLButtonElement);
-  const buildProgress = el('buildProgress', HTMLProgressElement);
+  const buildProgress = el('buildProgress', HTMLElement);
   const printHints = el('printHints', HTMLElement);
   const undoButton = el('undo', HTMLButtonElement);
   const redoButton = el('redo', HTMLButtonElement);
@@ -264,6 +266,9 @@ export function startApp({
   let build: Build = { state: 'idle' };
   let exporting: Exporting = { state: 'idle' };
   let previewTimer: number | null = null;
+  /** outline jobs not answered yet: a crop's new edges take a while too */
+  let outlinesRunning = 0;
+  let progressTimer: number | null = null;
   let stopped = false;
   let plateCard: ControlsHandle<PlateState> | null = null;
   let magnetCard: ControlsHandle<PlateState> | null = null;
@@ -484,7 +489,16 @@ export function startApp({
     downloadButton.disabled = exporting.state === 'building' || problems.length > 0;
 
     // manifold says nothing from inside a boolean: the bars run until the job is done
-    buildProgress.hidden = build.state !== 'building';
+    if (build.state !== 'building' && outlinesRunning === 0) {
+      if (progressTimer !== null) timers.clear(progressTimer);
+      progressTimer = null;
+      buildProgress.hidden = true;
+    } else if (buildProgress.hidden && progressTimer === null) {
+      progressTimer = timers.set(() => {
+        progressTimer = null;
+        buildProgress.hidden = false;
+      }, PROGRESS_DELAY_MS);
+    }
     exportProgress.hidden = exporting.state !== 'building';
     if (exporting.state === 'building') exportStatus.textContent = m.exporting;
     else if (exporting.state === 'saved') exportStatus.textContent = m.exported(exporting.name, exporting.ms);
@@ -808,6 +822,8 @@ export function startApp({
     }
     const crop = s.plate.kind === 'crop';
     const followed = crop || pictured(s.plate);
+    outlinesRunning++;
+    renderStatus();
     csg
       .run({
         kind: 'outline',
@@ -825,7 +841,11 @@ export function startApp({
         },
         // a failed outline leaves the instant one; the mesh job reports the failure
         () => {},
-      );
+      )
+      .finally(() => {
+        outlinesRunning--;
+        if (!stopped) renderStatus();
+      });
   };
 
   function update(next: PlateState, final: boolean) {
@@ -1073,6 +1093,7 @@ export function startApp({
   return () => {
     stopped = true;
     if (previewTimer !== null) timers.clear(previewTimer);
+    if (progressTimer !== null) timers.clear(progressTimer);
     localeSelect.removeEventListener('change', onLocale);
     downloadButton.removeEventListener('click', onExport);
     views.removeEventListener('click', onViews);

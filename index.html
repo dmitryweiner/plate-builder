@@ -101,7 +101,9 @@
             <button type="button" data-camera="iso" data-i18n="cameraIso">Angle</button>
             <button type="button" data-camera="back" data-i18n="cameraBack">Back</button>
           </div>
-          <progress id="buildProgress" class="progress view-progress" hidden></progress>
+          <div id="buildProgress" class="view-progress" role="progressbar" aria-label="Building…" data-i18n-label="building" hidden>
+            <div></div>
+          </div>
           <output id="status" class="status" aria-live="polite"></output>
         </div>
         <button id="sheetOpen" type="button" class="sheet-open" data-i18n="showPanel" hidden>Settings</button>

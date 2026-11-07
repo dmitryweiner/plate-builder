@@ -363,7 +363,8 @@ try {
       ]) {
         await setNumber(page, 'plate-width', w);
         await setNumber(page, 'plate-height', h);
-        await page.click('.element-name');
+        // a click on the open card's name would fold it
+        if (!(await page.locator('#element-size-n').isVisible())) await page.click('.element-name');
         await setNumber(page, 'element-size', size);
         const result = await built(page, info);
         info = result.info;
@@ -378,7 +379,7 @@ try {
       let { info } = await built(page);
       await page.setInputFiles('#imageFile', await testPicture(page, 'jpeg'));
       ({ info } = await built(page, info));
-      await page.click('.element-name');
+      if (!(await page.locator('#element-size-n').isVisible())) await page.click('.element-name');
       await setNumber(page, 'element-size', 50);
       for (const y of [22, -22]) {
         await page.click('#addText');

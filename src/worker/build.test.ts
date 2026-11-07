@@ -26,6 +26,7 @@ import {
   IMAGE_EPS,
   outlineRings,
   plateOutline,
+  PREVIEW_CELLS,
   stateOutline,
   type PlateMesh,
   type Rasters,
@@ -276,12 +277,21 @@ describe('images', () => {
 });
 
 describe('gridStep', () => {
-  it('is 0.5 mm for a preview and the pixel size for an export, within 0.1…0.2 mm', () => {
+  it('is the pixel size for an export, within 0.1…0.2 mm', () => {
     const image = { ...defaultImage(defaultState(), 'data:image/png;base64,', 512, 256), size: 60 };
-    expect(gridStep(image, 'preview')).toBe(0.5);
     expect(gridStep(image, 'export')).toBeCloseTo(60 / 512);
     expect(gridStep({ ...image, size: 300 }, 'export')).toBe(0.2);
     expect(gridStep({ ...image, size: 20 }, 'export')).toBe(0.1);
+  });
+
+  it('gives a preview PREVIEW_CELLS cells, no coarser than 0.5 mm and no finer than the export', () => {
+    const image = { ...defaultImage(defaultState(), 'data:image/png;base64,', 512, 256), size: 60 };
+    // 60 × 30 mm
+    expect(gridStep(image, 'preview')).toBeCloseTo(Math.sqrt((60 * 30) / PREVIEW_CELLS));
+    expect(gridStep({ ...image, size: 300 }, 'preview')).toBe(0.5);
+    expect(gridStep({ ...image, size: 20 }, 'preview')).toBe(gridStep({ ...image, size: 20 }, 'export'));
+    // a 100 mm square at 0.5 mm, the most a preview took before
+    expect(gridStep({ ...image, size: 100, pixelHeight: 512 }, 'preview')).toBe(0.5);
   });
 });
 
@@ -427,6 +437,29 @@ describe('crop outline', () => {
     const { rings, area } = cropped(cropState([{ threshold: 50 }], { padding: 0 }), { images: [discRaster(64, 24, 12)], texts: [] });
     expect(rings).toHaveLength(1);
     expect(Math.abs(area / (Math.PI * 12 * 12) - 1)).toBeLessThan(0.02);
+  });
+
+  it('pads a mask full of pinholes, like a JPEG’s noise, as fast as a solid one', () => {
+    // 512 px over 32 mm: a 200 px disc is 12.5 mm; a 2 px pinhole every 6 px, some 3500 of them
+    const raster = discRaster(512, 200);
+    for (let j = 2; j < 512; j += 6)
+      for (let i = 2; i < 512; i += 6) for (const k of [0, 1, 512, 513]) raster.data[(j * 512 + i + k) * 2 + 1] = 0;
+    const state = cropState([{ threshold: 50, pixelWidth: 512, pixelHeight: 512 }]);
+    const start = performance.now();
+    const { rings, area } = cropped(state, { images: [raster], texts: [] });
+    // seconds when the holes were padded one by one, then filled
+    expect(performance.now() - start).toBeLessThan(1000);
+    expect(rings).toHaveLength(1);
+    expect(Math.abs(area / (Math.PI * 15.5 * 15.5) - 1)).toBeLessThan(0.01);
+  });
+
+  it('fills what the padding closes in: a C whose gap is narrower than twice the padding', () => {
+    // a ring of 24 px with a hole of 12 px, cut by a 4 px gap: 2 mm, closed by a 3 mm padding
+    const raster = discRaster(64, 24, 12);
+    for (let j = 0; j < 64; j++) for (let i = 32; i < 64; i++) if (Math.abs(j + 0.5 - 32) < 2) raster.data[(j * 64 + i) * 2 + 1] = 0;
+    const { rings, area } = cropped(cropState([{ threshold: 50 }]), { images: [raster], texts: [] });
+    expect(rings).toHaveLength(1);
+    expect(Math.abs(area / (Math.PI * 15 * 15) - 1)).toBeLessThan(0.01);
   });
 
   it('takes the mask above the threshold only', () => {
