@@ -20,7 +20,7 @@ const LOCALES = ['en', 'ru', 'uk', 'he'];
 
 const app = await launch();
 const failures = [];
-try {
+await app.run(async () => {
   const { page } = await app.open();
   for (const entry of index.vignettes) {
     const problems = [];
@@ -135,10 +135,4 @@ try {
     console.log(`sheet: ${resolve(dir, 'vignettes.png')}`);
   }
   check(failures.length === 0, `failed: ${failures.join(', ')}`);
-  check(app.errors.length === 0, `console errors:\n${app.errors.join('\n')}`);
-} catch (error) {
-  console.error(`FAIL ${error instanceof Error ? error.message : String(error)}`);
-  process.exitCode = 1;
-} finally {
-  await app.close();
-}
+}, 'vignettes checked');

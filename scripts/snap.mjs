@@ -20,7 +20,7 @@ const LOCALES = { en: 'en-US', ru: 'ru-RU', uk: 'uk-UA', he: 'he-IL' };
 const BLANK = { 'plate-builder': JSON.stringify({ version: 2, settings: { locale: null, project: {}, presets: [] } }) };
 
 const app = await launch({ preview: flags.has('preview') });
-try {
+await app.run(async () => {
   check(out, '--out <png> is required');
   const viewport = { width: Number(flags.get('width') ?? 1280), height: Number(flags.get('height') ?? 860) };
   const { page } = await app.open({ viewport, locale: LOCALES[flags.get('lang') ?? 'en'], storage: BLANK });
@@ -49,11 +49,4 @@ try {
   await settle();
   await page.waitForTimeout(400);
   await page.screenshot({ path: out });
-  check(app.errors.length === 0, `console errors:\n${app.errors.join('\n')}`);
-  console.log(out);
-} catch (error) {
-  console.error(`FAIL ${error instanceof Error ? error.message : String(error)}`);
-  process.exitCode = 1;
-} finally {
-  await app.close();
-}
+}, out);

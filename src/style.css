@@ -5,27 +5,15 @@
    only. A phone: the views fill the screen, the panel a bottom sheet over
    them; from 1024 px the panel on the start side, both views beside it. */
 
-/* The kit's palette with the emerald accent (`data-accent` in index.html).
-   Plate Builder keeps its density: 14 px text and 36 px controls on a phone
-   (the kit's are 16 px and 40 px), its 88 px row names on a desktop. */
+/* The kit's palette with the emerald accent (`data-accent` in index.html)
+   and its density: 16 px text and 40 px controls on a phone, 14 px and
+   28 px on a desktop. The app's own pieces follow its tokens. */
 :root {
-  --font-size: 14px;
-  --font-small: 12px;
-  --font-tiny: 12px;
-  --control-h: 36px;
-  --stepper: 36px;
-  --label-w: 88px;
   /* the 2D editor's canvas, read by editor2d.ts */
   --editor-bg: #181b20;
   --editor-grid: rgb(228 233 239 / 6%);
   --editor-plate: #3a424d;
   --editor-edge: #c9d1db;
-}
-@media (min-width: 1024px) {
-  :root {
-    --control-h: 28px;
-    --stepper: 22px;
-  }
 }
 
 /* a line under the top bar when something needs saying at once */
@@ -34,7 +22,7 @@
   padding: 6px 12px;
   border-block-end: 1px solid var(--bad);
   background: rgb(224 108 92 / 14%);
-  font-size: 12.5px;
+  font-size: var(--font-small);
 }
 
 /* a phone: the views fill the screen under the top bar, the sheet lies over them */
@@ -94,7 +82,7 @@
   border-radius: 6px;
   background: var(--overlay);
   color: var(--muted);
-  font-size: 12px;
+  font-size: var(--font-tiny);
 }
 .snap-toggle input {
   accent-color: var(--accent);
@@ -106,16 +94,12 @@
 .name-field {
   grid-column: 1 / -1;
   inline-size: 100%;
-  min-block-size: 36px;
+  min-block-size: var(--control-h);
   padding-inline: 8px;
   border: 1px solid var(--line);
   border-radius: 6px;
   background: var(--panel);
   color: var(--text);
-}
-
-.btn.primary {
-  min-block-size: 44px;
 }
 
 .element-list,
@@ -155,7 +139,7 @@
   align-items: center;
   gap: 6px;
   min-inline-size: 0;
-  min-block-size: 40px;
+  min-block-size: var(--control-h);
   padding-inline: 8px 4px;
   border: 0;
   background: none;
@@ -165,7 +149,7 @@
 }
 .element-caret {
   color: var(--muted);
-  font-size: 12px;
+  font-size: var(--font-tiny);
 }
 /* a closed card's caret points along the line: leftwards in RTL */
 [dir='rtl'] .element-caret {
@@ -185,7 +169,7 @@
   min-inline-size: 0;
   overflow: hidden;
   color: var(--muted);
-  font-size: 12px;
+  font-size: var(--font-tiny);
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -214,7 +198,7 @@
   gap: 8px;
   padding-block: 3px;
   color: var(--warn);
-  font-size: 12px;
+  font-size: var(--font-tiny);
 }
 .warning span {
   flex: 1;
@@ -223,17 +207,17 @@
   display: block;
   margin-block: 6px;
   color: var(--muted);
-  font-size: 12px;
+  font-size: var(--font-tiny);
 }
 .error {
   margin-block: 6px;
   color: var(--bad);
-  font-size: 12px;
+  font-size: var(--font-tiny);
 }
 footer {
   padding: 8px 2px;
   color: var(--muted);
-  font-size: 12px;
+  font-size: var(--font-tiny);
 }
 footer a {
   color: inherit;
@@ -268,15 +252,6 @@ footer a {
     position: absolute;
     inset-block-start: 8px;
     inset-inline-start: 8px;
-  }
-  .btn.primary {
-    min-block-size: 36px;
-  }
-  .tool-button {
-    min-block-size: 34px;
-  }
-  .element-name {
-    min-block-size: 32px;
   }
 }
 
@@ -332,7 +307,7 @@ footer a {
 }
 .card h3 {
   margin-block: 12px 4px;
-  font-size: 12px;
+  font-size: var(--font-tiny);
   font-weight: 600;
   color: var(--muted);
 }
@@ -340,5 +315,5 @@ footer a {
   margin: 0;
   padding-inline-start: 18px;
   color: var(--muted);
-  font-size: 12px;
+  font-size: var(--font-tiny);
 }

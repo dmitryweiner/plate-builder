@@ -176,7 +176,9 @@ browser (service worker, layout, workers) → a step in `scripts/smoke.mjs`.
   `src/pwa.ts` — its registration.
 - `src/style.css` — Plate Builder's own rules over maker-kit's `kit.css`
   (imported first in `main.ts`; the kit's rules are in `@layer kit`, so
-  these win): the two views, element rows, vignettes, its density tokens.
+  these win): the two views, element rows, vignettes. The density is the
+  kit's (16 px text and 40 px controls on a phone, 14 px and 28 px on a
+  desktop); the app's own pieces follow its tokens.
   The palette is the kit's with `data-accent="emerald"` (`--panel` of the
   kit's `tokens.css` is the theme colour, a test keeps `index.html` and the
   manifest equal to it).
@@ -194,7 +196,9 @@ browser (service worker, layout, workers) → a step in `scripts/smoke.mjs`.
   `--eval`); the docs' pictures come from it.
 - `scripts/preset-pictures.mjs` — draws the built-in presets' pictures (a
   star, a logo, an apple) into `src/state/presetPictures.ts`.
-- `scripts/lib/harness.mjs` — flags, vite on 5373/4373, console errors.
+- `scripts/lib/harness.mjs` — maker-kit's harness (`maker-kit/harness`: flags,
+  the vite server, console errors, `app.step` / `app.run`, downloads, STL
+  checks, throttling) on Plate Builder's ports, 5373/4373.
 - `scripts/icons.mjs` — PWA icons from `public/icon.svg`.
 - `scripts/vignettes.mjs` — the vignette catalog: `--check` (one piece with
   a window, the index complete, licences allowed), `--sheet <dir>` (a
