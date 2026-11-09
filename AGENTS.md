@@ -147,12 +147,16 @@ browser (service worker, layout, workers) → a step in `scripts/smoke.mjs`.
   only), `scene.ts` (Three.js; checked by the smoke, not vitest).
 - `src/ui/` — `plateCard.ts`, `magnetsCard.ts`, `selectedCard.ts` (the cards' rows for maker-kit's `ui/controls`: ids
   `<prefix>_<key>`, `_n`, `_dec`, `_inc`), `elementsCard.ts` (the element groups: a foldable card
-  per element, the selected one open), `presetList.ts` (the presets
-  dialog's list), `warningsCard.ts`,
+  per element, the selected one open), `warningsCard.ts`,
   `imageImport.ts` (files → grayscale + alpha PNG, decoding, height
-  pictures), `sheet.ts` (the panel as a bottom sheet on a phone), `fonts.ts` (bundled fonts, loaded on first use),
+  pictures), `fonts.ts` (bundled fonts, loaded on first use),
   `textRaster.ts` (a text block drawn at 10 px/mm), `svgRaster.ts`
-  (vignette catalog schema, SVG silhouettes, own SVG files), `dom.ts`.
+  (vignette catalog schema, SVG silhouettes, own SVG files), `dom.ts`
+  (`scrollIntoContainer`). The rest of the page is maker-kit's: the
+  sheet, the bar over the 3D view (`ui/progress`), the storage banner, the
+  presets dialog (`ui/modal`) and its list, ↶ ↷ and their keys
+  (`ui/historyKeys`; the app's own keys wait while a dialog is open), the
+  language picker, downloads (`ui/files`).
 - `public/fonts/` — woff2 subsets with their OFL licences.
 - `public/vignettes/` — the catalog: `index.json` (id, names in four
   languages, source, author, licence) and one `<id>.svg` each.

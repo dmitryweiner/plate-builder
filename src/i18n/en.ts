@@ -8,7 +8,6 @@ export const en = {
   ...kitEn,
   title: 'Plate Builder',
   description: 'Design a flat plate — a sign, a keychain, a tag — and download it as STL for 3D printing.',
-  languageLabel: 'Language',
   source: 'Source code',
   mm: 'mm',
 
@@ -158,9 +157,6 @@ export const en = {
   presetsHeading: 'Presets',
   close: 'Close',
   savePreset: 'Save as preset',
-  presetChanged: 'changed',
-  openPreset: 'Open',
-  presetName: 'Preset name',
   'preset.blank.name': 'New plate',
   'preset.door-sign.name': 'Door sign',
   'preset.keychain.name': 'Keychain',
@@ -169,7 +165,6 @@ export const en = {
   'preset.medal.name': 'Medal',
   'preset.name-plate.name': 'Name plate with a logo',
   'preset.fridge-magnet.name': 'Fridge magnet',
-  storageRefused: 'This browser does not keep the project (its storage is full or private). Save the project file to keep it.',
 
   warningsCard: 'Warnings',
   show: 'Show',

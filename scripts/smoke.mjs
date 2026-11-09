@@ -182,7 +182,7 @@ try {
     let { info } = await built(page);
     // the keychain: much wider than high, in a view much higher than wide
     await page.click('#presetsOpen');
-    await page.click('.preset-row[data-id="keychain"] button');
+    await page.click('.preset-row[data-ref="b:keychain"] .preset-pick');
     ({ info } = await built(page, info));
     await page.click('#sheetClose');
     await page.click('.view-tabs [data-show="3d"]');
@@ -692,17 +692,17 @@ try {
     // the presets live in a dialog of the top bar; a pick closes it
     await page.click('#presetsOpen');
     if (shots) await page.screenshot({ path: 'shots/presets-dialog.png' });
-    await page.click('.preset-row[data-id="medal"] button');
+    await page.click('.preset-row[data-ref="b:medal"] .preset-pick');
     check(await page.locator('#presets').isHidden(), 'the presets dialog stayed open after a pick');
     info = await builtAs(page, '60 × 60');
     await page.setInputFiles('#projectFile', path);
     info = await builtAs(page, '170 × 60');
     // a user preset
     await page.click('#savePreset');
-    check((await page.locator('.preset-row[data-id="u1"]').count()) === 1, 'the user preset is not listed');
+    check((await page.locator('.preset-row[data-ref="u:u1"]').count()) === 1, 'the user preset is not listed');
     for (const id of ['keychain', 'pet-tag', 'house-number', 'name-plate']) {
       await page.click('#presetsOpen');
-      await page.click(`.preset-row[data-id="${id}"] button`);
+      await page.click(`.preset-row[data-ref="b:${id}"] .preset-pick`);
       ({ info } = await built(page, info));
       check(await page.locator('#meshBlocked').isHidden(), `${id}: the mesh is blocked`);
       const warned = await page.locator('#warningList li').evaluateAll((items) => items.map((li) => li.dataset.code));
@@ -728,6 +728,8 @@ try {
     await setNumber(page, 'plate_width', 120);
     ({ info } = await built(page, info));
     await page.waitForFunction(() => !document.querySelector('#storageBanner')?.hidden, null, { timeout: 5000 });
+    const note = await page.locator('#storageBanner').textContent();
+    check(note?.includes('storage is full'), `the banner does not say the storage is full: ${note}`);
     await context.close();
   });
 
@@ -763,7 +765,7 @@ try {
     }
     const { page, context } = await app.open({ locale: 'ru-RU' });
     for (const lang of ['uk', 'he', 'en']) {
-      await page.selectOption('#locale', lang);
+      await page.selectOption('.lang-field select', lang);
       await page.reload();
       check((await page.locator('html').getAttribute('lang')) === lang, `the switch to ${lang} was lost on reload`);
     }
@@ -822,7 +824,7 @@ try {
   await step('Hebrew turns the page right-to-left', async () => {
     const { page, context } = await app.open({ locale: 'he-IL' });
     check((await page.locator('html').getAttribute('dir')) === 'rtl', 'he-IL browser did not get dir=rtl');
-    const select = await page.locator('#locale').boundingBox();
+    const select = await page.locator('.lang-field select').boundingBox();
     check(select !== null && select.x < VIEWPORTS.desktop.width / 2, 'the language switcher did not move to the left');
     // an element's card mirrors too: its name on the right, delete on the left
     await page.click('#addText');

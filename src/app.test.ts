@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
+import { modalOpen } from 'maker-kit/ui/modal';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { startApp, PREVIEW_DELAY_MS, PROGRESS_DELAY_MS, type AppOptions, type Timers } from './app';
 import { LOCALE_NAMES, LOCALES, messages, staticText } from './i18n';
@@ -23,7 +24,7 @@ function $<T extends Element>(selector: string, type: abstract new () => T): T {
 }
 const text = (selector: string) => $(selector, HTMLElement).textContent;
 function selectLocale(locale: string) {
-  const select = $('#locale', HTMLSelectElement);
+  const select = $('.lang-field select', HTMLSelectElement);
   select.value = locale;
   select.dispatchEvent(new Event('change'));
 }
@@ -204,7 +205,7 @@ function start(languages: readonly string[] = ['en-US'], over: Partial<AppOption
     languages,
     csg,
     createScene: () => scene,
-    download: (name, data) => downloads.push({ name, bytes: data.byteLength }),
+    download: (name, data) => downloads.push({ name, bytes: typeof data === 'string' ? data.length : data.byteLength }),
     timers,
     pictures,
     texts,
@@ -234,12 +235,15 @@ beforeEach(() => {
 });
 afterEach(() => {
   stop();
+  // a dialog left open by one test would hold the next one's keys
+  if (modalOpen()) throw new Error('a dialog is still open after stop()');
   vi.restoreAllMocks();
 });
 
 describe('language', () => {
   it('lists every locale in the switcher by its own name', () => {
-    const options = [...$('#locale', HTMLSelectElement).options].map((o) => [o.value, o.textContent]);
+    start();
+    const options = [...$('.lang-field select', HTMLSelectElement).options].map((o) => [o.value, o.textContent]);
     expect(options).toEqual(LOCALES.map((l) => [l, LOCALE_NAMES[l]]));
   });
 
@@ -248,7 +252,7 @@ describe('language', () => {
     expect(document.documentElement.lang).toBe('ru');
     expect(document.title).toBe('Конструктор табличек');
     expect(text('#plateCard h2')).toBe('Табличка');
-    expect($('#locale', HTMLSelectElement).getAttribute('aria-label')).toBe('Язык');
+    expect($('.lang-field select', HTMLSelectElement).getAttribute('aria-label')).toBe('Язык');
   });
 
   it('falls back to English', () => {
@@ -265,7 +269,7 @@ describe('language', () => {
     document.body.innerHTML = body;
     start(['ru-RU']);
     expect(document.documentElement.lang).toBe('he');
-    expect($('#locale', HTMLSelectElement).value).toBe('he');
+    expect($('.lang-field select', HTMLSelectElement).value).toBe('he');
   });
 
   it('turns the page right-to-left for Hebrew and back', () => {
@@ -1043,6 +1047,7 @@ describe('export card and warnings', () => {
     expect(bar.hidden).toBe(false);
     csg.last().settle({ result: meshResult(), ms: 1 });
     await settle();
+    timers.run(0);
     expect(bar.hidden).toBe(true);
     // a quick build ends before the delay: nothing is left to show the bar
     setInput('#plate_width', '120');
@@ -1057,6 +1062,7 @@ describe('export card and warnings', () => {
     timers.run(PROGRESS_DELAY_MS);
     expect(bar.hidden).toBe(false);
     await answerOutlines();
+    timers.run(0);
     expect(bar.hidden).toBe(true);
     $('#downloadStl', HTMLButtonElement).click();
     expect($('#exportProgress', HTMLElement).hidden).toBe(false);
@@ -1065,8 +1071,9 @@ describe('export card and warnings', () => {
 
 class RefusingStorage extends MemoryStorage {
   refuse = true;
+  error: Error = new DOMException('quota', 'QuotaExceededError');
   override setItem(key: string, value: string) {
-    if (this.refuse) throw new DOMException('quota', 'QuotaExceededError');
+    if (this.refuse) throw this.error;
     super.setItem(key, value);
   }
 }
@@ -1091,13 +1098,21 @@ describe('projects, presets, storage', () => {
     expect($('#plate_width_n', HTMLInputElement).value).toBe('140');
   });
 
-  it('says when the browser does not keep the project, until a save works', () => {
+  it('says when the browser does not keep the project, and why, until a save works', () => {
     const refusing = new RefusingStorage();
     storage = refusing;
     start();
     setInput('#plate_width_n', '120');
     timers.flush();
-    expect($('#storageBanner', HTMLElement).hidden).toBe(false);
+    const banner = $('#storageBanner', HTMLElement);
+    expect(banner.hidden).toBe(false);
+    expect(banner.textContent).toBe(messages.en['kit.storage.project.full']);
+    expect(banner.classList.contains('bad')).toBe(false);
+    refusing.error = new Error('denied');
+    setInput('#plate_width_n', '125');
+    timers.flush();
+    expect(banner.textContent).toBe(messages.en['kit.storage.project.blocked']);
+    expect(banner.classList.contains('bad')).toBe(true);
     refusing.refuse = false;
     setInput('#plate_width_n', '130');
     timers.flush();
@@ -1188,15 +1203,17 @@ describe('projects, presets, storage', () => {
   it('opens a built-in preset from the dialog, closing it, and marks it changed once edited', () => {
     start();
     $('#presetsOpen', HTMLButtonElement).click();
-    expect([...document.querySelectorAll('.preset-row')].map((r) => r.textContent)).toEqual(
+    expect([...document.querySelectorAll('.preset-group')].map((h) => h.textContent)).toEqual(['My presets', 'Built-in']);
+    expect([...document.querySelectorAll('.preset-row[data-ref^="b:"] .preset-name')].map((r) => r.textContent)).toEqual(
       BUILT_IN_PRESETS.map((p) => staticText(messages.en, `preset.${p.id}.name`)),
     );
-    $('.preset-row[data-id="medal"] button', HTMLButtonElement).click();
+    $('.preset-row[data-ref="b:medal"] .preset-pick', HTMLButtonElement).click();
     expect($('#presets', HTMLElement).hidden).toBe(true);
     expect($('#projectName', HTMLInputElement).value).toBe('Medal');
+    expect($('.preset-row[data-ref="b:medal"] .preset-pick', HTMLElement).getAttribute('aria-current')).toBe('true');
     expect(document.querySelector('.preset-changed')).toBeNull();
     setInput('#plate_thickness_n', '4');
-    expect($('.preset-row[data-id="medal"] .preset-changed', HTMLElement).textContent).toBe('changed');
+    expect($('.preset-row[data-ref="b:medal"] .preset-changed', HTMLElement).textContent).toBe('changed');
   });
 
   it('New opens an empty rectangle plate, one undo step', () => {
@@ -1219,15 +1236,22 @@ describe('projects, presets, storage', () => {
     setInput('#plate_width_n', '111');
     $('#savePreset', HTMLButtonElement).click();
     expect(loadSettings(storage).presets.map((p) => [p.id, p.name, p.state.plate.width])).toEqual([['u1', 'plate', 111]]);
-    const name = $('.preset-row[data-id="u1"] input', HTMLInputElement);
+    const name = $('.preset-row[data-ref="u:u1"] input', HTMLInputElement);
     name.value = 'Wide';
     name.dispatchEvent(new Event('change'));
     expect(loadSettings(storage).presets[0]?.name).toBe('Wide');
     setInput('#plate_width_n', '50');
-    $('.preset-row[data-id="u1"] .link-button', HTMLButtonElement).click();
+    $('.preset-row[data-ref="u:u1"] .preset-open', HTMLButtonElement).click();
     expect($('#plate_width_n', HTMLInputElement).value).toBe('111');
-    $('.preset-row[data-id="u1"] [aria-label^="Delete"]', HTMLButtonElement).click();
+    // a destructive action in two taps: 🗑 asks, a second tap deletes
+    $('#presetsOpen', HTMLButtonElement).click();
+    const remove = () => $('.preset-row[data-ref="u:u1"] .preset-delete', HTMLButtonElement);
+    remove().click();
+    expect(remove().textContent).toBe('Delete?');
+    expect(loadSettings(storage).presets).toHaveLength(1);
+    remove().click();
     expect(loadSettings(storage).presets).toEqual([]);
+    expect(document.querySelector('.preset-row[data-ref^="u:"]')).toBeNull();
   });
 
   it('decodes the pictures of a stored project before building them, and builds again once in', async () => {

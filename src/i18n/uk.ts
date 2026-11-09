@@ -6,7 +6,6 @@ export const uk: Messages = {
   ...kitUk,
   title: 'Конструктор табличок',
   description: 'Пласка табличка — вивіска, брелок, жетон — у STL для 3D-друку.',
-  languageLabel: 'Мова',
   source: 'Вихідний код',
   mm: 'мм',
 
@@ -156,9 +155,6 @@ export const uk: Messages = {
   presetsHeading: 'Заготовки',
   close: 'Закрити',
   savePreset: 'Зберегти як заготовку',
-  presetChanged: 'змінено',
-  openPreset: 'Відкрити',
-  presetName: 'Назва заготовки',
   'preset.blank.name': 'Нова табличка',
   'preset.door-sign.name': 'Табличка на двері',
   'preset.keychain.name': 'Брелок',
@@ -167,7 +163,6 @@ export const uk: Messages = {
   'preset.medal.name': 'Медаль',
   'preset.name-plate.name': 'Іменна табличка з логотипом',
   'preset.fridge-magnet.name': 'Магніт на холодильник',
-  storageRefused: 'Браузер не зберігає проєкт (сховище заповнене або приватний режим). Збережіть файл проєкту, щоб не втратити його.',
 
   warningsCard: 'Попередження',
   show: 'Показати',
