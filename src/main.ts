@@ -1,3 +1,4 @@
+import 'maker-kit/styles/kit.css';
 import './style.css';
 import { startApp } from './app';
 import { registerServiceWorker } from './pwa';
