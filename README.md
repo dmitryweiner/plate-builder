@@ -40,7 +40,11 @@ npm run build      # → dist/
 
 TypeScript 7 + Vite, no framework; Three.js for the 3D view;
 [manifold-3d](https://github.com/elalish/manifold) (WASM) for the geometry,
-in a module worker. See [AGENTS.md](AGENTS.md) for the layout and conventions.
+in a module worker. Built on
+[maker-kit](https://github.com/dmitryweiner/maker-kit), the shared library of
+the 3D-printing tools (controls, undo, storage, presets, the 3D view, the
+worker queue, STL, the design code). See [AGENTS.md](AGENTS.md) for the
+layout and conventions.
 
 ## License
 

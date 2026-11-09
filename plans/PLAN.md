@@ -385,3 +385,10 @@ sheet on a phone, offline reload.
   emerald) and the element groups; see `plans/PLAN-DESIGN.md`.
 - **After M10**: magnets in the back (M11); see `plans/PLAN-MAGNETS.md`.
 - **After M11**: rounded or chamfered top and bottom edges (M12); see `plans/PLAN-FILLET.md`.
+- **After M12**: moved onto maker-kit (its milestone M1, plate-builder PRs
+  #16–#21, 2026-11-10): history, storage, the project file, presets, the
+  controls, the design code, the sheet, the progress bar, the banner, the
+  presets dialog, undo keys, the language picker, meshes, STL, the export
+  gate, the worker, the 3D view and the smoke harness are the kit's. What
+  changed for the user, and why, is in maker-kit's `plans/PLAN.md`
+  (deviations of M1); the density is the kit's (the user's call).

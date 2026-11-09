@@ -1,8 +1,10 @@
 # Projects and presets
 
 The plate you work on is kept in the browser and comes back on the next
-visit. If the browser refuses to keep it (its storage is full, or a private
-window), a banner says so: save the project file instead.
+visit. If the browser does not keep it, a banner under the top bar says why:
+its storage is unavailable (a private window, blocked site data; in red) or
+full (delete presets you no longer need). Save the project file with ⬇️
+then.
 
 - **📄 New plate** — the first button in the top bar: an empty 100 × 60
   rectangle, nothing on it. It is one undo step, as opening a project is.
@@ -16,9 +18,11 @@ window), a banner says so: save the project file instead.
 - **Presets** — the project's name in the top bar opens them: seven built-in
   plates to start from: a door sign, a keychain, a pet tag, a house number,
   a medal, a name plate with a logo and a fridge magnet. A first visit opens the door sign.
-  **💾 Save as preset** keeps the current plate as your own preset (rename it
-  in its field, delete it with ✕). The preset opened last says _changed_
-  once you edit it. ✕, Esc or a click beside the dialog closes it.
+  **💾 Save as preset** keeps the current plate as your own preset. Your
+  presets come first in the dialog: rename one in its field, open it with
+  ↗, delete it with 🗑 and then _Delete?_ (a second tap within 3 seconds).
+  The preset opened last says _changed_ once you edit it. ✕, Esc or a click
+  beside the dialog closes it.
 
 ![Hebrew, right to left](images/hebrew.png)
 
