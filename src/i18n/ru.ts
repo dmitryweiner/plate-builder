@@ -173,7 +173,7 @@ export const ru: Messages = {
   builtIn: (ms: number) => `построено за ${Math.round(ms)} мс`,
   exported: (name: string, ms: number) => `${name} сохранён, построен за ${Math.round(ms)} мс`,
   engineFailed: (reason: string) => `Геометрический движок не справился: ${reason}`,
-  meshBlocked: (problems: string) => `Сетка испорчена (${problems}); STL не экспортировать.`,
+  meshBlocked: (problems: string) => `${problems} STL не экспортировать.`,
   imageFailed: (reason: string) => `Не удалось прочитать картинку: ${reason}`,
   svgFailed: (reason: string) => `Не удалось прочитать SVG: ${reason}`,
   magnetPocket: (d: string, depth: string) => `Гнездо ⌀ ${d} мм глубиной ${depth} мм, открыто сзади.`,
@@ -199,13 +199,5 @@ export const ru: Messages = {
     magnetNoRoom:
       'Магниты не помещаются: гнездо ближе к контуру, чем отступ от края, или к другому гнезду. Помогут магниты поменьше, меньший отступ или другое расположение.',
     magnetOverlap: (names: string) => `Гнездо магнита задевает ${names}.`,
-  },
-  meshProblem: {
-    nonFinite: 'координаты — не числа',
-    badIndices: 'треугольники ссылаются на несуществующие вершины',
-    empty: 'сетка пуста',
-    open: 'поверхность не замкнута',
-    inverted: 'поверхность вывернута',
-    degenerate: 'слишком много вырожденных треугольников',
   },
 };

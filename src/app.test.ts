@@ -118,6 +118,7 @@ function meshResult(over: Partial<MeshResult> = {}): MeshResult {
       degenerateTriangles: 0,
       triangleCount: 12,
       vertexCount: 8,
+      extents: [100, 60, 3],
     },
     problems: [],
     stl: null,
@@ -428,11 +429,11 @@ describe('export', () => {
   it('blocks the export of a broken mesh and says why', async () => {
     start();
     timers.flush();
-    csg.last().settle({ result: meshResult({ problems: ['open', 'inverted'] }), ms: 5 });
+    csg.last().settle({ result: meshResult({ problems: [{ code: 'kit.mesh.open' }, { code: 'kit.mesh.inverted' }] }), ms: 5 });
     await settle();
     expect($('#meshBlocked', HTMLElement).hidden).toBe(false);
     expect(text('#meshBlocked')).toBe(
-      'The mesh is broken (the surface is not closed, the surface is inside out); the STL cannot be exported.',
+      'The mesh is not closed — a slicer would not print it. The mesh is inside out. The STL cannot be exported.',
     );
     expect($('#downloadStl', HTMLButtonElement).disabled).toBe(true);
   });
@@ -1025,10 +1026,10 @@ describe('export card and warnings', () => {
   it('lists a broken mesh among the warnings, without a place to show', async () => {
     start();
     timers.flush();
-    csg.last().settle({ result: meshResult({ problems: ['empty'] }), ms: 1 });
+    csg.last().settle({ result: meshResult({ problems: [{ code: 'kit.mesh.empty' }] }), ms: 1 });
     await settle();
     const item = $('#warningList li[data-code="mesh.invalid"]', HTMLElement);
-    expect(item.textContent).toBe('The mesh is broken (the mesh is empty); the STL cannot be exported.');
+    expect(item.textContent).toBe('The part is empty. The STL cannot be exported.');
     expect(item.querySelector('button')).toBeNull();
   });
 

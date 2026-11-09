@@ -172,7 +172,7 @@ export const uk: Messages = {
   builtIn: (ms: number) => `побудовано за ${Math.round(ms)} мс`,
   exported: (name: string, ms: number) => `${name} збережено, побудовано за ${Math.round(ms)} мс`,
   engineFailed: (reason: string) => `Геометричний рушій не впорався: ${reason}`,
-  meshBlocked: (problems: string) => `Сітка зіпсована (${problems}); STL не експортувати.`,
+  meshBlocked: (problems: string) => `${problems} STL не експортувати.`,
   imageFailed: (reason: string) => `Не вдалося прочитати зображення: ${reason}`,
   svgFailed: (reason: string) => `Не вдалося прочитати SVG: ${reason}`,
   magnetPocket: (d: string, depth: string) => `Гніздо ⌀ ${d} мм завглибшки ${depth} мм, відкрите ззаду.`,
@@ -198,13 +198,5 @@ export const uk: Messages = {
     magnetNoRoom:
       'Магніти не вміщаються: гніздо ближче до контуру, ніж відступ від краю, або до іншого гнізда. Допоможуть менші магніти, менший відступ чи інше розташування.',
     magnetOverlap: (names: string) => `Гніздо магніту зачіпає ${names}.`,
-  },
-  meshProblem: {
-    nonFinite: 'координати — не числа',
-    badIndices: 'трикутники посилаються на неіснуючі вершини',
-    empty: 'сітка порожня',
-    open: 'поверхня не замкнена',
-    inverted: 'поверхня вивернута',
-    degenerate: 'забагато вироджених трикутників',
   },
 };

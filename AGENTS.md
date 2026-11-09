@@ -128,11 +128,12 @@ browser (service worker, layout, workers) → a step in `scripts/smoke.mjs`.
   `holes.ts` (footprints, boxes and cutters of the hole kinds),
   `magnets.ts` (magnet layouts placed on the outline, pockets, cutters),
   `edges.ts` (the edges' profile, terraces and slabs),
-  `warnings.ts` (the warnings that need no CSG), `mesh.ts`
-  (`SurfaceMesh`, normals), `stl.ts` (binary STL, file names), `validate.ts`
-  (watertightness, volume, what blocks an export).
-- `src/worker/` — `protocol.ts` (typed messages), `client.ts` (lazy worker,
-  one-deep queue per lane), `csg.worker.ts` (thin adapter), `jobs.ts` (what
+  `warnings.ts` (the warnings that need no CSG). Meshes, STL and the
+  export gate are maker-kit's `3d/mesh`, `3d/stl`, `3d/validate`.
+- `src/worker/` — `protocol.ts` (the jobs and results; the envelope is
+  maker-kit's `worker/protocol`), `client.ts` (maker-kit's `WorkerClient`
+  with the app's policy), `csg.worker.ts` (a thin adapter over the kit's
+  `serveJobs`), `jobs.ts` (what
   each job does), `build.ts` (the recipe of the solid), `csg.ts` (manifold
   loading, `CsgScope`); all but the adapter tested in Node with real WASM.
 - `src/editor/` — the 2D view: `view.ts` (mm ↔ px, fit, zoom, pan),
@@ -144,7 +145,9 @@ browser (service worker, layout, workers) → a step in `scripts/smoke.mjs`.
   `presets.ts` (the built-in presets; their names are `preset.<id>.name`),
   `presetPictures.ts` (their pictures, generated).
 - `src/render/` — `view.ts` (what the app needs from the 3D view, types
-  only), `scene.ts` (Three.js; checked by the smoke, not vitest).
+  only), `scene.ts` (maker-kit's `3d/viewer` behind that interface: Front,
+  Angle, Back are the kit's `top`, `iso`, `bottom`; checked by the smoke,
+  not vitest).
 - `src/ui/` — `plateCard.ts`, `magnetsCard.ts`, `selectedCard.ts` (the cards' rows for maker-kit's `ui/controls`: ids
   `<prefix>_<key>`, `_n`, `_dec`, `_inc`), `elementsCard.ts` (the element groups: a foldable card
   per element, the selected one open), `warningsCard.ts`,

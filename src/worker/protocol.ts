@@ -1,5 +1,6 @@
-// Protocol of the CSG worker. Types only: both sides of the boundary (main
-// and worker) must see one description of the messages.
+// The CSG worker's jobs and results; the envelope around them (ids,
+// progress, errors) is maker-kit's worker/protocol. Both sides of the
+// boundary see one description of the messages.
 //
 // The worker boundary is an outer boundary of the core, like a file or
 // localStorage: whatever state comes in is sanitised by the worker itself.
@@ -9,7 +10,9 @@ import type { Ring } from '../geo/outline';
 import type { PlateState } from '../geo/state';
 import type { TextRaster } from '../geo/textShape';
 import type { Warning } from '../geo/warnings';
-import type { MeshProblem, MeshReport } from '../geo/validate';
+import type { MeshReport } from 'maker-kit/3d/validate';
+import type { Message } from 'maker-kit/core/message';
+import type { KitKey } from 'maker-kit/i18n/index';
 
 /**
  * A job (spec §8.4). `ping` loads the geometry engine and answers;
@@ -50,8 +53,8 @@ export interface MeshResult {
   positions: Float32Array;
   indices: Uint32Array;
   report: MeshReport;
-  /** what blocks the export; empty when the mesh is fine */
-  problems: MeshProblem[];
+  /** what blocks the export (the kit's export gate, `kit.mesh.*`); empty when the mesh is fine */
+  problems: Message<KitKey>[];
   /** the binary STL of an export; null for a preview */
   stl: ArrayBuffer | null;
   /** what only the contours can tell (text.thin, text.arcTooLong) */
@@ -61,35 +64,6 @@ export interface MeshResult {
 /** What a finished job returns, by kind. */
 /** An outline: its rings (plate frame) and what it has to say (islands, nothing to crop). */
 export type JobResult = { kind: 'ping'; volume: number } | { kind: 'outline'; rings: Ring[]; warnings: Warning[] } | MeshResult;
-
-/**
- * Progress by stages. Manifold says nothing about itself inside one boolean:
- * the bar counts stages, the label names the current one.
- */
-export interface JobProgress {
-  step: number;
-  total: number;
-  label: string;
-}
-
-export interface WorkerIn<J = Job> {
-  jobId: number;
-  job: J;
-}
-
-/** A reply; `ms` is the time the worker spent on the job. */
-export type WorkerOut<R = JobResult> =
-  | ({ type: 'progress'; jobId: number } & JobProgress)
-  | { type: 'done'; jobId: number; result: R; ms: number }
-  | { type: 'error'; jobId: number; message: string };
-
-/** Checks the envelope only: the result comes from our own worker. */
-export function isWorkerOut<R>(data: unknown): data is WorkerOut<R> {
-  if (typeof data !== 'object' || data === null) return false;
-  if (!('jobId' in data) || typeof data.jobId !== 'number') return false;
-  if (!('type' in data)) return false;
-  return data.type === 'progress' || data.type === 'done' || data.type === 'error';
-}
 
 /** Checks a job's shape; its state is sanitised by the worker anyway. */
 export function isJob(job: unknown): job is Job {

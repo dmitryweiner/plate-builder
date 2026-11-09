@@ -1,9 +1,9 @@
 import { beforeAll, describe, expect, it } from 'vitest';
 import type { Raster } from '../geo/heightmap';
-import { meshNormals } from '../geo/mesh';
+import { meshNormals } from 'maker-kit/3d/mesh';
 import { defaultPlate, sanitizeState } from '../geo/state';
 import type { TextRaster } from '../geo/textShape';
-import { meshProblems, validateMesh } from '../geo/validate';
+import { assessExport, validateMesh } from 'maker-kit/3d/validate';
 import { LOCALES, messages, staticText } from '../i18n';
 import { warnings } from '../geo/warnings';
 import { buildPlate, outlineRings, stateOutline } from '../worker/build';
@@ -70,7 +70,7 @@ describe('built-in presets', () => {
       };
       const { mesh } = buildPlate(csg, scope, state, rasters, 'preview');
       const report = validateMesh({ ...mesh, normals: meshNormals(mesh.positions, mesh.indices) });
-      expect({ watertight: report.watertight, problems: meshProblems(report) }).toEqual({ watertight: true, problems: [] });
+      expect({ watertight: report.watertight, problems: assessExport(report, true).blockers }).toEqual({ watertight: true, problems: [] });
     } finally {
       scope.dispose();
     }

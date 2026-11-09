@@ -172,7 +172,7 @@ export const he: Messages = {
   builtIn: (ms: number) => `נבנה תוך ${Math.round(ms)} אלפיות שנייה`,
   exported: (name: string, ms: number) => `${name} נשמר, נבנה תוך ${Math.round(ms)} אלפיות שנייה`,
   engineFailed: (reason: string) => `מנוע הגאומטריה נכשל: ${reason}`,
-  meshBlocked: (problems: string) => `הרשת פגומה (${problems}); אי אפשר לייצא STL.`,
+  meshBlocked: (problems: string) => `${problems} אי אפשר לייצא STL.`,
   imageFailed: (reason: string) => `לא ניתן לקרוא את התמונה: ${reason}`,
   svgFailed: (reason: string) => `לא ניתן לקרוא את קובץ ה־SVG: ${reason}`,
   magnetPocket: (d: string, depth: string) => `שקע בקוטר ${d} מ״מ ובעומק ${depth} מ״מ, פתוח מאחור.`,
@@ -197,13 +197,5 @@ export const he: Messages = {
     magnetNoRoom:
       'המגנטים לא נכנסים: שקע קרוב לקו המתאר יותר מהמרחק מהשוליים, או לשקע אחר. מגנטים קטנים יותר, מרחק קטן יותר או פריסה אחרת יעזרו.',
     magnetOverlap: (names: string) => `שקע של מגנט חופף עם ${names}.`,
-  },
-  meshProblem: {
-    nonFinite: 'קואורדינטות שאינן מספרים',
-    badIndices: 'משולשים מצביעים על קודקודים חסרים',
-    empty: 'הרשת ריקה',
-    open: 'המשטח אינו סגור',
-    inverted: 'המשטח הפוך',
-    degenerate: 'יותר מדי משולשים מנוונים',
   },
 };

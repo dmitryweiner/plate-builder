@@ -27,8 +27,11 @@ export default defineConfig({
   // CSG lives in a module worker: the manifold glue finds its .wasm through
   // import.meta.url, which an iife worker does not have.
   worker: { format: 'es' },
-  // Pre-bundling breaks the relative path from the manifold glue to its .wasm.
-  optimizeDeps: { exclude: ['manifold-3d'] },
+  // Pre-bundling breaks the relative path from the manifold glue to its .wasm;
+  // maker-kit is TypeScript sources, which the pre-bundler's scan reads as
+  // JavaScript (a worker's import of maker-kit/3d/mesh crashed the dev server):
+  // Vite serves them as the app's own files instead.
+  optimizeDeps: { exclude: ['manifold-3d', 'maker-kit'] },
   test: {
     environment: 'node',
     include: ['src/**/*.test.ts'],

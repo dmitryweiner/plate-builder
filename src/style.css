@@ -75,37 +75,12 @@
   display: flex;
   gap: 4px;
 }
-/* chips over the views, as Case Constructor's view caption: translucent page colour */
-.view-tabs button,
-.cameras button,
-.swap-views {
-  min-block-size: 36px;
-  min-inline-size: 44px;
-  padding-inline: 10px;
-  border: 1px solid var(--line);
-  border-radius: 6px;
-  background: var(--overlay);
-  color: var(--text);
-  font-size: 12.5px;
-  cursor: pointer;
-}
-.view-tabs button:hover,
-.cameras button:hover,
-.swap-views:hover {
-  border-color: var(--accent);
-}
+/* the view's chips are the kit's (.chip): the 2D/3D tab on show is pressed */
 .views[data-show='2d'] .view-tabs [data-show='2d'],
 .views[data-show='3d'] .view-tabs [data-show='3d'] {
   border-color: var(--accent);
-  background: color-mix(in srgb, var(--accent) 22%, rgb(21 24 28 / 85%));
+  background: color-mix(in srgb, var(--accent) 22%, var(--overlay));
   color: var(--accent-strong);
-}
-.cameras {
-  position: absolute;
-  inset-block-start: 8px;
-  inset-inline-end: 8px;
-  display: flex;
-  gap: 4px;
 }
 .snap-toggle {
   position: absolute;

@@ -1,6 +1,6 @@
 import { beforeAll, describe, expect, it } from 'vitest';
 import { edgeInset } from '../geo/edges';
-import { meshNormals } from '../geo/mesh';
+import { meshNormals } from 'maker-kit/3d/mesh';
 import { bounds, ringArea } from '../geo/outline';
 import type { Raster } from '../geo/heightmap';
 import {
@@ -18,7 +18,7 @@ import {
   type TextElement,
 } from '../geo/state';
 import type { TextRaster } from '../geo/textShape';
-import { meshProblems, validateMesh } from '../geo/validate';
+import { assessExport, validateMesh } from 'maker-kit/3d/validate';
 import {
   buildMesh,
   buildPlate,
@@ -128,7 +128,7 @@ describe('holes', () => {
     const { report: r } = holeReport(plateWith([{ kind }]));
     expect(r.watertight).toBe(true);
     expect(r.volume).toBeGreaterThan(0);
-    expect(meshProblems(r)).toEqual([]);
+    expect(assessExport(r, true).blockers).toEqual([]);
   });
 
   it('a round hole removes a cylinder', () => {
@@ -230,7 +230,7 @@ describe('images', () => {
   it('raises a flat image by its height over its square, watertight', () => {
     const { report } = built(plateWithImages([{ height: 2 }]), [flat(255)]);
     expect(report.watertight).toBe(true);
-    expect(meshProblems(report)).toEqual([]);
+    expect(assessExport(report, true).blockers).toEqual([]);
     expect(report.bbox.max[2]).toBeCloseTo(3 + 2 - IMAGE_EPS, 4);
     expect(report.volume).toBeCloseTo(100 * 60 * 3 + 20 * 20 * (2 - IMAGE_EPS), 0);
   });
@@ -319,7 +319,7 @@ describe('texts', () => {
   it('a raised text stands on the base to its height, watertight', () => {
     const { report } = builtTexts(plateWithTexts([{ height: 1.5 }]), [blockRaster(20, 8)]);
     expect(report.watertight).toBe(true);
-    expect(meshProblems(report)).toEqual([]);
+    expect(assessExport(report, true).blockers).toEqual([]);
     expect(report.bbox.max[2]).toBeCloseTo(4.5, 4);
     expect(report.volume).toBeCloseTo(100 * 60 * 3 + 20 * 8 * 1.5, -1);
   });
@@ -518,7 +518,7 @@ describe('magnets', () => {
     const state = plateWithMagnets({ count: 4, layout: 'corners' });
     const { mesh, report } = holeReport(state);
     expect(report.watertight).toBe(true);
-    expect(meshProblems(report)).toEqual([]);
+    expect(assessExport(report, true).blockers).toEqual([]);
     expect(Math.abs((100 * 60 * 3 - report.volume) / (4 * pocket * 2.1) - 1)).toBeLessThan(0.01);
     expect(faceArea(mesh, 3)).toBeCloseTo(100 * 60, 3);
     expect(Math.abs((100 * 60 - faceArea(mesh, 0)) / (4 * pocket) - 1)).toBeLessThan(0.01);
@@ -537,7 +537,7 @@ describe('magnets', () => {
     // the pocket's top (1.5) at the image's and the text's bottom (T / 2): they are inside the base, gone in the union
     const { report } = builtTexts(state, [blockRaster(20, 8)], [flat(255)]);
     expect(report.watertight).toBe(true);
-    expect(meshProblems(report)).toEqual([]);
+    expect(assessExport(report, true).blockers).toEqual([]);
   });
 
   it('a pocket beside a keyhole, at its lip’s level, stays one closed solid', () => {
@@ -576,7 +576,7 @@ describe('rim', () => {
     const state = withPlate({ kind, rim: true });
     const { mesh } = inScope((scope) => buildPlate(csg, scope, state, { images: [], texts: [] }, 'preview'));
     const report = validateMesh({ ...mesh, normals: meshNormals(mesh.positions, mesh.indices) });
-    expect({ watertight: report.watertight, problems: meshProblems(report) }).toEqual({ watertight: true, problems: [] });
+    expect({ watertight: report.watertight, problems: assessExport(report, true).blockers }).toEqual({ watertight: true, problems: [] });
   });
 
   it('joins with the relief and is cut by holes into one closed solid', () => {
@@ -588,7 +588,11 @@ describe('rim', () => {
       };
       const { mesh } = inScope((scope) => buildPlate(csg, scope, state, { images: [flat(200)], texts: [] }, 'preview'));
       const report = validateMesh({ ...mesh, normals: meshNormals(mesh.positions, mesh.indices) });
-      expect({ kind, watertight: report.watertight, problems: meshProblems(report) }).toEqual({ kind, watertight: true, problems: [] });
+      expect({ kind, watertight: report.watertight, problems: assessExport(report, true).blockers }).toEqual({
+        kind,
+        watertight: true,
+        problems: [],
+      });
     }
   });
 });
@@ -638,7 +642,7 @@ describe('vignettes and own SVG', () => {
   it('raises the frame by its height and leaves the window at the base', () => {
     const { report } = builtSilhouette(silhouetteState(), frameMask(60, 40, 5));
     expect(report.watertight).toBe(true);
-    expect(meshProblems(report)).toEqual([]);
+    expect(assessExport(report, true).blockers).toEqual([]);
     expect(report.bbox.max[2]).toBeCloseTo(4.5, 4);
     expect(report.volume).toBeCloseTo(60 * 40 * 3 + (60 * 40 - 50 * 30) * 1.5, -1);
   });
@@ -655,7 +659,7 @@ describe('vignettes and own SVG', () => {
       [1.5, 1.5],
     ]) {
       const { report } = builtSilhouette(silhouetteState({ rim: true, rimWidth: 2, rimHeight, frameHeight }), frameMask(60, 40, 5));
-      expect({ rimHeight, frameHeight, watertight: report.watertight, problems: meshProblems(report) }).toEqual({
+      expect({ rimHeight, frameHeight, watertight: report.watertight, problems: assessExport(report, true).blockers }).toEqual({
         rimHeight,
         frameHeight,
         watertight: true,
@@ -687,14 +691,14 @@ describe('vignettes and own SVG', () => {
   it('is empty, with a warning, without a silhouette', () => {
     const { warnings, report } = builtSilhouette(silhouetteState(), null);
     expect(warnings.map((w) => w.code)).toEqual(['outline.empty']);
-    expect(meshProblems(report)).toEqual(['empty']);
+    expect(assessExport(report, true).blockers).toEqual([{ code: 'kit.mesh.empty' }]);
   });
 });
 
 const report = (mesh: PlateMesh) => validateMesh({ ...mesh, normals: meshNormals(mesh.positions, mesh.indices) });
 function closed(mesh: PlateMesh) {
   const r = report(mesh);
-  return { watertight: r.watertight, problems: meshProblems(r) };
+  return { watertight: r.watertight, problems: assessExport(r, true).blockers };
 }
 
 describe('edges', () => {
@@ -781,7 +785,7 @@ describe('edges', () => {
   it('rounds a frame and a crop', () => {
     const framed = silhouetteState({ edgeSize: 1.5, rim: true, rimWidth: 2, rimHeight: 1 });
     expect(builtSilhouette(framed, frameMask(60, 40, 5)).report.watertight).toBe(true);
-    expect(meshProblems(builtSilhouette(framed, frameMask(60, 40, 5)).report)).toEqual([]);
+    expect(assessExport(builtSilhouette(framed, frameMask(60, 40, 5)).report, true).blockers).toEqual([]);
     const crop = cropState([{ height: 1 }], { edgeSize: 1.5 });
     const { mesh } = inScope((scope) => buildPlate(csg, scope, crop, { images: [discRaster(64, 24)], texts: [] }, 'preview'));
     expect(closed(mesh)).toEqual(ok);
