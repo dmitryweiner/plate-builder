@@ -6,7 +6,18 @@ const state = () => sanitizeState({ ...defaultState(), name: 'Door sign', holes:
 
 describe('project file', () => {
   it('round-trips a project', () => {
-    expect(readProjectFile(projectFileText(state()))).toEqual({ ok: true, state: state() });
+    expect(readProjectFile(projectFileText(state()))).toEqual({ ok: true, name: 'Door sign', state: state() });
+  });
+
+  it('says the app, the version, the name and when it was saved', () => {
+    const saved = JSON.parse(projectFileText(state(), new Date('2026-11-09T10:00:00Z')));
+    expect(saved).toEqual({
+      app: 'plate-builder',
+      version: STATE_VERSION,
+      name: 'Door sign',
+      savedAt: '2026-11-09T10:00:00.000Z',
+      state: state(),
+    });
   });
 
   it('is named after the project', () => {
@@ -29,7 +40,7 @@ describe('project file', () => {
     const old: Record<string, unknown> = { ...state() };
     delete old.magnets;
     const read = readProjectFile(JSON.stringify({ app: 'plate-builder', version: STATE_VERSION, state: old }));
-    expect(read).toEqual({ ok: true, state: state() });
+    expect(read).toEqual({ ok: true, name: '', state: state() });
     expect(read.ok && read.state.magnets.count).toBe(0);
   });
 
@@ -39,7 +50,7 @@ describe('project file', () => {
     delete plate.edgeProfile;
     delete plate.edgeSides;
     const read = readProjectFile(JSON.stringify({ app: 'plate-builder', version: STATE_VERSION, state: { ...state(), plate } }));
-    expect(read).toEqual({ ok: true, state: state() });
+    expect(read).toEqual({ ok: true, name: '', state: state() });
     expect(read.ok && [read.state.plate.edgeSize, read.state.plate.edgeProfile, read.state.plate.edgeSides]).toEqual([0, 'fillet', 'both']);
   });
 

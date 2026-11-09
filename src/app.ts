@@ -22,10 +22,11 @@ import { magnetPocket } from './geo/magnets';
 import { colourChanges } from './geo/printHints';
 import { stlFileName } from './geo/stl';
 import { warnings as findWarnings, type Warning } from './geo/warnings';
-import { detectLocale, direction, isLocale, messages, staticText, type Locale, type Messages } from './i18n';
+import { detectLocale, direction, isLocale, messages, staticText, translator, type Locale, type Messages } from './i18n';
 import type { CameraPreset, SceneHandle } from './render/view';
 import { addHole, addText, duplicateElement, nudgeElement, removeElement, toggleVisible } from './state/edit';
-import { History } from './state/history';
+import { History } from 'maker-kit/core/history';
+import { addUserPreset, presetRef, presetStatus, removeUserPreset, renameUserPreset, type PresetRef } from 'maker-kit/core/presets';
 import { BLANK_PRESET, BUILT_IN_PRESETS } from './state/presets';
 import { projectFileName, projectFileText, readProjectFile } from './state/projectFile';
 import { loadSettings, saveSettings, type KeyValueStorage, type Settings } from './storage';
@@ -253,10 +254,9 @@ export function startApp({
   let locale: Locale = detectLocale(settings.locale, languages);
   // a first visit opens the first preset; afterwards, the project as it was left
   const firstPreset = BUILT_IN_PRESETS[0];
-  const history = new History<PlateState>(settings.project ?? firstPreset?.state ?? defaultState());
-  /** the preset opened last and the project as it was then: "changed" once they differ */
-  let opened: { id: string; json: string } | null =
-    settings.project || !firstPreset ? null : { id: firstPreset.id, json: JSON.stringify(firstPreset.state) };
+  const history = new History<PlateState>(settings.project ?? firstPreset?.build() ?? defaultState());
+  /** the preset opened last: "changed" once the project differs from it */
+  let opened: PresetRef = settings.project || !firstPreset ? '' : presetRef('b', firstPreset.id);
   let saveTimer: number | null = null;
   let selected: string | null = null;
   let outline: Ring[] = instantOutline(history.state.plate);
@@ -621,27 +621,32 @@ export function startApp({
     ctx.drawImage(source, 0, 0, selectedThumb.width, selectedThumb.height);
   }
 
+  /** The state of a preset by its ref, as it opens. */
+  function presetState(ref: PresetRef): PlateState | undefined {
+    const id = ref.slice(2);
+    if (ref.startsWith('b:')) return [...BUILT_IN_PRESETS, BLANK_PRESET].find((p) => p.id === id)?.build();
+    return settings.presets.find((p) => p.id === id)?.state;
+  }
+
   function renderPresets(): void {
-    const changed = opened && JSON.stringify(state()) !== opened.json ? opened.id : null;
+    // states are sanitised the same way, so their JSON text is the same for the same project
+    const changed = presetStatus(opened, state(), presetState, (s) => JSON.stringify(s)) === 'changed' ? opened.slice(2) : null;
     const key = JSON.stringify([locale, changed, settings.presets.map((p) => [p.id, p.name])]);
     if (key === presetsKey) return;
     presetsKey = key;
-    renderPresetList(presetList, BUILT_IN_PRESETS, settings.presets, changed, t(), locale, {
+    renderPresetList(presetList, BUILT_IN_PRESETS, settings.presets, changed, t(), {
       open: (id) => {
         openPreset(id);
         closePresets();
       },
       rename: (id, name) => {
-        settings = {
-          ...settings,
-          presets: settings.presets.map((p) => (p.id === id && name.trim() ? { ...p, name: name.trim().slice(0, 60) } : p)),
-        };
+        settings = { ...settings, presets: renameUserPreset(settings.presets, id, name) };
         persist();
         renderState();
       },
       remove: (id) => {
-        settings = { ...settings, presets: settings.presets.filter((p) => p.id !== id) };
-        if (opened?.id === id) opened = null;
+        settings = { ...settings, presets: removeUserPreset(settings.presets, id) };
+        if (opened === presetRef('u', id)) opened = '';
         persist();
         renderState();
       },
@@ -649,10 +654,10 @@ export function startApp({
   }
 
   /** Opens a project in place of the current one: one step, so undo brings the old one back. */
-  function openProject(next: PlateState, preset: string | null): void {
+  function openProject(next: PlateState, preset: PresetRef): void {
     selected = null;
     history.commit(sanitizeState(next));
-    opened = preset ? { id: preset, json: JSON.stringify(state()) } : null;
+    opened = preset;
     afterChange();
     editor.fit();
   }
@@ -673,9 +678,11 @@ export function startApp({
     if (event.target === presetsDialog) closePresets();
   };
 
+  /** A preset of the list by its id: a built-in one, or the user's (`u<n>`). */
   function openPreset(id: string): void {
-    const preset = BUILT_IN_PRESETS.find((p) => p.id === id) ?? settings.presets.find((p) => p.id === id);
-    if (preset) openProject(preset.state, id);
+    const ref = BUILT_IN_PRESETS.some((p) => p.id === id) ? presetRef('b', id) : presetRef('u', id);
+    const preset = presetState(ref);
+    if (preset) openProject(preset, ref);
   }
 
   /** Saves to the browser's storage; the banner says so when it refuses, and goes once a save works. */
@@ -683,14 +690,14 @@ export function startApp({
     if (saveTimer !== null) timers.clear(saveTimer);
     saveTimer = null;
     settings = { ...settings, project: state() };
-    storageBanner.hidden = saveSettings(storage, settings);
+    storageBanner.hidden = saveSettings(storage, settings) === 'ok';
   }
   const schedulePersist = () => {
     if (saveTimer !== null) timers.clear(saveTimer);
     saveTimer = timers.set(persist, SAVE_DELAY_MS);
   };
 
-  const newPlate = () => openProject(BLANK_PRESET.state, BLANK_PRESET.id);
+  const newPlate = () => openProject(BLANK_PRESET.build(), presetRef('b', BLANK_PRESET.id));
   const saveProjectFile = () => download(projectFileName(state().name), new TextEncoder().encode(projectFileText(state())).buffer);
   const pickProject = () => projectFile.click();
   const onProjectFile = () => {
@@ -702,19 +709,18 @@ export function startApp({
       if (stopped) return;
       const read = readProjectFile(text);
       if (read.ok) {
-        openProject(read.state, null);
+        openProject(read.state, '');
         return;
       }
       projectStatus.hidden = false;
-      projectStatus.textContent = { broken: t().projectBroken, foreign: t().projectForeign, newer: t().projectNewer }[read.reason];
+      projectStatus.textContent = translator(locale)(`kit.file.${read.reason}`);
     });
   };
   const onProjectName = () => update({ ...state(), name: projectName.value }, true);
   const savePreset = () => {
-    const n = Math.max(0, ...settings.presets.map((p) => Number(p.id.slice(1)) || 0)) + 1;
-    const id = `u${n}`;
-    settings = { ...settings, presets: [...settings.presets, { id, name: state().name, state: state() }] };
-    opened = { id, json: JSON.stringify(state()) };
+    const { list, id } = addUserPreset(settings.presets, state().name, state());
+    settings = { ...settings, presets: list };
+    opened = presetRef('u', id);
     persist();
     renderState();
   };

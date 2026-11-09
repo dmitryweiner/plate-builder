@@ -1,8 +1,9 @@
 // @vitest-environment jsdom
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
+import { kitMessages } from 'maker-kit/i18n/index';
 import { describe, expect, it } from 'vitest';
-import { detectLocale, direction, isLocale, LOCALES, messages, staticText } from './index';
+import { detectLocale, direction, isLocale, LOCALES, messages, staticText, translator } from './index';
 import { plural } from './plural';
 
 const html = readFileSync(resolve(__dirname, '../../index.html'), 'utf8');
@@ -72,6 +73,11 @@ describe('messages', () => {
     }
   });
 
+  it.each(LOCALES)('take the kit’s strings as they are (%s)', (locale) => {
+    for (const [key, text] of Object.entries(kitMessages[locale]))
+      expect({ key, text: staticText(messages[locale], key) }).toEqual({ key, text });
+  });
+
   it('cover four languages', () => {
     expect(LOCALES).toEqual(['en', 'ru', 'uk', 'he']);
   });
@@ -96,6 +102,14 @@ describe('messages', () => {
   it('name every mesh problem in every language', () => {
     for (const locale of LOCALES)
       expect(Object.keys(messages[locale].meshProblem).toSorted()).toEqual(Object.keys(messages.en.meshProblem).toSorted());
+  });
+});
+
+describe('translator', () => {
+  it('fills a template with its parameters, the kit’s keys too', () => {
+    expect(translator('en')('kit.control.decrease', { label: 'Width' })).toBe('Decrease Width');
+    expect(translator('ru')('kit.file.broken')).toBe(kitMessages.ru['kit.file.broken']);
+    expect(translator('he')('plateCard')).toBe(messages.he.plateCard);
   });
 });
 

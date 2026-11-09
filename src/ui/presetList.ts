@@ -2,8 +2,9 @@
 // names, the user's with a name field (rename on change) and delete. The one
 // opened last says "changed" once the project differs from it.
 
-import type { Locale, Messages } from '../i18n';
-import type { BuiltInPreset } from '../state/presets';
+import type { BuiltInPreset } from 'maker-kit/core/presets';
+import { staticText, type Messages } from '../i18n';
+import type { PlateState } from '../geo/state';
 import type { UserPreset } from '../storage';
 import { make } from './dom';
 
@@ -21,18 +22,17 @@ function row(id: string): HTMLLIElement {
 
 export function renderPresetList(
   list: HTMLElement,
-  builtIn: readonly BuiltInPreset[],
+  builtIn: readonly BuiltInPreset<PlateState>[],
   user: readonly UserPreset[],
   changed: string | null,
   t: Messages,
-  locale: Locale,
   actions: PresetActions,
 ): void {
   list.textContent = '';
   const mark = (id: string) => (id === changed ? [make('span', 'preset-changed', t.presetChanged)] : []);
   for (const preset of builtIn) {
     const item = row(preset.id);
-    const open = make('button', 'preset-pick', preset.names[locale]);
+    const open = make('button', 'preset-pick', staticText(t, `preset.${preset.id}.name`) ?? preset.id);
     open.type = 'button';
     open.addEventListener('click', () => actions.open(preset.id));
     item.append(open, ...mark(preset.id));
