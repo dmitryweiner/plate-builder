@@ -176,7 +176,9 @@ browser (service worker, layout, workers) → a step in `scripts/smoke.mjs`.
   `src/pwa.ts` — its registration.
 - `src/style.css` — Plate Builder's own rules over maker-kit's `kit.css`
   (imported first in `main.ts`; the kit's rules are in `@layer kit`, so
-  these win): the two views, element rows, vignettes, its density tokens.
+  these win): the two views, element rows, vignettes. The density is the
+  kit's (16 px text and 40 px controls on a phone, 14 px and 28 px on a
+  desktop); the app's own pieces follow its tokens.
   The palette is the kit's with `data-accent="emerald"` (`--panel` of the
   kit's `tokens.css` is the theme colour, a test keeps `index.html` and the
   manifest equal to it).
