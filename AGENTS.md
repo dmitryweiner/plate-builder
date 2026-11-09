@@ -194,7 +194,9 @@ browser (service worker, layout, workers) → a step in `scripts/smoke.mjs`.
   `--eval`); the docs' pictures come from it.
 - `scripts/preset-pictures.mjs` — draws the built-in presets' pictures (a
   star, a logo, an apple) into `src/state/presetPictures.ts`.
-- `scripts/lib/harness.mjs` — flags, vite on 5373/4373, console errors.
+- `scripts/lib/harness.mjs` — maker-kit's harness (`maker-kit/harness`: flags,
+  the vite server, console errors, `app.step` / `app.run`, downloads, STL
+  checks, throttling) on Plate Builder's ports, 5373/4373.
 - `scripts/icons.mjs` — PWA icons from `public/icon.svg`.
 - `scripts/vignettes.mjs` — the vignette catalog: `--check` (one piece with
   a window, the index complete, licences allowed), `--sheet <dir>` (a
