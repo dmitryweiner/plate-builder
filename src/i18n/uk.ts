@@ -1,7 +1,9 @@
+import { kitUk } from 'maker-kit/i18n/uk';
 import type { Messages } from './en';
 import { plural } from './plural';
 
 export const uk: Messages = {
+  ...kitUk,
   title: 'Конструктор табличок',
   description: 'Пласка табличка — вивіска, брелок, жетон — у STL для 3D-друку.',
   languageLabel: 'Мова',
@@ -159,10 +161,15 @@ export const uk: Messages = {
   presetChanged: 'змінено',
   openPreset: 'Відкрити',
   presetName: 'Назва заготовки',
+  'preset.blank.name': 'Нова табличка',
+  'preset.door-sign.name': 'Табличка на двері',
+  'preset.keychain.name': 'Брелок',
+  'preset.pet-tag.name': 'Жетон для улюбленця',
+  'preset.house-number.name': 'Номер будинку',
+  'preset.medal.name': 'Медаль',
+  'preset.name-plate.name': 'Іменна табличка з логотипом',
+  'preset.fridge-magnet.name': 'Магніт на холодильник',
   storageRefused: 'Браузер не зберігає проєкт (сховище заповнене або приватний режим). Збережіть файл проєкту, щоб не втратити його.',
-  projectBroken: 'Цей файл не читається як проєкт.',
-  projectForeign: 'Це не проєкт конструктора табличок.',
-  projectNewer: 'Проєкт зроблено в новішій версії застосунку.',
 
   warningsCard: 'Попередження',
   show: 'Показати',

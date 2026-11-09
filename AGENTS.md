@@ -8,6 +8,13 @@ English, Russian, Ukrainian and Hebrew (RTL). Deployed to GitHub Pages.
 
 What to build: `docs/spec.md`. The order of work: `plans/PLAN.md`.
 
+Built on **maker-kit** (`~/projects/maker-kit`, the shared library of the
+3D-printing tools), installed by git tag in `package.json`. Its modules are
+imported as `maker-kit/core/history` and so on; its docs are in its
+`docs/`. Moving onto it is maker-kit's milestone M1, one PR per group. For
+joint work on the app and the kit: `npm link ../maker-kit`; a kit change
+reaches the app as a new tag.
+
 The shared conventions behind this setup are in `~/projects/CLAUDE.md` and
 `~/projects/_conventions/`; this file is what holds for this repository.
 
@@ -132,9 +139,9 @@ browser (service worker, layout, workers) → a step in `scripts/smoke.mjs`.
   `elements.ts` (boxes, hit tests, uniform scaling), `gestures.ts` (move,
   corner scale, rotate, pinch, snapping), `editor2d.ts` (pointer events and
   drawing on the canvas).
-- `src/state/` — `history.ts` (undo/redo, a gesture is one step), `edit.ts`
-  (add, duplicate, delete, show/hide, nudge, element names),
-  `projectFile.ts` (`*.plate.json`), `presets.ts` (the built-in presets),
+- `src/state/` — `edit.ts` (add, duplicate, delete, show/hide, nudge,
+  element names), `projectFile.ts` (`*.plate.json`, the kit's wrapper),
+  `presets.ts` (the built-in presets; their names are `preset.<id>.name`),
   `presetPictures.ts` (their pictures, generated).
 - `src/render/` — `view.ts` (what the app needs from the 3D view, types
   only), `scene.ts` (Three.js; checked by the smoke, not vitest).
@@ -150,11 +157,15 @@ browser (service worker, layout, workers) → a step in `scripts/smoke.mjs`.
 - `public/fonts/` — woff2 subsets with their OFL licences.
 - `public/vignettes/` — the catalog: `index.json` (id, names in four
   languages, source, author, licence) and one `<id>.svg` each.
-- `src/i18n/` — `en.ts` defines the messages, `ru.ts`, `uk.ts`, `he.ts` follow
-  its type; `index.ts` — locales, detection, text direction, `staticText`;
-  `plural.ts` — `Intl.PluralRules` helper.
-- `src/storage.ts` — one versioned key: the language, the current project,
-  the user presets; every field sanitised, a refused write reported.
+- `src/i18n/` — `en.ts` defines the messages (the kit's `kit.*` strings
+  spread first), `ru.ts`, `uk.ts`, `he.ts` follow its type; `index.ts` —
+  locales, detection, text direction, `staticText`, `translator` (the
+  kit's `Translate` over the string messages); `plural.ts` —
+  `Intl.PluralRules` helper for the messages that are functions.
+- `src/storage.ts` — one versioned key (a kit `StoredRecord`): the language,
+  the current project, the user presets; every field sanitised, a refused
+  write says why (`full`, `blocked`). Undo and redo: the kit's
+  `core/history`.
 - `src/sw-plugin.ts` — Vite plugin emitting `sw.js` that precaches the build;
   `src/pwa.ts` — its registration.
 - `src/style.css` — mobile first, logical properties; Case Constructor's dark
@@ -195,7 +206,7 @@ browser (service worker, layout, workers) → a step in `scripts/smoke.mjs`.
 - Language: the saved choice, else the first supported browser language, else
   English. Switching redraws without losing state. RTL locales set
   `dir="rtl"` on `<html>`; CSS uses logical properties only.
-- Do not change the stored format without bumping `VERSION` in
+- Do not change the stored format without bumping the record's `version` in
   `src/storage.ts` and a test for the reset or migration.
 - No `as` casts in app code; a disabled lint rule carries its reason.
 - A helper script that may be needed again goes to `scripts/` with a header

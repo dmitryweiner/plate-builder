@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { startApp, PREVIEW_DELAY_MS, PROGRESS_DELAY_MS, type AppOptions, type Timers } from './app';
-import { LOCALE_NAMES, LOCALES } from './i18n';
+import { LOCALE_NAMES, LOCALES, messages, staticText } from './i18n';
 import type { CameraPreset, SceneHandle, ViewMesh } from './render/view';
 import { DEFAULT_SETTINGS, loadSettings, saveSettings, type KeyValueStorage } from './storage';
 import { defaultImage, defaultState } from './geo/state';
@@ -40,6 +40,9 @@ class MemoryStorage implements KeyValueStorage {
   }
   setItem(key: string, value: string) {
     this.data.set(key, value);
+  }
+  removeItem(key: string) {
+    this.data.delete(key);
   }
 }
 
@@ -1136,7 +1139,7 @@ describe('projects, presets, storage', () => {
       await settle();
       return text('#projectStatus');
     };
-    expect(await tryFile('{"app":"other"}')).toBe('This file is not a Plate Builder project.');
+    expect(await tryFile('{"app":"other"}')).toBe('This file is not a project of this app.');
     expect(await tryFile('{broken')).toBe('This file is not a readable project.');
     expect($('#plate-width-n', HTMLInputElement).value).toBe('100');
   });
@@ -1185,7 +1188,9 @@ describe('projects, presets, storage', () => {
   it('opens a built-in preset from the dialog, closing it, and marks it changed once edited', () => {
     start();
     $('#presetsOpen', HTMLButtonElement).click();
-    expect([...document.querySelectorAll('.preset-row')].map((r) => r.textContent)).toEqual(BUILT_IN_PRESETS.map((p) => p.names.en));
+    expect([...document.querySelectorAll('.preset-row')].map((r) => r.textContent)).toEqual(
+      BUILT_IN_PRESETS.map((p) => staticText(messages.en, `preset.${p.id}.name`)),
+    );
     $('.preset-row[data-id="medal"] button', HTMLButtonElement).click();
     expect($('#presets', HTMLElement).hidden).toBe(true);
     expect($('#projectName', HTMLInputElement).value).toBe('Medal');

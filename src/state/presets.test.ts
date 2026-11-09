@@ -4,7 +4,7 @@ import { meshNormals } from '../geo/mesh';
 import { defaultPlate, sanitizeState } from '../geo/state';
 import type { TextRaster } from '../geo/textShape';
 import { meshProblems, validateMesh } from '../geo/validate';
-import { LOCALES } from '../i18n';
+import { LOCALES, messages, staticText } from '../i18n';
 import { warnings } from '../geo/warnings';
 import { buildPlate, outlineRings, stateOutline } from '../worker/build';
 import { CsgScope, initCSG, type CsgApi } from '../worker/csg';
@@ -51,15 +51,16 @@ describe('built-in presets', () => {
   it('have distinct ids and a name in every language', () => {
     expect(new Set(BUILT_IN_PRESETS.map((p) => p.id)).size).toBe(BUILT_IN_PRESETS.length);
     expect(BUILT_IN_PRESETS.length).toBeGreaterThanOrEqual(5);
-    for (const preset of BUILT_IN_PRESETS) for (const locale of LOCALES) expect(preset.names[locale]).toBeTruthy();
+    for (const preset of [...BUILT_IN_PRESETS, BLANK_PRESET])
+      for (const locale of LOCALES) expect(staticText(messages[locale], `preset.${preset.id}.name`)).toBeTruthy();
   });
 
   it.each(BUILT_IN_PRESETS.map((p) => [p.id, p] as const))('%s: sanitising leaves it as it is', (_, preset) => {
-    expect(sanitizeState(preset.state)).toEqual(preset.state);
+    expect(sanitizeState(preset.build())).toEqual(preset.build());
   });
 
   it.each(BUILT_IN_PRESETS.map((p) => [p.id, p] as const))('%s: builds a valid mesh', (_, preset) => {
-    const { state } = preset;
+    const state = preset.build();
     const scope = new CsgScope();
     try {
       const rasters = {
@@ -78,12 +79,12 @@ describe('built-in presets', () => {
 
 describe('the blank preset', () => {
   it('is the default rectangle with nothing on it, named in every language', () => {
-    const { state } = BLANK_PRESET;
+    const state = BLANK_PRESET.build();
     expect(sanitizeState(state)).toEqual(state);
     expect(state.plate).toEqual(defaultPlate());
     expect([state.texts, state.images, state.holes, state.magnets.count]).toEqual([[], [], [], 0]);
     expect(BUILT_IN_PRESETS.map((p) => p.id)).not.toContain(BLANK_PRESET.id);
-    for (const locale of LOCALES) expect(BLANK_PRESET.names[locale]).toBeTruthy();
+    expect(BLANK_PRESET.listed).toBe(false);
   });
 });
 
@@ -97,7 +98,7 @@ describe('edges of the presets', () => {
     ['house-number', 0],
     ['name-plate', 0],
   ] as const)('%s: a %s mm fillet, no text on it', (id, edgeSize) => {
-    const { state } = presetById(id);
+    const state = presetById(id).build();
     expect([state.plate.edgeSize, state.plate.edgeProfile]).toEqual([edgeSize, 'fillet']);
     const scope = new CsgScope();
     try {
@@ -116,7 +117,7 @@ describe('edges of the presets', () => {
 
 describe('the fridge magnet', () => {
   it('has two 10 × 2 magnets in a row that fit its crop, with no warning', () => {
-    const { state } = presetById('fridge-magnet');
+    const state = presetById('fridge-magnet').build();
     expect(state.plate.kind).toBe('crop');
     expect(state.magnets).toMatchObject({ count: 2, layout: 'row', diameter: 10, thickness: 2 });
     const scope = new CsgScope();

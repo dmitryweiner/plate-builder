@@ -1,8 +1,11 @@
+import { kitEn } from 'maker-kit/i18n/en';
 import { plural } from './plural';
 
 // English is the default locale and defines the shape of every message set.
 // Plain string messages can be used in index.html via data-i18n / data-i18n-label.
+// The kit's own strings (`kit.*`) come first, as the kit has them.
 export const en = {
+  ...kitEn,
   title: 'Plate Builder',
   description: 'Design a flat plate — a sign, a keychain, a tag — and download it as STL for 3D printing.',
   languageLabel: 'Language',
@@ -160,10 +163,15 @@ export const en = {
   presetChanged: 'changed',
   openPreset: 'Open',
   presetName: 'Preset name',
+  'preset.blank.name': 'New plate',
+  'preset.door-sign.name': 'Door sign',
+  'preset.keychain.name': 'Keychain',
+  'preset.pet-tag.name': 'Pet tag',
+  'preset.house-number.name': 'House number',
+  'preset.medal.name': 'Medal',
+  'preset.name-plate.name': 'Name plate with a logo',
+  'preset.fridge-magnet.name': 'Fridge magnet',
   storageRefused: 'This browser does not keep the project (its storage is full or private). Save the project file to keep it.',
-  projectBroken: 'This file is not a readable project.',
-  projectForeign: 'This file is not a Plate Builder project.',
-  projectNewer: 'This project comes from a newer version of the app.',
 
   warningsCard: 'Warnings',
   show: 'Show',

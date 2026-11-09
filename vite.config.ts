@@ -34,5 +34,8 @@ export default defineConfig({
     include: ['src/**/*.test.ts'],
     // the fuzz and the CSG tests take seconds on a CI runner
     testTimeout: 30000,
+    // Node does not strip the types of files in node_modules: the kit's
+    // TypeScript sources are transformed as the app's own.
+    server: { deps: { inline: ['maker-kit'] } },
   },
 });

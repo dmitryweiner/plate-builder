@@ -1,9 +1,13 @@
+import { format } from 'maker-kit/core/format';
+import type { Translate } from 'maker-kit/core/message';
 import { en, type Messages } from './en';
 import { he } from './he';
 import { ru } from './ru';
 import { uk } from './uk';
 
 export type { Messages };
+/** The keys of the plain string messages (templates): what the kit's components take. */
+export type TextKey = { [K in keyof Messages]: Messages[K] extends string ? K : never }[keyof Messages];
 export type Locale = 'en' | 'ru' | 'uk' | 'he';
 
 export const LOCALES: readonly Locale[] = ['en', 'ru', 'uk', 'he'];
@@ -38,4 +42,10 @@ export function staticText(t: Messages, key: string): string | undefined {
   const record: Record<string, unknown> = t;
   const value = Object.hasOwn(record, key) ? record[key] : undefined;
   return typeof value === 'string' ? value : undefined;
+}
+
+/** The translate function the kit's components take: a string message filled by core/format. */
+export function translator(locale: Locale): Translate<TextKey> {
+  const t = messages[locale];
+  return (key, params) => format(t[key], params, locale);
 }
