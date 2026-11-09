@@ -13,7 +13,8 @@ import {
   type PlateState,
   type PrimitiveKind,
 } from '../geo/state';
-import type { Control, TextKey } from './controls';
+import type { Control } from 'maker-kit/ui/controls';
+import type { TextKey } from '../i18n';
 
 type OfferedKind = PrimitiveKind | 'vignette' | 'svg' | 'crop';
 
@@ -44,7 +45,7 @@ const isOffered = (value: string): value is OfferedKind => OFFERED.some((kind) =
 const sized = (s: PlateState) => s.plate.kind !== 'crop';
 const pictured = (s: PlateState) => s.plate.kind === 'vignette' || s.plate.kind === 'svg';
 
-export const plateControls: readonly Control<PlateState>[] = [
+export const plateControls: readonly Control<PlateState, TextKey>[] = [
   {
     kind: 'select',
     key: 'kind',

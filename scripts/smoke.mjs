@@ -250,6 +250,27 @@ try {
     await context.close();
   });
 
+  await step('− and + step by a click and repeat while held, each one undo step', async () => {
+    const { page, context } = await app.open();
+    await built(page);
+    const width = async () => Number(await page.inputValue('#plate-width-n'));
+    await page.click('#plate-width-inc');
+    check((await width()) === 100.5, `a click stepped to ${await width()}`);
+    const box = await page.locator('#plate-width-inc').boundingBox();
+    check(box, 'no + beside the width');
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+    await page.mouse.down();
+    await page.waitForTimeout(1000);
+    await page.mouse.up();
+    const held = await width();
+    check(held >= 102.5, `a hold of 1 s stepped only to ${held}`);
+    await page.click('#undo');
+    check((await width()) === 100.5, `undo after a hold went to ${await width()}, not to before it`);
+    await page.click('#undo');
+    check((await width()) === 100, `undo after a click went to ${await width()}`);
+    await context.close();
+  });
+
   await step('each hole kind: add, drag, scale, turn, undo (desktop)', async () => {
     const { page, context } = await app.open();
     let { info } = await built(page);

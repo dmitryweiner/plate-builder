@@ -26,11 +26,11 @@ import { detectLocale, direction, isLocale, messages, staticText, translator, ty
 import type { CameraPreset, SceneHandle } from './render/view';
 import { addHole, addText, duplicateElement, nudgeElement, removeElement, toggleVisible } from './state/edit';
 import { History } from 'maker-kit/core/history';
+import { renderControls, type ControlsHandle } from 'maker-kit/ui/controls';
 import { addUserPreset, presetRef, presetStatus, removeUserPreset, renameUserPreset, type PresetRef } from 'maker-kit/core/presets';
 import { BLANK_PRESET, BUILT_IN_PRESETS } from './state/presets';
 import { projectFileName, projectFileText, readProjectFile } from './state/projectFile';
 import { loadSettings, saveSettings, type KeyValueStorage, type Settings } from './storage';
-import { renderControls, type ControlsHandle } from './ui/controls';
 import { el, scrollIntoContainer } from './ui/dom';
 import { elementsOf, renderElementGroup, syncHints, type ElementActions, type ElementType } from './ui/elementsCard';
 import { renderPresetList } from './ui/presetList';
@@ -555,7 +555,8 @@ export function startApp({
           read: state,
           change: (next, final) => update(next, final),
           idPrefix: 'element',
-          t: m,
+          t: translator(locale),
+          timers,
         });
         selectedControls = { id: element.id, kind, handle };
       } else selectedControls.handle.sync(s);
@@ -745,13 +746,15 @@ export function startApp({
       read: state,
       change: (next, final) => update(next, final),
       idPrefix: 'plate',
-      t: t(),
+      t: translator(locale),
+      timers,
     });
     magnetCard = renderControls(magnetBox, magnetControls, {
       read: state,
       change: (next, final) => update(next, final),
       idPrefix: 'magnet',
-      t: t(),
+      t: translator(locale),
+      timers,
     });
     selectedControls = null;
   };

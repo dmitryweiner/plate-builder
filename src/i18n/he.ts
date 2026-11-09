@@ -77,8 +77,6 @@ export const he: Messages = {
   visible: 'גלוי',
   duplicate: 'שכפול',
   remove: 'מחיקה',
-  decrease: 'הקטנה',
-  increase: 'הגדלה',
   holeKind: 'סוג',
   holeRound: 'עגול',
   holeSlot: 'חריץ',
