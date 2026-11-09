@@ -193,7 +193,8 @@ browser (service worker, layout, workers) → a step in `scripts/smoke.mjs`.
   (seeded storage); `app.first()` opens a first visit.
 - `scripts/snap.mjs` — a screenshot in a given state (`--preset`, `--lang`,
   `--width/--height`, `--view`, `--camera`, `--swap`, `--select`, `--panel`,
-  `--eval`); the docs' pictures come from it.
+  `--eval`); `--docs` re-shoots every picture of `docs/images` (the list is
+  in the script) — run it after a change of the look.
 - `scripts/preset-pictures.mjs` — draws the built-in presets' pictures (a
   star, a logo, an apple) into `src/state/presetPictures.ts`.
 - `scripts/lib/harness.mjs` — maker-kit's harness (`maker-kit/harness`: flags,
