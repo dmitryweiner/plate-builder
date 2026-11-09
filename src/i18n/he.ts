@@ -6,7 +6,6 @@ export const he: Messages = {
   ...kitHe,
   title: 'בונה שלטים',
   description: 'שלט שטוח — שלט לדלת, מחזיק מפתחות, תג — כקובץ STL להדפסה בתלת־ממד.',
-  languageLabel: 'שפה',
   source: 'קוד מקור',
   mm: 'מ״מ',
 
@@ -156,9 +155,6 @@ export const he: Messages = {
   presetsHeading: 'תבניות',
   close: 'סגירה',
   savePreset: 'שמירה כתבנית',
-  presetChanged: 'שונה',
-  openPreset: 'פתיחה',
-  presetName: 'שם התבנית',
   'preset.blank.name': 'שלט חדש',
   'preset.door-sign.name': 'שלט לדלת',
   'preset.keychain.name': 'מחזיק מפתחות',
@@ -167,7 +163,6 @@ export const he: Messages = {
   'preset.medal.name': 'מדליה',
   'preset.name-plate.name': 'שלט שם עם לוגו',
   'preset.fridge-magnet.name': 'מגנט למקרר',
-  storageRefused: 'הדפדפן לא שומר את הפרויקט (האחסון מלא או במצב פרטי). שמרו את קובץ הפרויקט כדי לא לאבד אותו.',
 
   warningsCard: 'אזהרות',
   show: 'הצגה',

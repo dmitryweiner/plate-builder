@@ -8,7 +8,7 @@
 import type { PlateElement, PlateState } from '../geo/state';
 import type { Messages } from '../i18n';
 import { elementName } from '../state/edit';
-import { make } from './dom';
+import { make } from 'maker-kit/ui/dom';
 import { HOLE_LABELS } from './selectedCard';
 
 export interface ElementActions {

@@ -1,5 +1,7 @@
 import 'maker-kit/styles/kit.css';
 import './style.css';
+import { download } from 'maker-kit/ui/files';
+import { browserTimers } from 'maker-kit/ui/timers';
 import { startApp } from './app';
 import { registerServiceWorker } from './pwa';
 import { createScene } from './render/scene';
@@ -10,24 +12,13 @@ import { browserSilhouettes } from './ui/svgRaster';
 import { rasterizeText } from './ui/textRaster';
 import { csgClient } from './worker/client';
 
-/** Hands a file to the browser as a download. */
-function download(name: string, data: ArrayBuffer): void {
-  const url = URL.createObjectURL(new Blob([data], { type: 'model/stl' }));
-  const link = document.createElement('a');
-  link.href = url;
-  link.download = name;
-  link.click();
-  // the click has started the download; the URL is not needed after it
-  setTimeout(() => URL.revokeObjectURL(url), 1000);
-}
-
 startApp({
   storage: browserStorage(),
   languages: navigator.languages,
   csg: csgClient(),
   createScene,
-  download,
-  timers: { set: (fn, ms) => window.setTimeout(fn, ms), clear: (id) => window.clearTimeout(id) },
+  download: (name, data, type) => download(name, data, type),
+  timers: browserTimers,
   pictures: { importFile: importImageFile, decode: decodeRaster },
   texts: { fontReady, loadFont, rasterize: (text) => rasterizeText(text, FONTS[text.font]) },
   silhouettes: browserSilhouettes(import.meta.env.BASE_URL),

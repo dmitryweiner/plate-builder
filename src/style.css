@@ -37,12 +37,6 @@
   font-size: 12.5px;
 }
 
-/* the presets dialog's list scrolls inside the box */
-.modal-box .preset-list {
-  min-block-size: 0;
-  overflow-y: auto;
-}
-
 /* a phone: the views fill the screen under the top bar, the sheet lies over them */
 .views {
   position: relative;
@@ -134,16 +128,6 @@
   display: none;
 }
 
-/* the presets in the top bar and the dialog: Plate Builder's rows until the kit's list */
-.preset-pick {
-  overflow: hidden;
-  color: var(--text);
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.preset-list .link-button {
-  min-block-size: 38px;
-}
 .name-field {
   grid-column: 1 / -1;
   inline-size: 100%;
@@ -153,10 +137,6 @@
   border-radius: 6px;
   background: var(--panel);
   color: var(--text);
-}
-.preset-row .name-field {
-  flex: 1;
-  min-inline-size: 0;
 }
 
 .btn.primary {
@@ -375,29 +355,6 @@ footer a {
   margin-block: 6px;
   accent-color: var(--accent);
 }
-/* Case Constructor's bar over the view: a running stripe, there being no share done to show */
-.view-progress {
-  block-size: 6px;
-  border-radius: 3px;
-  background: rgb(148 160 173 / 25%);
-  overflow: hidden;
-}
-.view-progress > div {
-  position: absolute;
-  inset-block: 0;
-  inline-size: 30%;
-  border-radius: inherit;
-  background: var(--accent);
-  animation: progress-run 1.1s ease-in-out infinite;
-}
-@keyframes progress-run {
-  from {
-    inset-inline-start: -30%;
-  }
-  to {
-    inset-inline-start: 100%;
-  }
-}
 .card h3 {
   margin-block: 12px 4px;
   font-size: 12px;
@@ -409,16 +366,4 @@ footer a {
   padding-inline-start: 18px;
   color: var(--muted);
   font-size: 12px;
-}
-
-/* the storage banner: Plate Builder's box until the kit's banner */
-.banner {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px;
-  margin-block-end: 8px;
-  padding: 8px 12px;
-  border: 1px solid var(--warn);
-  border-radius: 8px;
 }

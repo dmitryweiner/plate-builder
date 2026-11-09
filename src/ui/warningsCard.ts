@@ -6,7 +6,7 @@ import type { MeshProblem } from '../geo/validate';
 import type { Warning } from '../geo/warnings';
 import type { Messages } from '../i18n';
 import { elementName } from '../state/edit';
-import { make } from './dom';
+import { make } from 'maker-kit/ui/dom';
 
 export function warningText(t: Messages, w: Warning, state: PlateState, problems: readonly MeshProblem[] = []): string {
   const names = w.ids.map((id) => elementName(state, id, t.elementName)).join(', ');

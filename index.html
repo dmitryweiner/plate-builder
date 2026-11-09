@@ -12,7 +12,7 @@
     <script type="module" src="./src/main.ts"></script>
   </head>
   <body class="kit-app">
-    <header class="topbar">
+    <header id="topbar" class="topbar">
       <span class="brand" data-i18n="title">Plate Builder</span>
       <!-- the project's name; opens the presets -->
       <button
@@ -24,15 +24,6 @@
         aria-expanded="false"
       ></button>
       <span class="spacer"></span>
-      <label class="lang-field">
-        <span class="lang-globe" aria-hidden="true">🌐</span>
-        <select id="locale" aria-label="Language" data-i18n-label="languageLabel">
-          <option value="en" lang="en">English</option>
-          <option value="ru" lang="ru">Русский</option>
-          <option value="uk" lang="uk">Українська</option>
-          <option value="he" lang="he">עברית</option>
-        </select>
-      </label>
       <!-- a phone breaks the bar here: the buttons go to a second line -->
       <span class="topbar-break"></span>
       <div class="topbar-tools">
@@ -75,13 +66,14 @@
       </div>
     </header>
     <p id="projectStatus" class="topbar-note" role="alert" hidden></p>
+    <div id="storageBanner" class="banner" hidden></div>
     <div id="presets" class="modal" hidden>
       <div class="modal-box" role="dialog" aria-modal="true" aria-labelledby="presetsTitle">
         <button id="presetsClose" type="button" class="icon-button modal-close" title="Close" aria-label="Close" data-i18n-label="close">
           ✕
         </button>
         <h2 id="presetsTitle" data-i18n="presetsHeading">Presets</h2>
-        <ul id="presetList" class="preset-list"></ul>
+        <div id="presetList" class="modal-body"></div>
       </div>
     </div>
     <main class="workspace">
@@ -101,9 +93,7 @@
             <button type="button" data-camera="iso" data-i18n="cameraIso">Angle</button>
             <button type="button" data-camera="back" data-i18n="cameraBack">Back</button>
           </div>
-          <div id="buildProgress" class="view-progress" role="progressbar" aria-label="Building…" data-i18n-label="building" hidden>
-            <div></div>
-          </div>
+          <div id="buildProgress" class="view-progress" hidden></div>
           <output id="status" class="view-status" aria-live="polite"></output>
         </div>
         <button id="sheetOpen" type="button" class="sheet-open" data-i18n="showPanel" hidden>Settings</button>
@@ -120,12 +110,6 @@
           aria-label="Hide the settings"
           data-i18n-label="hidePanel"
         ></button>
-        <div id="storageBanner" class="banner" role="status" hidden>
-          <span data-i18n="storageRefused"
-            >This browser does not keep the project (its storage is full or private). Save the project file to keep it.</span
-          >
-          <button id="bannerSave" type="button" class="btn" data-i18n="saveProject">Save project file</button>
-        </div>
         <section class="card" id="plateCard">
           <h2 data-i18n="plateCard">Plate</h2>
           <div id="plateControls"></div>
