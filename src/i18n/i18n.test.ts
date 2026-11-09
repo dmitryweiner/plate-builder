@@ -61,7 +61,6 @@ describe('messages', () => {
   it('do not have static texts for unknown keys or functions', () => {
     expect(staticText(messages.en, 'missing')).toBeUndefined();
     expect(staticText(messages.en, 'triangles')).toBeUndefined();
-    expect(staticText(messages.en, 'meshProblem')).toBeUndefined();
   });
 
   it('match the English defaults in index.html', () => {
@@ -97,11 +96,6 @@ describe('messages', () => {
       expect(messages[locale].engineFailed('boom')).toContain('boom');
       expect(messages[locale].meshBlocked('x')).toContain('x');
     }
-  });
-
-  it('name every mesh problem in every language', () => {
-    for (const locale of LOCALES)
-      expect(Object.keys(messages[locale].meshProblem).toSorted()).toEqual(Object.keys(messages.en.meshProblem).toSorted());
   });
 });
 

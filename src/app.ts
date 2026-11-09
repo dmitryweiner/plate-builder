@@ -20,21 +20,30 @@ import type { Raster } from './geo/heightmap';
 import { processPixels } from './geo/heightmap';
 import { magnetPocket } from './geo/magnets';
 import { colourChanges } from './geo/printHints';
-import { stlFileName } from './geo/stl';
 import { warnings as findWarnings, type Warning } from './geo/warnings';
-import { detectLocale, direction, isLocale, messages, staticText, translator, type Locale, type Messages } from './i18n';
+import { detectLocale, direction, LOCALES, messages, staticText, translator, type Locale, type Messages, type TextKey } from './i18n';
 import type { CameraPreset, SceneHandle } from './render/view';
 import { addHole, addText, duplicateElement, nudgeElement, removeElement, toggleVisible } from './state/edit';
+import { stlFileName } from 'maker-kit/3d/stl';
 import { History } from 'maker-kit/core/history';
+import type { Translate } from 'maker-kit/core/message';
+import type { StorageWrite } from 'maker-kit/core/storage';
+import { renderBanner } from 'maker-kit/ui/banner';
+import { renderControls, type ControlsHandle } from 'maker-kit/ui/controls';
+import { el } from 'maker-kit/ui/dom';
+import { bindHistory, shortcutLetter } from 'maker-kit/ui/historyKeys';
+import { createLanguagePicker } from 'maker-kit/ui/languagePicker';
+import { createModal, modalOpen } from 'maker-kit/ui/modal';
+import { createProgress, SHOW_DELAY_MS } from 'maker-kit/ui/progress';
+import { renderPresetList } from 'maker-kit/ui/presetList';
+import { setupSheet, type NarrowQuery } from 'maker-kit/ui/sheet';
+import type { Timers } from 'maker-kit/ui/timers';
 import { addUserPreset, presetRef, presetStatus, removeUserPreset, renameUserPreset, type PresetRef } from 'maker-kit/core/presets';
 import { BLANK_PRESET, BUILT_IN_PRESETS } from './state/presets';
 import { projectFileName, projectFileText, readProjectFile } from './state/projectFile';
 import { loadSettings, saveSettings, type KeyValueStorage, type Settings } from './storage';
-import { renderControls, type ControlsHandle } from './ui/controls';
-import { el, scrollIntoContainer } from './ui/dom';
+import { scrollIntoContainer } from './ui/dom';
 import { elementsOf, renderElementGroup, syncHints, type ElementActions, type ElementType } from './ui/elementsCard';
-import { renderPresetList } from './ui/presetList';
-import { setupSheet, type NarrowQuery } from './ui/sheet';
 import { heightPicture, type ImportedImage } from './ui/imageImport';
 import { silhouetteSize, type VignetteEntry } from './ui/svgRaster';
 import { plateControls } from './ui/plateCard';
@@ -46,17 +55,14 @@ import type { Job, JobResult, MeshResult } from './worker/protocol';
 
 /** The pause after the last edit before a preview is built (spec §8.4). */
 export const PREVIEW_DELAY_MS = 250;
-/** A build or an outline runs this long before the bar over the 3D view shows: a quick one would only flicker it. */
-export const PROGRESS_DELAY_MS = 300;
+/** A build or an outline runs this long before the bar over the 3D view shows (the kit's): a quick one would only flicker it. */
+export const PROGRESS_DELAY_MS = SHOW_DELAY_MS;
 /** The pause after the last edit before the project is saved to the browser's storage. */
 export const SAVE_DELAY_MS = 1000;
 /** Arrow keys move the selected element this far, mm; with Shift ten times as far (spec §7.3). */
 export const NUDGE_MM = 0.5;
 
-export interface Timers {
-  set(fn: () => void, ms: number): number;
-  clear(id: number): void;
-}
+export type { Timers };
 
 export interface AppOptions {
   storage?: KeyValueStorage | null;
@@ -66,8 +72,8 @@ export interface AppOptions {
   csg: { run(job: Job): Promise<JobDone<JobResult> | null> };
   /** The 3D view on its canvas; null when there is none (no WebGL). */
   createScene: (canvas: HTMLCanvasElement) => SceneHandle | null;
-  /** Saves a file for the person (a download in the browser). */
-  download: (name: string, data: ArrayBuffer) => void;
+  /** Saves a file for the person (a download in the browser): text or bytes, and its media type. */
+  download: (name: string, data: string | ArrayBuffer, type: string) => void;
   timers: Timers;
   /** true where the panel is a bottom sheet (a phone); none means never */
   narrow?: NarrowQuery;
@@ -139,18 +145,6 @@ const errorText = (error: unknown) => (error instanceof Error ? error.message : 
 const typing = (target: EventTarget | null) =>
   target instanceof HTMLInputElement || target instanceof HTMLSelectElement || target instanceof HTMLTextAreaElement;
 
-/** Fields that hold typed text and so have an undo of their own; a slider, a check box or a select has none. */
-const NO_TEXT = new Set(['range', 'checkbox', 'radio', 'color', 'file', 'button', 'submit', 'reset']);
-const textEntry = (target: EventTarget | null) =>
-  target instanceof HTMLTextAreaElement || (target instanceof HTMLInputElement && !NO_TEXT.has(target.type));
-
-/** The letter of a Ctrl/⌘ shortcut: on a non-Latin layout (Cyrillic, Hebrew) the key's place on the keyboard. */
-const shortcutLetter = (event: KeyboardEvent) => {
-  const key = event.key.toLowerCase();
-  if (/^[a-z]$/.test(key)) return key;
-  return /^Key[A-Z]$/.test(event.code) ? event.code.slice(3).toLowerCase() : key;
-};
-
 /** What the view and the export card show about the last build. */
 type Build =
   { state: 'idle' } | { state: 'building' } | { state: 'done'; mesh: MeshResult; ms: number } | { state: 'failed'; reason: string };
@@ -171,7 +165,6 @@ export function startApp({
   silhouettes,
   narrow = { matches: false, addEventListener: () => {} },
 }: AppOptions): () => void {
-  const localeSelect = el('locale', HTMLSelectElement);
   const status = el('status', HTMLOutputElement);
   const plateBox = el('plateControls', HTMLElement);
   const magnetBox = el('magnetControls', HTMLElement);
@@ -210,7 +203,6 @@ export function startApp({
   const exportStatus = el('exportStatus', HTMLOutputElement);
   const exportProgress = el('exportProgress', HTMLProgressElement);
   const storageBanner = el('storageBanner', HTMLElement);
-  const bannerSave = el('bannerSave', HTMLButtonElement);
   const projectName = el('projectName', HTMLInputElement);
   const saveProjectButton = el('saveProject', HTMLButtonElement);
   const openProjectButton = el('openProject', HTMLButtonElement);
@@ -218,14 +210,9 @@ export function startApp({
   const projectStatus = el('projectStatus', HTMLElement);
   const presetList = el('presetList', HTMLElement);
   const presetsOpen = el('presetsOpen', HTMLButtonElement);
-  const presetsDialog = el('presets', HTMLElement);
-  const presetsClose = el('presetsClose', HTMLButtonElement);
   const savePresetButton = el('savePreset', HTMLButtonElement);
   const newPlateButton = el('newPlate', HTMLButtonElement);
-  const buildProgress = el('buildProgress', HTMLElement);
   const printHints = el('printHints', HTMLElement);
-  const undoButton = el('undo', HTMLButtonElement);
-  const redoButton = el('redo', HTMLButtonElement);
   const addHoleButton = el('addHole', HTMLButtonElement);
   const addImageButton = el('addImage', HTMLButtonElement);
   const addTextButton = el('addText', HTMLButtonElement);
@@ -249,6 +236,12 @@ export function startApp({
     narrow,
     onChange: () => editor.fit(),
   });
+  /** the kit's components follow the language: their translate function reads the current one */
+  const tr: Translate<TextKey> = (key, params) => translator(locale)(key, params);
+  const presetsDialog = el('presets', HTMLElement);
+  const presetsModal = createModal(presetsDialog, { close: el('presetsClose', HTMLButtonElement) });
+  // a build or an outline: one bar over the 3D view for any number of them
+  const progress = createProgress(el('buildProgress', HTMLElement), { t: tr, timers });
 
   let settings: Settings = loadSettings(storage);
   let locale: Locale = detectLocale(settings.locale, languages);
@@ -258,6 +251,8 @@ export function startApp({
   /** the preset opened last: "changed" once the project differs from it */
   let opened: PresetRef = settings.project || !firstPreset ? '' : presetRef('b', firstPreset.id);
   let saveTimer: number | null = null;
+  /** the last write of the project to the browser's storage: the banner says when it failed and why */
+  let stored: StorageWrite = 'ok';
   let selected: string | null = null;
   let outline: Ring[] = instantOutline(history.state.plate);
   /** the plate the last outline job was asked for, to ask again only when it changes */
@@ -266,9 +261,6 @@ export function startApp({
   let build: Build = { state: 'idle' };
   let exporting: Exporting = { state: 'idle' };
   let previewTimer: number | null = null;
-  /** outline jobs not answered yet: a crop's new edges take a while too */
-  let outlinesRunning = 0;
-  let progressTimer: number | null = null;
   let stopped = false;
   let plateCard: ControlsHandle<PlateState> | null = null;
   let magnetCard: ControlsHandle<PlateState> | null = null;
@@ -291,7 +283,6 @@ export function startApp({
     remove: (id) => remove(id),
   };
   let warningsKey = '';
-  let presetsKey = '';
   /** the vignette catalog, once fetched */
   let catalog: VignetteEntry[] = [];
   /** SVG proportions by URL, once loaded; a failed load stays NaN */
@@ -485,20 +476,8 @@ export function startApp({
     }
     const problems = mesh?.problems ?? [];
     meshBlocked.hidden = problems.length === 0;
-    meshBlocked.textContent = problems.length ? m.meshBlocked(problems.map((p) => m.meshProblem[p]).join(', ')) : '';
+    meshBlocked.textContent = problems.length ? m.meshBlocked(problems.map((p) => tr(p.code, p.params)).join(' ')) : '';
     downloadButton.disabled = exporting.state === 'building' || problems.length > 0;
-
-    // manifold says nothing from inside a boolean: the bars run until the job is done
-    if (build.state !== 'building' && outlinesRunning === 0) {
-      if (progressTimer !== null) timers.clear(progressTimer);
-      progressTimer = null;
-      buildProgress.hidden = true;
-    } else if (buildProgress.hidden && progressTimer === null) {
-      progressTimer = timers.set(() => {
-        progressTimer = null;
-        buildProgress.hidden = false;
-      }, PROGRESS_DELAY_MS);
-    }
     exportProgress.hidden = exporting.state !== 'building';
     if (exporting.state === 'building') exportStatus.textContent = m.exporting;
     else if (exporting.state === 'saved') exportStatus.textContent = m.exported(exporting.name, exporting.ms);
@@ -555,7 +534,8 @@ export function startApp({
           read: state,
           change: (next, final) => update(next, final),
           idPrefix: 'element',
-          t: m,
+          t: translator(locale),
+          timers,
         });
         selectedControls = { id: element.id, kind, handle };
       } else selectedControls.handle.sync(s);
@@ -593,7 +573,7 @@ export function startApp({
           views.dataset.show = '2d';
           editor.frame(spot);
         },
-        problems,
+        problems.map((p) => tr(p.code, p.params)),
       );
     }
     renderHints();
@@ -602,8 +582,7 @@ export function startApp({
     presetsOpen.title = m.presetsHeading;
     presetsOpen.setAttribute('aria-label', `${m.presetsHeading}: ${s.name}`);
     renderPresets();
-    undoButton.disabled = !history.canUndo;
-    redoButton.disabled = !history.canRedo;
+    historyKeys.refresh();
     editor.draw();
   };
 
@@ -629,15 +608,18 @@ export function startApp({
   }
 
   function renderPresets(): void {
-    // states are sanitised the same way, so their JSON text is the same for the same project
-    const changed = presetStatus(opened, state(), presetState, (s) => JSON.stringify(s)) === 'changed' ? opened.slice(2) : null;
-    const key = JSON.stringify([locale, changed, settings.presets.map((p) => [p.id, p.name])]);
-    if (key === presetsKey) return;
-    presetsKey = key;
-    renderPresetList(presetList, BUILT_IN_PRESETS, settings.presets, changed, t(), {
-      open: (id) => {
-        openPreset(id);
-        closePresets();
+    renderPresetList(presetList, {
+      builtIn: BUILT_IN_PRESETS.map((p) => ({ id: p.id, label: staticText(messages[locale], `preset.${p.id}.name`) ?? p.id })),
+      user: settings.presets,
+      current: opened,
+      // states are sanitised the same way, so their JSON text is the same for the same project
+      status: presetStatus(opened, state(), presetState, (s) => JSON.stringify(s)),
+      t: tr,
+      timers,
+      open: (ref) => {
+        const preset = presetState(ref);
+        if (preset) openProject(preset, ref);
+        presetsModal.close();
       },
       rename: (id, name) => {
         settings = { ...settings, presets: renameUserPreset(settings.presets, id, name) };
@@ -662,35 +644,13 @@ export function startApp({
     editor.fit();
   }
 
-  /** The presets dialog over everything; closed, the focus goes back to its button. */
-  const openPresets = () => {
-    presetsDialog.hidden = false;
-    presetsOpen.setAttribute('aria-expanded', 'true');
-    presetsClose.focus();
-  };
-  const closePresets = () => {
-    if (presetsDialog.hidden) return;
-    presetsDialog.hidden = true;
-    presetsOpen.setAttribute('aria-expanded', 'false');
-    presetsOpen.focus();
-  };
-  const onPresetsBackdrop = (event: MouseEvent) => {
-    if (event.target === presetsDialog) closePresets();
-  };
-
-  /** A preset of the list by its id: a built-in one, or the user's (`u<n>`). */
-  function openPreset(id: string): void {
-    const ref = BUILT_IN_PRESETS.some((p) => p.id === id) ? presetRef('b', id) : presetRef('u', id);
-    const preset = presetState(ref);
-    if (preset) openProject(preset, ref);
-  }
-
   /** Saves to the browser's storage; the banner says so when it refuses, and goes once a save works. */
   function persist(): void {
     if (saveTimer !== null) timers.clear(saveTimer);
     saveTimer = null;
     settings = { ...settings, project: state() };
-    storageBanner.hidden = saveSettings(storage, settings) === 'ok';
+    stored = saveSettings(storage, settings);
+    renderBanner(storageBanner, { project: stored, preset: null }, { t: translator(locale), onDismiss: () => {} });
   }
   const schedulePersist = () => {
     if (saveTimer !== null) timers.clear(saveTimer);
@@ -698,7 +658,7 @@ export function startApp({
   };
 
   const newPlate = () => openProject(BLANK_PRESET.build(), presetRef('b', BLANK_PRESET.id));
-  const saveProjectFile = () => download(projectFileName(state().name), new TextEncoder().encode(projectFileText(state())).buffer);
+  const saveProjectFile = () => download(projectFileName(state().name), projectFileText(state()), 'application/json');
   const pickProject = () => projectFile.click();
   const onProjectFile = () => {
     const file = projectFile.files?.[0];
@@ -745,20 +705,24 @@ export function startApp({
       read: state,
       change: (next, final) => update(next, final),
       idPrefix: 'plate',
-      t: t(),
+      t: translator(locale),
+      timers,
     });
     magnetCard = renderControls(magnetBox, magnetControls, {
       read: state,
       change: (next, final) => update(next, final),
       idPrefix: 'magnet',
-      t: t(),
+      t: translator(locale),
+      timers,
     });
     selectedControls = null;
   };
 
   const render = () => {
     translatePage(locale, t());
-    localeSelect.value = locale;
+    picker.set(locale);
+    renderBanner(storageBanner, { project: stored, preset: null }, { t: translator(locale), onDismiss: () => {} });
+    progress.refresh();
     renderCards();
     renderState();
     renderStatus();
@@ -768,15 +732,17 @@ export function startApp({
     previewTimer = null;
     build = { state: 'building' };
     renderStatus();
-    csg
-      .run({
-        kind: 'mesh',
-        quality: 'preview',
-        state: state(),
-        rasters: rasterList(),
-        textRasters: textRasterList(),
-        silhouette: silhouette(),
-      })
+    progress
+      .track(
+        csg.run({
+          kind: 'mesh',
+          quality: 'preview',
+          state: state(),
+          rasters: rasterList(),
+          textRasters: textRasterList(),
+          silhouette: silhouette(),
+        }),
+      )
       .then(
         (done) => {
           // null: a fresher preview replaced this one and will answer instead
@@ -828,15 +794,16 @@ export function startApp({
     }
     const crop = s.plate.kind === 'crop';
     const followed = crop || pictured(s.plate);
-    outlinesRunning++;
-    renderStatus();
-    csg
-      .run({
-        kind: 'outline',
-        state: s,
-        ...(crop ? { rasters: rasterList(), textRasters: textRasterList() } : {}),
-        ...(pictured(s.plate) ? { silhouette: silhouette() } : {}),
-      })
+    // a crop's new edges take a while too: the outline runs under the bar
+    progress
+      .track(
+        csg.run({
+          kind: 'outline',
+          state: s,
+          ...(crop ? { rasters: rasterList(), textRasters: textRasterList() } : {}),
+          ...(pictured(s.plate) ? { silhouette: silhouette() } : {}),
+        }),
+      )
       .then(
         (done) => {
           if (stopped || !done || done.result.kind !== 'outline' || key !== outlineFor) return;
@@ -847,11 +814,7 @@ export function startApp({
         },
         // a failed outline leaves the instant one; the mesh job reports the failure
         () => {},
-      )
-      .finally(() => {
-        outlinesRunning--;
-        if (!stopped) renderStatus();
-      });
+      );
   };
 
   function update(next: PlateState, final: boolean) {
@@ -945,36 +908,23 @@ export function startApp({
     if (selected === id) selected = null;
     update(removeElement(state(), id), true);
   }
-  const undo = () => {
-    if (history.undo() !== null) afterChange();
-  };
-  const redo = () => {
-    if (history.redo() !== null) afterChange();
-  };
+  const historyKeys = bindHistory({
+    undo: el('undo', HTMLButtonElement),
+    redo: el('redo', HTMLButtonElement),
+    onUndo: () => {
+      if (history.undo() !== null) afterChange();
+    },
+    onRedo: () => {
+      if (history.redo() !== null) afterChange();
+    },
+    canUndo: () => history.canUndo,
+    canRedo: () => history.canRedo,
+  });
 
+  /** The editor's keys; undo and redo are the kit's (bindHistory), Esc in the dialog its own. */
   const onKey = (event: KeyboardEvent) => {
-    // the open dialog takes Esc, even from its name fields
-    if (!presetsDialog.hidden) {
-      if (event.key === 'Escape') {
-        event.preventDefault();
-        closePresets();
-      }
-      return;
-    }
+    if (modalOpen() || typing(event.target)) return;
     const mod = event.ctrlKey || event.metaKey;
-    const letter = mod && !textEntry(event.target) ? shortcutLetter(event) : null;
-    if (letter === 'z') {
-      event.preventDefault();
-      if (event.shiftKey) redo();
-      else undo();
-      return;
-    }
-    if (letter === 'y') {
-      event.preventDefault();
-      redo();
-      return;
-    }
-    if (typing(event.target)) return;
     const key = event.key.toLowerCase();
     if (!selected) return;
     const step = event.shiftKey ? NUDGE_MM * 10 : NUDGE_MM;
@@ -999,19 +949,18 @@ export function startApp({
     }
   };
 
-  const onLocale = () => {
-    const value = localeSelect.value;
-    if (!isLocale(value)) return;
+  const onLocale = (value: Locale) => {
     locale = value;
     settings = { ...settings, locale: value };
     persist();
     render();
   };
+  const picker = createLanguagePicker(el('topbar', HTMLElement), { locales: LOCALES, current: locale, t: tr, onChange: onLocale });
 
   const onExport = () => {
     exporting = { state: 'building' };
     renderStatus();
-    const name = stlFileName(state().name);
+    const name = stlFileName(state().name, 'plate');
     // every picture decoded and every font in first: an export never leaves an element out
     ensureRasters();
     Promise.all([...decoding.values(), ...state().texts.map((text) => texts.loadFont(text.font))])
@@ -1030,7 +979,7 @@ export function startApp({
           if (stopped || !done || done.result.kind !== 'mesh') return;
           const { stl, problems } = done.result;
           if (stl && problems.length === 0) {
-            download(name, stl);
+            download(name, stl, 'model/stl');
             exporting = { state: 'saved', name, ms: done.ms };
           } else {
             exporting = { state: 'idle' };
@@ -1061,25 +1010,20 @@ export function startApp({
     }
   };
 
-  localeSelect.addEventListener('change', onLocale);
   downloadButton.addEventListener('click', onExport);
   views.addEventListener('click', onViews);
-  undoButton.addEventListener('click', undo);
-  redoButton.addEventListener('click', redo);
   addHoleButton.addEventListener('click', addHoleNow);
   addImageButton.addEventListener('click', pickImage);
   addTextButton.addEventListener('click', addTextNow);
   svgUpload.addEventListener('click', pickSvg);
-  bannerSave.addEventListener('click', saveProjectFile);
   saveProjectButton.addEventListener('click', saveProjectFile);
   openProjectButton.addEventListener('click', pickProject);
   projectFile.addEventListener('change', onProjectFile);
   projectName.addEventListener('change', onProjectName);
   savePresetButton.addEventListener('click', savePreset);
   newPlateButton.addEventListener('click', newPlate);
+  const openPresets = () => presetsModal.open(presetsOpen);
   presetsOpen.addEventListener('click', openPresets);
-  presetsClose.addEventListener('click', closePresets);
-  presetsDialog.addEventListener('click', onPresetsBackdrop);
   svgFile.addEventListener('change', onSvgFile);
   silhouettes.catalog().then(
     (entries) => {
@@ -1099,17 +1043,15 @@ export function startApp({
   return () => {
     stopped = true;
     if (previewTimer !== null) timers.clear(previewTimer);
-    if (progressTimer !== null) timers.clear(progressTimer);
-    localeSelect.removeEventListener('change', onLocale);
+    progress.dispose();
+    presetsModal.close();
+    historyKeys.dispose();
     downloadButton.removeEventListener('click', onExport);
     views.removeEventListener('click', onViews);
-    undoButton.removeEventListener('click', undo);
-    redoButton.removeEventListener('click', redo);
     addHoleButton.removeEventListener('click', addHoleNow);
     addImageButton.removeEventListener('click', pickImage);
     addTextButton.removeEventListener('click', addTextNow);
     svgUpload.removeEventListener('click', pickSvg);
-    bannerSave.removeEventListener('click', saveProjectFile);
     saveProjectButton.removeEventListener('click', saveProjectFile);
     openProjectButton.removeEventListener('click', pickProject);
     projectFile.removeEventListener('change', onProjectFile);
@@ -1117,8 +1059,6 @@ export function startApp({
     savePresetButton.removeEventListener('click', savePreset);
     newPlateButton.removeEventListener('click', newPlate);
     presetsOpen.removeEventListener('click', openPresets);
-    presetsClose.removeEventListener('click', closePresets);
-    presetsDialog.removeEventListener('click', onPresetsBackdrop);
     if (saveTimer !== null) {
       timers.clear(saveTimer);
       persist();

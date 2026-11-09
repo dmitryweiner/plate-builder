@@ -161,7 +161,8 @@ describe('web app manifest', () => {
   });
 
   it('takes its colours from the stylesheet: the top bar is the theme, the page the background', () => {
-    const css = readFileSync(resolve(__dirname, 'style.css'), 'utf8');
+    // the palette is maker-kit's: its first block is the base one, whose neutrals the emerald accent keeps
+    const css = readFileSync(resolve(__dirname, '../node_modules/maker-kit/src/styles/tokens.css'), 'utf8');
     const token = (name: string) => css.match(new RegExp(`${name}:\\s*(#[0-9a-f]{6});`))?.[1];
     const themeColor = html.match(/name="theme-color" content="(#[0-9a-f]{6})"/)?.[1];
     expect({ page: themeColor, manifest: manifest.theme_color, background: manifest.background_color }).toEqual({

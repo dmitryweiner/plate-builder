@@ -6,7 +6,6 @@ export const he: Messages = {
   ...kitHe,
   title: 'בונה שלטים',
   description: 'שלט שטוח — שלט לדלת, מחזיק מפתחות, תג — כקובץ STL להדפסה בתלת־ממד.',
-  languageLabel: 'שפה',
   source: 'קוד מקור',
   mm: 'מ״מ',
 
@@ -77,8 +76,6 @@ export const he: Messages = {
   visible: 'גלוי',
   duplicate: 'שכפול',
   remove: 'מחיקה',
-  decrease: 'הקטנה',
-  increase: 'הגדלה',
   holeKind: 'סוג',
   holeRound: 'עגול',
   holeSlot: 'חריץ',
@@ -158,9 +155,6 @@ export const he: Messages = {
   presetsHeading: 'תבניות',
   close: 'סגירה',
   savePreset: 'שמירה כתבנית',
-  presetChanged: 'שונה',
-  openPreset: 'פתיחה',
-  presetName: 'שם התבנית',
   'preset.blank.name': 'שלט חדש',
   'preset.door-sign.name': 'שלט לדלת',
   'preset.keychain.name': 'מחזיק מפתחות',
@@ -169,7 +163,6 @@ export const he: Messages = {
   'preset.medal.name': 'מדליה',
   'preset.name-plate.name': 'שלט שם עם לוגו',
   'preset.fridge-magnet.name': 'מגנט למקרר',
-  storageRefused: 'הדפדפן לא שומר את הפרויקט (האחסון מלא או במצב פרטי). שמרו את קובץ הפרויקט כדי לא לאבד אותו.',
 
   warningsCard: 'אזהרות',
   show: 'הצגה',
@@ -179,7 +172,7 @@ export const he: Messages = {
   builtIn: (ms: number) => `נבנה תוך ${Math.round(ms)} אלפיות שנייה`,
   exported: (name: string, ms: number) => `${name} נשמר, נבנה תוך ${Math.round(ms)} אלפיות שנייה`,
   engineFailed: (reason: string) => `מנוע הגאומטריה נכשל: ${reason}`,
-  meshBlocked: (problems: string) => `הרשת פגומה (${problems}); אי אפשר לייצא STL.`,
+  meshBlocked: (problems: string) => `${problems} אי אפשר לייצא STL.`,
   imageFailed: (reason: string) => `לא ניתן לקרוא את התמונה: ${reason}`,
   svgFailed: (reason: string) => `לא ניתן לקרוא את קובץ ה־SVG: ${reason}`,
   magnetPocket: (d: string, depth: string) => `שקע בקוטר ${d} מ״מ ובעומק ${depth} מ״מ, פתוח מאחור.`,
@@ -204,13 +197,5 @@ export const he: Messages = {
     magnetNoRoom:
       'המגנטים לא נכנסים: שקע קרוב לקו המתאר יותר מהמרחק מהשוליים, או לשקע אחר. מגנטים קטנים יותר, מרחק קטן יותר או פריסה אחרת יעזרו.',
     magnetOverlap: (names: string) => `שקע של מגנט חופף עם ${names}.`,
-  },
-  meshProblem: {
-    nonFinite: 'קואורדינטות שאינן מספרים',
-    badIndices: 'משולשים מצביעים על קודקודים חסרים',
-    empty: 'הרשת ריקה',
-    open: 'המשטח אינו סגור',
-    inverted: 'המשטח הפוך',
-    degenerate: 'יותר מדי משולשים מנוונים',
   },
 };

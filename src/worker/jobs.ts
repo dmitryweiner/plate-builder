@@ -1,12 +1,12 @@
 // What the worker does with each job, without the messaging: testable in
 // Node with the real manifold module.
 
+import { meshNormals } from 'maker-kit/3d/mesh';
+import { encodeSTL } from 'maker-kit/3d/stl';
+import { assessExport, validateMesh } from 'maker-kit/3d/validate';
 import { isRaster } from '../geo/heightmap';
-import { encodeSTL } from '../geo/stl';
-import { meshNormals } from '../geo/mesh';
 import { sanitizeState } from '../geo/state';
 import { isTextRaster } from '../geo/textShape';
-import { meshProblems, validateMesh } from '../geo/validate';
 import { buildPlate, outlineRings, stateOutline } from './build';
 import { CsgScope, type CsgApi } from './csg';
 import type { Job, JobResult } from './protocol';
@@ -39,8 +39,12 @@ export function runJob(csg: CsgApi, job: Job): JobResult {
     const { mesh, warnings } = buildPlate(csg, scope, state, rasters, job.quality);
     const { positions, indices } = mesh;
     const report = validateMesh({ positions, indices, normals: meshNormals(positions, indices) });
-    const problems = meshProblems(report);
-    const stl = job.quality === 'export' && problems.length === 0 ? encodeSTL({ positions, indices }, { name: state.name }) : null;
+    // the kit's export gate: a plate is a solid to print, so it must be closed
+    const problems = assessExport(report, true).blockers;
+    const stl =
+      job.quality === 'export' && problems.length === 0
+        ? encodeSTL({ positions, indices }, { brand: 'Plate Builder', name: state.name })
+        : null;
     return { kind: 'mesh', quality: job.quality, positions, indices, report, problems, stl, warnings };
   } finally {
     scope.dispose();

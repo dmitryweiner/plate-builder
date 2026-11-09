@@ -2,13 +2,13 @@
 // names and a "show" that frames its spot in the 2D view.
 
 import type { PlateState } from '../geo/state';
-import type { MeshProblem } from '../geo/validate';
 import type { Warning } from '../geo/warnings';
 import type { Messages } from '../i18n';
 import { elementName } from '../state/edit';
-import { make } from './dom';
+import { make } from 'maker-kit/ui/dom';
 
-export function warningText(t: Messages, w: Warning, state: PlateState, problems: readonly MeshProblem[] = []): string {
+/** `problems`: what blocks the export, as text (the kit's `kit.mesh.*` sentences). */
+export function warningText(t: Messages, w: Warning, state: PlateState, problems: readonly string[] = []): string {
   const names = w.ids.map((id) => elementName(state, id, t.elementName)).join(', ');
   const mm = (key: string) => w.params?.[key] ?? 0;
   const texts: Record<Warning['code'], () => string> = {
@@ -21,7 +21,7 @@ export function warningText(t: Messages, w: Warning, state: PlateState, problems
     'text.thin': () => t.warning.textThin(names),
     'frame.thin': () => t.warning.frameThin,
     'relief.tall': () => t.warning.reliefTall(mm('times')),
-    'mesh.invalid': () => t.meshBlocked(problems.map((p) => t.meshProblem[p]).join(', ')),
+    'mesh.invalid': () => t.meshBlocked(problems.join(' ')),
     'text.arcLines': () => t.warning.arcLines(names),
     'text.buried': () => t.warning.buried(names),
     'text.onEdge': () => t.warning.onEdge(names),
@@ -41,7 +41,7 @@ export function renderWarnings(
   t: Messages,
   /** frames the spot of the warning at this place in the list (looked up when clicked: spots follow the elements) */
   show: (index: number) => void,
-  problems: readonly MeshProblem[] = [],
+  problems: readonly string[] = [],
 ): void {
   card.hidden = warnings.length === 0;
   list.textContent = '';

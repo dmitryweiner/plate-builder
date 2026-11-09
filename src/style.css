@@ -1,135 +1,34 @@
-/* Mobile first: base rules are for a phone, min-width queries add room.
-   Logical properties (inline/block) mirror the layout for RTL by themselves.
-   A phone: the view fills the screen, the panel a bottom sheet over it, as
-   in Case Constructor. From 1024 px: the panel on the start side, the view
-   filling the rest. */
+/* Plate Builder's own styles over maker-kit's design code (maker-kit/styles/
+   kit.css: the palette, the top bar, the panel and its sheet, cards, rows,
+   buttons, the dialog). The kit's rules are in `@layer kit`, so any rule
+   here wins without a specificity fight. Mobile first; logical properties
+   only. A phone: the views fill the screen, the panel a bottom sheet over
+   them; from 1024 px the panel on the start side, both views beside it. */
 
-/* Case Constructor's dark palette with an emerald accent; dark only.
-   --panel is also the theme colour (index.html, the manifest; a test
-   keeps them equal), --bg the manifest's background. */
+/* The kit's palette with the emerald accent (`data-accent` in index.html).
+   Plate Builder keeps its density: 14 px text and 36 px controls on a phone
+   (the kit's are 16 px and 40 px), its 88 px row names on a desktop. */
 :root {
-  --bg: #15181c;
-  --panel: #1c2026;
-  --card: #252a31;
-  --text: #e4e9ef;
-  --muted: #94a0ad;
-  --accent: #34c38f;
-  --accent-strong: #5fd6a8;
-  --accent-soft: rgb(52 195 143 / 14%);
-  --on-accent: #04201a;
-  --warn: #e3b341;
-  --bad: #e06c5c;
-  --line: #343b44;
+  --font-size: 14px;
+  --font-small: 12px;
+  --font-tiny: 12px;
+  --control-h: 36px;
+  --stepper: 36px;
+  --label-w: 88px;
   /* the 2D editor's canvas, read by editor2d.ts */
   --editor-bg: #181b20;
   --editor-grid: rgb(228 233 239 / 6%);
   --editor-plate: #3a424d;
   --editor-edge: #c9d1db;
-  color-scheme: dark;
+}
+@media (min-width: 1024px) {
+  :root {
+    --control-h: 28px;
+    --stepper: 22px;
+  }
 }
 
-* {
-  box-sizing: border-box;
-}
-/* the page is the window: the views fill it, the panel scrolls */
-body {
-  margin: 0;
-  block-size: 100dvh;
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-  background: var(--bg);
-  color: var(--text);
-  font:
-    14px/1.45 system-ui,
-    -apple-system,
-    'Segoe UI',
-    sans-serif;
-}
-button,
-select,
-input {
-  font: inherit;
-}
-:focus-visible {
-  outline: 2px solid var(--accent-strong);
-  outline-offset: 2px;
-}
-
-.topbar {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 12px;
-  background: var(--panel);
-  border-block-end: 1px solid var(--line);
-}
-/* A phone: the brand and the language, then the project's name and the
-   buttons in a second line; from 760 px all in one, as in Case Constructor. */
-.topbar {
-  flex-wrap: wrap;
-  row-gap: 6px;
-}
-.brand {
-  flex: 1;
-  min-inline-size: 0;
-  overflow: hidden;
-  font-size: 15px;
-  font-weight: 700;
-  letter-spacing: 0.5px;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.lang-field {
-  order: 1;
-}
-.topbar-break {
-  order: 2;
-}
-.preset-button {
-  order: 3;
-  flex: 1;
-  min-inline-size: 0;
-  max-inline-size: 240px;
-  padding-inline: 10px;
-  overflow: hidden;
-  font-size: 14px;
-  text-align: start;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.preset-button::after {
-  content: ' …';
-  color: var(--muted);
-}
-.topbar .spacer {
-  display: none;
-}
-.topbar-break {
-  flex-basis: 100%;
-  block-size: 0;
-}
-.topbar-tools {
-  order: 4;
-  display: flex;
-  gap: 4px;
-}
-/* six buttons on a 360 px phone leave the project's name some room */
-.topbar-tools .tool-button {
-  min-inline-size: 36px;
-  padding-inline: 4px;
-}
-.lang-field select {
-  max-inline-size: 130px;
-}
-.lang-field {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-}
-.lang-globe {
-  display: none;
-}
+/* a line under the top bar when something needs saying at once */
 .topbar-note {
   margin: 0;
   padding: 6px 12px;
@@ -137,102 +36,8 @@ input {
   background: rgb(224 108 92 / 14%);
   font-size: 12.5px;
 }
-.topbar-note[hidden] {
-  display: none;
-}
-@media (min-width: 760px) {
-  .topbar {
-    flex-wrap: nowrap;
-  }
-  .topbar .spacer {
-    display: block;
-    order: 3;
-  }
-  .topbar-break {
-    display: none;
-  }
-  .topbar-tools {
-    order: 2;
-    gap: 6px;
-  }
-  .topbar-tools .tool-button {
-    min-inline-size: 40px;
-  }
-  .lang-field {
-    order: 4;
-  }
-  .lang-globe {
-    display: inline;
-  }
-  .brand {
-    flex: none;
-    font-size: 17px;
-  }
-  .preset-button {
-    order: 1;
-    flex: 0 1 auto;
-  }
-  .lang-field select {
-    max-inline-size: none;
-  }
-}
 
-/* the presets: a dialog over everything */
-.modal {
-  position: fixed;
-  inset: 0;
-  z-index: 40;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 12px;
-  background: rgb(0 0 0 / 60%);
-}
-.modal[hidden] {
-  display: none;
-}
-.modal-box {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  inline-size: min(420px, 100%);
-  max-block-size: min(80vh, 80dvh);
-  padding: 14px 16px;
-  border: 1px solid var(--line);
-  border-radius: 12px;
-  background: var(--panel);
-  box-shadow: 0 12px 40px rgb(0 0 0 / 60%);
-}
-.modal-box h2 {
-  margin: 0 0 8px;
-  font-size: 16px;
-}
-.modal-close {
-  position: absolute;
-  inset-block-start: 8px;
-  inset-inline-end: 8px;
-}
-.modal-box .preset-list {
-  min-block-size: 0;
-  overflow-y: auto;
-}
-select {
-  min-block-size: 40px;
-  padding-inline: 6px;
-  border-radius: 6px;
-  border: 1px solid var(--line);
-  background: var(--panel);
-  color: var(--text);
-}
-
-.workspace {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  min-block-size: 0;
-}
-
-/* a phone: the view fills the screen under the top bar, the sheet lies over it */
+/* a phone: the views fill the screen under the top bar, the sheet lies over them */
 .views {
   position: relative;
   flex: 1;
@@ -270,37 +75,12 @@ select {
   display: flex;
   gap: 4px;
 }
-/* chips over the views, as Case Constructor's view caption: translucent page colour */
-.view-tabs button,
-.cameras button,
-.swap-views {
-  min-block-size: 36px;
-  min-inline-size: 44px;
-  padding-inline: 10px;
-  border: 1px solid var(--line);
-  border-radius: 6px;
-  background: rgb(21 24 28 / 75%);
-  color: var(--text);
-  font-size: 12.5px;
-  cursor: pointer;
-}
-.view-tabs button:hover,
-.cameras button:hover,
-.swap-views:hover {
-  border-color: var(--accent);
-}
+/* the view's chips are the kit's (.chip): the 2D/3D tab on show is pressed */
 .views[data-show='2d'] .view-tabs [data-show='2d'],
 .views[data-show='3d'] .view-tabs [data-show='3d'] {
   border-color: var(--accent);
-  background: color-mix(in srgb, var(--accent) 22%, rgb(21 24 28 / 85%));
+  background: color-mix(in srgb, var(--accent) 22%, var(--overlay));
   color: var(--accent-strong);
-}
-.cameras {
-  position: absolute;
-  inset-block-start: 8px;
-  inset-inline-end: 8px;
-  display: flex;
-  gap: 4px;
 }
 .snap-toggle {
   position: absolute;
@@ -312,7 +92,7 @@ select {
   padding: 4px 8px;
   border: 1px solid var(--line);
   border-radius: 6px;
-  background: rgb(21 24 28 / 75%);
+  background: var(--overlay);
   color: var(--muted);
   font-size: 12px;
 }
@@ -322,220 +102,22 @@ select {
 .swap-views {
   display: none;
 }
-.status {
-  position: absolute;
-  inset-block-end: 8px;
-  inset-inline-start: 12px;
-  color: var(--muted);
-  font-size: 12px;
-}
 
-.tool-button {
-  min-block-size: 40px;
-  min-inline-size: 40px;
-  border: 1px solid var(--line);
-  border-radius: 6px;
-  background: var(--card);
-  color: var(--text);
-  font-size: 1.125rem;
-  cursor: pointer;
-}
-.tool-button:disabled {
-  opacity: 0.4;
-  cursor: default;
-}
-.spacer {
-  flex: 1;
-}
-
-.panel {
-  position: absolute;
-  z-index: 2;
-  inset-inline: 0;
-  inset-block-end: 0;
-  max-block-size: 62dvh;
-  overflow-y: auto;
-  padding: 4px 12px 24px;
-  border-block-start: 1px solid var(--line);
-  border-radius: 14px 14px 0 0;
-  background: var(--panel);
-  box-shadow: 0 -12px 28px rgb(0 0 0 / 55%);
-  transform: translateY(105%);
-  transition: transform 0.2s ease;
-}
-.panel.open {
-  transform: none;
-}
-.sheet-handle {
-  display: block;
-  inline-size: 64px;
-  block-size: 24px;
-  margin: 0 auto 4px;
-  border: 0;
-  background: none;
-  cursor: pointer;
-}
-.sheet-handle::before {
-  content: '';
-  display: block;
-  inline-size: 40px;
-  block-size: 4px;
-  margin: auto;
-  border-radius: 2px;
-  background: var(--muted);
-}
-.sheet-open {
-  position: absolute;
-  z-index: 1;
-  inset-block-end: 12px;
-  inset-inline-start: 50%;
-  translate: -50% 0;
-  min-block-size: 44px;
-  padding-inline: 20px;
-  border: 0;
-  border-radius: 22px;
-  background: var(--accent);
-  color: var(--on-accent);
-  font-weight: 600;
-  box-shadow: 0 4px 14px rgb(0 0 0 / 45%);
-  cursor: pointer;
-}
-.sheet-open::before {
-  content: '⚙ ';
-}
-.sheet-open[hidden] {
-  display: none;
-}
-.card {
-  margin-block-end: 8px;
-  padding: 10px 12px;
-  border-radius: 8px;
-  background: var(--card);
-}
-.card h2 {
-  margin-block: 0 8px;
-  font-size: 13px;
-  text-transform: uppercase;
-  letter-spacing: 0.8px;
-  color: var(--muted);
-}
-
-/* A row: on a phone the name above its control (a slider needs the width),
-   from 1024 px Case Constructor's line — name | − slider + | number unit. */
-.row {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  align-items: center;
-  gap: 4px 6px;
-  margin-block: 6px;
-}
-.row[hidden] {
-  display: none;
-}
-.row-name {
+.name-field {
   grid-column: 1 / -1;
-  font-size: 12px;
-  color: var(--muted);
-}
-.range-row {
-  grid-template-columns: auto minmax(0, 1fr) auto 4.5em auto;
-}
-.range-row:not(:has(.unit)) {
-  grid-template-columns: auto minmax(0, 1fr) auto 4.5em;
-}
-.row input[type='range'] {
-  inline-size: 100%;
-  min-inline-size: 0;
-  min-block-size: 32px;
-  margin: 0;
-  accent-color: var(--accent);
-}
-.adj-btn {
-  inline-size: 36px;
-  block-size: 36px;
-  padding: 0;
-  line-height: 1;
-  border: 1px solid var(--line);
-  border-radius: 5px;
-  background: var(--panel);
-  color: var(--muted);
-  cursor: pointer;
-}
-.adj-btn:hover:not(:disabled) {
-  color: var(--text);
-  border-color: var(--accent);
-}
-.adj-btn:disabled {
-  opacity: 0.35;
-  cursor: default;
-}
-.exact {
   inline-size: 100%;
   min-block-size: 36px;
-  padding-inline: 6px;
+  padding-inline: 8px;
   border: 1px solid var(--line);
   border-radius: 6px;
   background: var(--panel);
   color: var(--text);
-  font-variant-numeric: tabular-nums;
-  text-align: end;
-  appearance: textfield;
-}
-.exact::-webkit-inner-spin-button,
-.exact::-webkit-outer-spin-button {
-  appearance: none;
-  margin: 0;
-}
-.unit {
-  font-size: 12px;
-  color: var(--muted);
-}
-.row select {
-  inline-size: 100%;
-  min-inline-size: 0;
-}
-.check-row {
-  grid-template-columns: auto 1fr;
-}
-.check-row .row-name {
-  grid-column: 2;
-}
-.check-row input {
-  accent-color: var(--accent);
 }
 
-button.primary {
+.btn.primary {
   min-block-size: 44px;
-  inline-size: 100%;
-  padding-inline: 12px;
-  border: 0;
-  border-radius: 6px;
-  background: var(--accent);
-  color: var(--on-accent);
-  font-weight: 600;
-  cursor: pointer;
 }
-button.primary:hover:not(:disabled) {
-  background: var(--accent-strong);
-}
-/* Case Constructor's tb-btn: a quiet frame that lights up in the accent */
-button.secondary {
-  min-block-size: 40px;
-  padding-inline: 12px;
-  border: 1px solid var(--line);
-  border-radius: 6px;
-  background: var(--panel);
-  color: var(--text);
-  cursor: pointer;
-}
-button.secondary:hover:not(:disabled),
-.tool-button:hover:not(:disabled) {
-  border-color: var(--accent);
-}
-button.secondary:disabled {
-  opacity: 0.45;
-  cursor: not-allowed;
-}
+
 .element-list,
 .warning-list {
   margin: 0 0 8px;
@@ -614,27 +196,11 @@ button.secondary:disabled {
   padding: 0 8px 6px;
   border-block-start: 1px solid var(--line);
 }
-.element-body[hidden] {
-  display: none;
-}
 .element-visible {
   inline-size: 18px;
   block-size: 18px;
   margin-inline: 6px;
   accent-color: var(--accent);
-}
-.icon-button {
-  min-block-size: 36px;
-  min-inline-size: 36px;
-  border: 0;
-  border-radius: 6px;
-  background: none;
-  color: var(--muted);
-  cursor: pointer;
-}
-.icon-button:hover {
-  color: var(--text);
-  background: var(--panel);
 }
 .add-button {
   inline-size: 100%;
@@ -652,18 +218,6 @@ button.secondary:disabled {
 }
 .warning span {
   flex: 1;
-}
-.link-button {
-  border: 0;
-  background: none;
-  color: var(--accent);
-  text-decoration: underline;
-  cursor: pointer;
-  font-size: 12px;
-}
-button.primary:disabled {
-  opacity: 0.5;
-  cursor: default;
 }
 .note {
   display: block;
@@ -686,20 +240,12 @@ footer a {
 }
 
 @media (min-width: 1024px) {
-  /* the panel beside the views; the page is the window, the panel scrolls */
-  .workspace {
-    flex-direction: row-reverse;
-  }
+  /* both views side by side, the 3D one smaller; the swap button turns that round */
   .views {
-    position: relative;
-    inset: auto;
-    flex: 1;
-    block-size: auto;
     grid-template-columns: 2fr 1fr;
     gap: 1px;
     background: var(--line);
   }
-  /* both views side by side, the 3D one smaller; the swap button turns that round */
   .views.swapped {
     grid-template-columns: 1fr 2fr;
   }
@@ -723,81 +269,14 @@ footer a {
     inset-block-start: 8px;
     inset-inline-start: 8px;
   }
-  .panel {
-    position: static;
-    inline-size: 360px;
-    max-block-size: none;
-    flex: none;
-    overflow-y: auto;
-    padding: 12px 12px 24px;
-    border-block-start: 0;
-    border-radius: 0;
-    box-shadow: none;
-    transform: none;
-    transition: none;
-    border-inline-end: 1px solid var(--line);
-  }
-  .sheet-handle,
-  .sheet-open {
-    display: none;
-  }
-  /* just above the status */
-  .view-progress {
-    inset-block-end: 32px;
-  }
-  /* a pointer, not a finger: Case Constructor's density */
-  select {
-    min-block-size: 30px;
-  }
-  .row {
-    grid-template-columns: 88px minmax(0, 1fr);
-    margin-block: 5px;
-  }
-  .row-name {
-    grid-column: 1;
-  }
-  .range-row {
-    grid-template-columns: 88px auto minmax(0, 1fr) auto 3.8em auto;
-  }
-  .range-row:not(:has(.unit)) {
-    grid-template-columns: 88px auto minmax(0, 1fr) auto 3.8em;
-  }
-  .row input[type='range'] {
-    min-block-size: 22px;
-  }
-  .adj-btn {
-    inline-size: 22px;
-    block-size: 22px;
-  }
-  .exact {
-    min-block-size: 26px;
-    padding-inline: 4px;
-  }
-  .check-row {
-    grid-template-columns: auto 1fr;
-  }
-  .text-row .row-name {
-    grid-column: 1 / -1;
-  }
-  .text-row textarea {
-    grid-column: 1 / -1;
-  }
-  button.primary {
+  .btn.primary {
     min-block-size: 36px;
-  }
-  button.secondary {
-    min-block-size: 32px;
   }
   .tool-button {
     min-block-size: 34px;
-    min-inline-size: 40px;
   }
   .element-name {
     min-block-size: 32px;
-  }
-  .icon-button {
-    min-block-size: 28px;
-    min-inline-size: 28px;
   }
 }
 
@@ -814,31 +293,12 @@ footer a {
   /* a checkerboard: transparent is height 0 */
   background: repeating-conic-gradient(#343b44 0 25%, #2a3038 0 50%) 0 0 / 16px 16px;
 }
-.thumb[hidden] {
-  display: none;
-}
-
-.text-row textarea {
-  grid-column: 1 / -1;
-  inline-size: 100%;
-  padding: 6px 8px;
-  border: 1px solid var(--line);
-  border-radius: 6px;
-  background: var(--panel);
-  color: var(--text);
-  font: inherit;
-  resize: vertical;
-}
 
 .vignette-picker {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(84px, 1fr));
   gap: 6px;
   margin-block: 8px;
-}
-.vignette-picker[hidden],
-#svgChooser[hidden] {
-  display: none;
 }
 .vignette {
   padding: 4px;
@@ -870,37 +330,6 @@ footer a {
   margin-block: 6px;
   accent-color: var(--accent);
 }
-.progress[hidden] {
-  display: none;
-}
-/* Case Constructor's bar over the view: a running stripe, there being no share done to show */
-.view-progress {
-  position: absolute;
-  inset-inline: 12px;
-  /* above the settings button of a phone */
-  inset-block-end: 64px;
-  block-size: 6px;
-  border-radius: 3px;
-  background: rgb(148 160 173 / 25%);
-  overflow: hidden;
-  pointer-events: none;
-}
-.view-progress > div {
-  position: absolute;
-  inset-block: 0;
-  inline-size: 30%;
-  border-radius: inherit;
-  background: var(--accent);
-  animation: progress-run 1.1s ease-in-out infinite;
-}
-@keyframes progress-run {
-  from {
-    inset-inline-start: -30%;
-  }
-  to {
-    inset-inline-start: 100%;
-  }
-}
 .card h3 {
   margin-block: 12px 4px;
   font-size: 12px;
@@ -912,71 +341,4 @@ footer a {
   padding-inline-start: 18px;
   color: var(--muted);
   font-size: 12px;
-}
-
-.banner {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px;
-  margin-block-end: 8px;
-  padding: 8px 12px;
-  border: 1px solid var(--warn);
-  border-radius: 8px;
-  background: rgb(227 179 65 / 12%);
-  font-size: 12.5px;
-}
-.banner[hidden] {
-  display: none;
-}
-.name-field {
-  grid-column: 1 / -1;
-  inline-size: 100%;
-  min-block-size: 36px;
-  padding-inline: 8px;
-  border: 1px solid var(--line);
-  border-radius: 6px;
-  background: var(--panel);
-  color: var(--text);
-}
-.preset-list {
-  margin: 0 0 8px;
-  padding: 0;
-  list-style: none;
-}
-.preset-row {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  margin-block-end: 4px;
-}
-.preset-row .name-field {
-  flex: 1;
-  min-inline-size: 0;
-}
-/* Case Constructor's preset rows: a framed button the width of the list */
-.preset-pick {
-  flex: 1;
-  min-inline-size: 0;
-  min-block-size: 38px;
-  padding-inline: 10px;
-  overflow: hidden;
-  border: 1px solid var(--line);
-  border-radius: 6px;
-  background: var(--card);
-  color: var(--text);
-  text-align: start;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  cursor: pointer;
-}
-.preset-pick:hover {
-  border-color: var(--accent);
-}
-.preset-changed {
-  color: var(--warn);
-  font-size: 12px;
-}
-.preset-list .link-button {
-  min-block-size: 38px;
 }

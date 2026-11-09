@@ -8,7 +8,6 @@ export const en = {
   ...kitEn,
   title: 'Plate Builder',
   description: 'Design a flat plate — a sign, a keychain, a tag — and download it as STL for 3D printing.',
-  languageLabel: 'Language',
   source: 'Source code',
   mm: 'mm',
 
@@ -79,8 +78,6 @@ export const en = {
   visible: 'Visible',
   duplicate: 'Duplicate',
   remove: 'Delete',
-  decrease: 'Decrease',
-  increase: 'Increase',
   holeKind: 'Kind',
   holeRound: 'Round',
   holeSlot: 'Slot',
@@ -160,9 +157,6 @@ export const en = {
   presetsHeading: 'Presets',
   close: 'Close',
   savePreset: 'Save as preset',
-  presetChanged: 'changed',
-  openPreset: 'Open',
-  presetName: 'Preset name',
   'preset.blank.name': 'New plate',
   'preset.door-sign.name': 'Door sign',
   'preset.keychain.name': 'Keychain',
@@ -171,7 +165,6 @@ export const en = {
   'preset.medal.name': 'Medal',
   'preset.name-plate.name': 'Name plate with a logo',
   'preset.fridge-magnet.name': 'Fridge magnet',
-  storageRefused: 'This browser does not keep the project (its storage is full or private). Save the project file to keep it.',
 
   warningsCard: 'Warnings',
   show: 'Show',
@@ -181,7 +174,7 @@ export const en = {
   builtIn: (ms: number) => `built in ${Math.round(ms)} ms`,
   exported: (name: string, ms: number) => `${name} saved, built in ${Math.round(ms)} ms`,
   engineFailed: (reason: string) => `The geometry engine failed: ${reason}`,
-  meshBlocked: (problems: string) => `The mesh is broken (${problems}); the STL cannot be exported.`,
+  meshBlocked: (problems: string) => `${problems} The STL cannot be exported.`,
   imageFailed: (reason: string) => `The picture could not be read: ${reason}`,
   svgFailed: (reason: string) => `The SVG could not be read: ${reason}`,
   magnetPocket: (d: string, depth: string) => `Pocket ⌀ ${d} mm, ${depth} mm deep, open at the back.`,
@@ -207,14 +200,6 @@ export const en = {
     magnetNoRoom:
       'The magnets do not fit: a pocket comes closer to the outline than the edge distance, or to another pocket. Smaller magnets, a smaller distance or another layout help.',
     magnetOverlap: (names: string) => `A magnet pocket runs into ${names}.`,
-  },
-  meshProblem: {
-    nonFinite: 'coordinates are not numbers',
-    badIndices: 'triangles point at missing vertices',
-    empty: 'the mesh is empty',
-    open: 'the surface is not closed',
-    inverted: 'the surface is inside out',
-    degenerate: 'too many degenerate triangles',
   },
 };
 

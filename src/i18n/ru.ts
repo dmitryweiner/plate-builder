@@ -6,7 +6,6 @@ export const ru: Messages = {
   ...kitRu,
   title: 'Конструктор табличек',
   description: 'Плоская табличка — вывеска, брелок, жетон — в STL для 3D-печати.',
-  languageLabel: 'Язык',
   source: 'Исходный код',
   mm: 'мм',
 
@@ -77,8 +76,6 @@ export const ru: Messages = {
   visible: 'Видимость',
   duplicate: 'Копия',
   remove: 'Удалить',
-  decrease: 'Уменьшить',
-  increase: 'Увеличить',
   holeKind: 'Вид',
   holeRound: 'Круглое',
   holeSlot: 'Паз',
@@ -158,9 +155,6 @@ export const ru: Messages = {
   presetsHeading: 'Заготовки',
   close: 'Закрыть',
   savePreset: 'Сохранить как заготовку',
-  presetChanged: 'изменено',
-  openPreset: 'Открыть',
-  presetName: 'Название заготовки',
   'preset.blank.name': 'Новая табличка',
   'preset.door-sign.name': 'Табличка на дверь',
   'preset.keychain.name': 'Брелок',
@@ -169,7 +163,6 @@ export const ru: Messages = {
   'preset.medal.name': 'Медаль',
   'preset.name-plate.name': 'Именная табличка с логотипом',
   'preset.fridge-magnet.name': 'Магнит на холодильник',
-  storageRefused: 'Браузер не сохраняет проект (хранилище заполнено или приватный режим). Сохраните файл проекта, чтобы не потерять его.',
 
   warningsCard: 'Предупреждения',
   show: 'Показать',
@@ -180,7 +173,7 @@ export const ru: Messages = {
   builtIn: (ms: number) => `построено за ${Math.round(ms)} мс`,
   exported: (name: string, ms: number) => `${name} сохранён, построен за ${Math.round(ms)} мс`,
   engineFailed: (reason: string) => `Геометрический движок не справился: ${reason}`,
-  meshBlocked: (problems: string) => `Сетка испорчена (${problems}); STL не экспортировать.`,
+  meshBlocked: (problems: string) => `${problems} STL не экспортировать.`,
   imageFailed: (reason: string) => `Не удалось прочитать картинку: ${reason}`,
   svgFailed: (reason: string) => `Не удалось прочитать SVG: ${reason}`,
   magnetPocket: (d: string, depth: string) => `Гнездо ⌀ ${d} мм глубиной ${depth} мм, открыто сзади.`,
@@ -206,13 +199,5 @@ export const ru: Messages = {
     magnetNoRoom:
       'Магниты не помещаются: гнездо ближе к контуру, чем отступ от края, или к другому гнезду. Помогут магниты поменьше, меньший отступ или другое расположение.',
     magnetOverlap: (names: string) => `Гнездо магнита задевает ${names}.`,
-  },
-  meshProblem: {
-    nonFinite: 'координаты — не числа',
-    badIndices: 'треугольники ссылаются на несуществующие вершины',
-    empty: 'сетка пуста',
-    open: 'поверхность не замкнута',
-    inverted: 'поверхность вывернута',
-    degenerate: 'слишком много вырожденных треугольников',
   },
 };

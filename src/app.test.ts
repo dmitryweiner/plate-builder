@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
+import { modalOpen } from 'maker-kit/ui/modal';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { startApp, PREVIEW_DELAY_MS, PROGRESS_DELAY_MS, type AppOptions, type Timers } from './app';
 import { LOCALE_NAMES, LOCALES, messages, staticText } from './i18n';
@@ -23,7 +24,7 @@ function $<T extends Element>(selector: string, type: abstract new () => T): T {
 }
 const text = (selector: string) => $(selector, HTMLElement).textContent;
 function selectLocale(locale: string) {
-  const select = $('#locale', HTMLSelectElement);
+  const select = $('.lang-field select', HTMLSelectElement);
   select.value = locale;
   select.dispatchEvent(new Event('change'));
 }
@@ -117,6 +118,7 @@ function meshResult(over: Partial<MeshResult> = {}): MeshResult {
       degenerateTriangles: 0,
       triangleCount: 12,
       vertexCount: 8,
+      extents: [100, 60, 3],
     },
     problems: [],
     stl: null,
@@ -204,7 +206,7 @@ function start(languages: readonly string[] = ['en-US'], over: Partial<AppOption
     languages,
     csg,
     createScene: () => scene,
-    download: (name, data) => downloads.push({ name, bytes: data.byteLength }),
+    download: (name, data) => downloads.push({ name, bytes: typeof data === 'string' ? data.length : data.byteLength }),
     timers,
     pictures,
     texts,
@@ -234,12 +236,15 @@ beforeEach(() => {
 });
 afterEach(() => {
   stop();
+  // a dialog left open by one test would hold the next one's keys
+  if (modalOpen()) throw new Error('a dialog is still open after stop()');
   vi.restoreAllMocks();
 });
 
 describe('language', () => {
   it('lists every locale in the switcher by its own name', () => {
-    const options = [...$('#locale', HTMLSelectElement).options].map((o) => [o.value, o.textContent]);
+    start();
+    const options = [...$('.lang-field select', HTMLSelectElement).options].map((o) => [o.value, o.textContent]);
     expect(options).toEqual(LOCALES.map((l) => [l, LOCALE_NAMES[l]]));
   });
 
@@ -248,7 +253,7 @@ describe('language', () => {
     expect(document.documentElement.lang).toBe('ru');
     expect(document.title).toBe('Конструктор табличек');
     expect(text('#plateCard h2')).toBe('Табличка');
-    expect($('#locale', HTMLSelectElement).getAttribute('aria-label')).toBe('Язык');
+    expect($('.lang-field select', HTMLSelectElement).getAttribute('aria-label')).toBe('Язык');
   });
 
   it('falls back to English', () => {
@@ -265,7 +270,7 @@ describe('language', () => {
     document.body.innerHTML = body;
     start(['ru-RU']);
     expect(document.documentElement.lang).toBe('he');
-    expect($('#locale', HTMLSelectElement).value).toBe('he');
+    expect($('.lang-field select', HTMLSelectElement).value).toBe('he');
   });
 
   it('turns the page right-to-left for Hebrew and back', () => {
@@ -278,10 +283,10 @@ describe('language', () => {
 
   it('keeps the plate and redraws its card when the language changes', () => {
     start();
-    setInput('#plate-width', '120');
+    setInput('#plate_width', '120');
     selectLocale('uk');
-    expect($('#plate-width-n', HTMLInputElement).value).toBe('120');
-    expect(text('label[for="plate-width"]')).toBe('Ширина');
+    expect($('#plate_width_n', HTMLInputElement).value).toBe('120');
+    expect(text('label[for="plate_width"]')).toBe('Ширина');
   });
 });
 
@@ -304,7 +309,7 @@ describe('preview', () => {
     start();
     timers.flush();
     const before = csg.meshJobs().length;
-    for (const value of ['110', '120', '130']) setInput('#plate-width', value, 'input');
+    for (const value of ['110', '120', '130']) setInput('#plate_width', value, 'input');
     // one preview waits (the project's save waits beside it)
     expect([...timers.pending.values()].filter((p) => p.ms === PREVIEW_DELAY_MS)).toHaveLength(1);
     timers.flush();
@@ -314,7 +319,7 @@ describe('preview', () => {
 
   it('sanitises what the controls give', () => {
     start();
-    setInput('#plate-rounding-n', '999');
+    setInput('#plate_rounding_n', '999');
     timers.flush();
     expect(csg.last().job).toMatchObject({ state: { plate: { rounding: 30 } } });
   });
@@ -340,57 +345,57 @@ describe('preview', () => {
 describe('plate card', () => {
   it('offers every primitive outline and shows only the parameters of the chosen one', () => {
     start();
-    const kinds = [...$('#plate-kind', HTMLSelectElement).options].map((o) => o.value);
+    const kinds = [...$('#plate_kind', HTMLSelectElement).options].map((o) => o.value);
     expect(kinds).toEqual(['rectangle', 'ellipse', 'triangle', 'polygon', 'star', 'heart', 'shield', 'tag', 'vignette', 'svg', 'crop']);
-    const sidesRow = () => $('#plate-sides', HTMLInputElement).closest('.row');
+    const sidesRow = () => $('#plate_sides', HTMLInputElement).closest('.row');
     expect(sidesRow()?.hasAttribute('hidden')).toBe(true);
-    const select = $('#plate-kind', HTMLSelectElement);
+    const select = $('#plate_kind', HTMLSelectElement);
     select.value = 'polygon';
     select.dispatchEvent(new Event('change'));
     expect(sidesRow()?.hasAttribute('hidden')).toBe(false);
-    expect($('#plate-points', HTMLInputElement).closest('.row')?.hasAttribute('hidden')).toBe(true);
+    expect($('#plate_points', HTMLInputElement).closest('.row')?.hasAttribute('hidden')).toBe(true);
   });
 
   it('limits the rounding by the plate size', () => {
     start();
-    setInput('#plate-height-n', '20');
-    expect($('#plate-rounding', HTMLInputElement).max).toBe('10');
+    setInput('#plate_height_n', '20');
+    expect($('#plate_rounding', HTMLInputElement).max).toBe('10');
   });
 
   it('has the edges for every outline: the size up to half the wall, the profile once there is an edge', () => {
     start();
     const row = (selector: string) => $(selector, HTMLElement).closest('.row');
-    const kind = $('#plate-kind', HTMLSelectElement);
+    const kind = $('#plate_kind', HTMLSelectElement);
     for (const value of [...kind.options].map((o) => o.value)) {
       kind.value = value;
       kind.dispatchEvent(new Event('change'));
-      expect(row('#plate-edgeSize')?.hasAttribute('hidden')).toBe(false);
+      expect(row('#plate_edgeSize')?.hasAttribute('hidden')).toBe(false);
     }
     kind.value = 'rectangle';
     kind.dispatchEvent(new Event('change'));
-    expect($('#plate-edgeSize', HTMLInputElement).max).toBe('1.5');
-    $('#plate-rim', HTMLInputElement).click();
-    expect($('#plate-edgeSize', HTMLInputElement).max).toBe('2');
-    expect(row('#plate-edgeProfile')?.hasAttribute('hidden')).toBe(true);
-    expect(row('#plate-edgeSides')?.hasAttribute('hidden')).toBe(true);
-    setInput('#plate-edgeSize-n', '1');
-    expect(row('#plate-edgeProfile')?.hasAttribute('hidden')).toBe(false);
-    expect(row('#plate-edgeSides')?.hasAttribute('hidden')).toBe(false);
-    expect([...$('#plate-edgeSides', HTMLSelectElement).options].map((o) => [o.value, o.text])).toEqual([
+    expect($('#plate_edgeSize', HTMLInputElement).max).toBe('1.5');
+    $('#plate_rim', HTMLInputElement).click();
+    expect($('#plate_edgeSize', HTMLInputElement).max).toBe('2');
+    expect(row('#plate_edgeProfile')?.hasAttribute('hidden')).toBe(true);
+    expect(row('#plate_edgeSides')?.hasAttribute('hidden')).toBe(true);
+    setInput('#plate_edgeSize_n', '1');
+    expect(row('#plate_edgeProfile')?.hasAttribute('hidden')).toBe(false);
+    expect(row('#plate_edgeSides')?.hasAttribute('hidden')).toBe(false);
+    expect([...$('#plate_edgeSides', HTMLSelectElement).options].map((o) => [o.value, o.text])).toEqual([
       ['both', 'Top and bottom'],
       ['top', 'Top only'],
       ['bottom', 'Bottom only'],
     ]);
-    expect([...$('#plate-edgeProfile', HTMLSelectElement).options].map((o) => [o.value, o.text])).toEqual([
+    expect([...$('#plate_edgeProfile', HTMLSelectElement).options].map((o) => [o.value, o.text])).toEqual([
       ['fillet', 'Rounded'],
       ['chamfer', 'Chamfer 45°'],
     ]);
-    const profile = $('#plate-edgeProfile', HTMLSelectElement);
+    const profile = $('#plate_edgeProfile', HTMLSelectElement);
     profile.value = 'chamfer';
     profile.dispatchEvent(new Event('change'));
     timers.flush();
     expect(csg.last().job).toMatchObject({ state: { plate: { edgeSize: 1, edgeProfile: 'chamfer' } } });
-    const sides = $('#plate-edgeSides', HTMLSelectElement);
+    const sides = $('#plate_edgeSides', HTMLSelectElement);
     sides.value = 'top';
     sides.dispatchEvent(new Event('change'));
     timers.flush();
@@ -401,7 +406,7 @@ describe('plate card', () => {
     $('#undo', HTMLButtonElement).click();
     expect(profile.value).toBe('fillet');
     $('#undo', HTMLButtonElement).click();
-    expect($('#plate-edgeSize-n', HTMLInputElement).value).toBe('0');
+    expect($('#plate_edgeSize_n', HTMLInputElement).value).toBe('0');
   });
 });
 
@@ -424,11 +429,11 @@ describe('export', () => {
   it('blocks the export of a broken mesh and says why', async () => {
     start();
     timers.flush();
-    csg.last().settle({ result: meshResult({ problems: ['open', 'inverted'] }), ms: 5 });
+    csg.last().settle({ result: meshResult({ problems: [{ code: 'kit.mesh.open' }, { code: 'kit.mesh.inverted' }] }), ms: 5 });
     await settle();
     expect($('#meshBlocked', HTMLElement).hidden).toBe(false);
     expect(text('#meshBlocked')).toBe(
-      'The mesh is broken (the surface is not closed, the surface is inside out); the STL cannot be exported.',
+      'The mesh is not closed — a slicer would not print it. The mesh is inside out. The STL cannot be exported.',
     );
     expect($('#downloadStl', HTMLButtonElement).disabled).toBe(true);
   });
@@ -471,7 +476,7 @@ describe('elements', () => {
     expect(titles('holeList')).toEqual(['Hole 1']);
     expect(openRow()).not.toBeNull();
     expect(openTitle()).toBe('Hole 1');
-    expect($('#element-diameter-n', HTMLInputElement).value).toBe('4');
+    expect($('#element_diameter_n', HTMLInputElement).value).toBe('4');
     timers.flush();
     expect(holes()).toHaveLength(1);
   });
@@ -479,12 +484,12 @@ describe('elements', () => {
   it('edits the selected hole by its card and changes the rows with its kind', () => {
     start();
     $('#addHole', HTMLButtonElement).click();
-    setInput('#element-x-n', '20');
-    const kind = $('#element-holeKind', HTMLSelectElement);
+    setInput('#element_x_n', '20');
+    const kind = $('#element_holeKind', HTMLSelectElement);
     kind.value = 'keyhole';
     kind.dispatchEvent(new Event('change'));
-    expect($('#element-keySlot', HTMLInputElement).closest('.row')?.hasAttribute('hidden')).toBe(false);
-    expect($('#element-diameter', HTMLInputElement).closest('.row')?.hasAttribute('hidden')).toBe(true);
+    expect($('#element_keySlot', HTMLInputElement).closest('.row')?.hasAttribute('hidden')).toBe(false);
+    expect($('#element_diameter', HTMLInputElement).closest('.row')?.hasAttribute('hidden')).toBe(true);
     timers.flush();
     expect(holes()[0]).toMatchObject({ x: 20, kind: 'keyhole' });
   });
@@ -539,7 +544,7 @@ describe('elements', () => {
     $('#addHole', HTMLButtonElement).click();
     expect(headHints()).toEqual(['Text', 'Round']);
     $('.element-row[data-id="t1"] .element-name', HTMLButtonElement).click();
-    const area = $('#element-text', HTMLTextAreaElement);
+    const area = $('#element_text', HTMLTextAreaElement);
     area.focus();
     area.value = 'Room 12\nKitchen';
     area.dispatchEvent(new Event('input'));
@@ -587,26 +592,26 @@ describe('history', () => {
   it('undoes and redoes with the buttons and the keys, a slider drag being one step', () => {
     start();
     expect($('#undo', HTMLButtonElement).disabled).toBe(true);
-    for (const value of ['110', '120', '130']) setInput('#plate-width', value, 'input');
-    setInput('#plate-width', '130', 'change');
+    for (const value of ['110', '120', '130']) setInput('#plate_width', value, 'input');
+    setInput('#plate_width', '130', 'change');
     $('#undo', HTMLButtonElement).click();
-    expect($('#plate-width-n', HTMLInputElement).value).toBe('100');
+    expect($('#plate_width_n', HTMLInputElement).value).toBe('100');
     expect($('#redo', HTMLButtonElement).disabled).toBe(false);
     press('z', { ctrlKey: true, shiftKey: true });
-    expect($('#plate-width-n', HTMLInputElement).value).toBe('130');
+    expect($('#plate_width_n', HTMLInputElement).value).toBe('130');
     press('z', { metaKey: true });
-    expect($('#plate-width-n', HTMLInputElement).value).toBe('100');
+    expect($('#plate_width_n', HTMLInputElement).value).toBe('100');
     press('y', { ctrlKey: true });
-    expect($('#plate-width-n', HTMLInputElement).value).toBe('130');
+    expect($('#plate_width_n', HTMLInputElement).value).toBe('130');
   });
 
   it('undoes with Ctrl+Z on a non-Latin keyboard layout', () => {
     start();
-    setInput('#plate-width-n', '130');
+    setInput('#plate_width_n', '130');
     press('я', { code: 'KeyZ', ctrlKey: true });
-    expect($('#plate-width-n', HTMLInputElement).value).toBe('100');
+    expect($('#plate_width_n', HTMLInputElement).value).toBe('100');
     press('н', { code: 'KeyY', ctrlKey: true });
-    expect($('#plate-width-n', HTMLInputElement).value).toBe('130');
+    expect($('#plate_width_n', HTMLInputElement).value).toBe('130');
     $('#addHole', HTMLButtonElement).click();
     press('в', { code: 'KeyD', ctrlKey: true });
     expect(document.querySelectorAll('.element-row')).toHaveLength(2);
@@ -614,24 +619,24 @@ describe('history', () => {
 
   it('undoes with Ctrl+Z while a slider, a check box or a select has the focus', () => {
     start();
-    setInput('#plate-width-n', '130');
-    setInput('#plate-width-n', '140');
-    setInput('#plate-width-n', '150');
+    setInput('#plate_width_n', '130');
+    setInput('#plate_width_n', '140');
+    setInput('#plate_width_n', '150');
     const keyOn = (selector: string) =>
       $(selector, HTMLElement).dispatchEvent(new KeyboardEvent('keydown', { key: 'z', ctrlKey: true, bubbles: true }));
-    keyOn('#plate-width');
-    expect($('#plate-width-n', HTMLInputElement).value).toBe('140');
-    keyOn('#plate-kind');
-    expect($('#plate-width-n', HTMLInputElement).value).toBe('130');
+    keyOn('#plate_width');
+    expect($('#plate_width_n', HTMLInputElement).value).toBe('140');
+    keyOn('#plate_kind');
+    expect($('#plate_width_n', HTMLInputElement).value).toBe('130');
     keyOn('#snapping');
-    expect($('#plate-width-n', HTMLInputElement).value).toBe('100');
+    expect($('#plate_width_n', HTMLInputElement).value).toBe('100');
   });
 
   it("leaves Ctrl+Z in a text or number field to the field's own undo", () => {
     start();
-    setInput('#plate-width-n', '130');
-    $('#plate-width-n', HTMLInputElement).dispatchEvent(new KeyboardEvent('keydown', { key: 'z', ctrlKey: true, bubbles: true }));
-    expect($('#plate-width-n', HTMLInputElement).value).toBe('130');
+    setInput('#plate_width_n', '130');
+    $('#plate_width_n', HTMLInputElement).dispatchEvent(new KeyboardEvent('keydown', { key: 'z', ctrlKey: true, bubbles: true }));
+    expect($('#plate_width_n', HTMLInputElement).value).toBe('130');
   });
 
   it('undo of an added hole removes it and its selection', () => {
@@ -649,8 +654,8 @@ describe('keyboard', () => {
     $('#addHole', HTMLButtonElement).click();
     press('ArrowRight');
     press('ArrowUp', { shiftKey: true });
-    expect($('#element-x-n', HTMLInputElement).value).toBe('0.5');
-    expect($('#element-y-n', HTMLInputElement).value).toBe('5');
+    expect($('#element_x_n', HTMLInputElement).value).toBe('0.5');
+    expect($('#element_y_n', HTMLInputElement).value).toBe('5');
     press('d', { ctrlKey: true });
     expect(document.querySelectorAll('.element-row')).toHaveLength(2);
     press('Delete');
@@ -663,7 +668,7 @@ describe('keyboard', () => {
   it('leaves keys typed into a field alone', () => {
     start();
     $('#addHole', HTMLButtonElement).click();
-    $('#element-x-n', HTMLInputElement).dispatchEvent(new KeyboardEvent('keydown', { key: 'Delete', bubbles: true }));
+    $('#element_x_n', HTMLInputElement).dispatchEvent(new KeyboardEvent('keydown', { key: 'Delete', bubbles: true }));
     expect(document.querySelectorAll('.element-row')).toHaveLength(1);
   });
 });
@@ -674,11 +679,11 @@ describe('warnings and outline', () => {
   it('lists a warning with the element name and hides the card when it is gone', () => {
     start();
     $('#addHole', HTMLButtonElement).click();
-    setInput('#element-x-n', '47');
+    setInput('#element_x_n', '47');
     expect($('#warningsCard', HTMLElement).hidden).toBe(false);
     expect(text('#warningList li span')).toBe('Hole 1: only 1 mm of material to the edge; 2 mm or more holds better.');
     $('#warningList button', HTMLButtonElement).click();
-    setInput('#element-x-n', '0');
+    setInput('#element_x_n', '0');
     expect($('#warningsCard', HTMLElement).hidden).toBe(true);
   });
 
@@ -687,7 +692,7 @@ describe('warnings and outline', () => {
     expect(outlines()).toBe(1);
     $('#addHole', HTMLButtonElement).click();
     expect(outlines()).toBe(1);
-    setInput('#plate-rounding-n', '10');
+    setInput('#plate_rounding_n', '10');
     expect(outlines()).toBe(2);
   });
 
@@ -711,10 +716,10 @@ describe('images', () => {
     chooseFile('logo.png');
     await settle();
     expect(openTitle()).toBe('Image 1');
-    expect($('#element-size-n', HTMLInputElement).value).toBe('60');
-    expect($('#element-height-n', HTMLInputElement).value).toBe('1.5');
+    expect($('#element_size_n', HTMLInputElement).value).toBe('60');
+    expect($('#element_height_n', HTMLInputElement).value).toBe('1.5');
     // the crop's own rows wait for the crop outline
-    expect($('#element-threshold', HTMLInputElement).closest('.row')?.hasAttribute('hidden')).toBe(true);
+    expect($('#element_threshold', HTMLInputElement).closest('.row')?.hasAttribute('hidden')).toBe(true);
     timers.flush();
     const job = csg.last().job;
     expect(job.kind === 'mesh' && job.rasters).toEqual([raster2x1]);
@@ -757,8 +762,8 @@ describe('texts', () => {
     start();
     $('#addText', HTMLButtonElement).click();
     expect(openTitle()).toBe('Text 1');
-    expect($('#element-text', HTMLTextAreaElement).value).toBe('Text');
-    expect([...$('#element-text-font', HTMLSelectElement).options].map((o) => o.textContent)).toEqual([
+    expect($('#element_text', HTMLTextAreaElement).value).toBe('Text');
+    expect([...$('#element_text-font', HTMLSelectElement).options].map((o) => o.textContent)).toEqual([
       'Rubik',
       'Oswald',
       'PT Serif',
@@ -778,30 +783,30 @@ describe('texts', () => {
     start();
     $('#addText', HTMLButtonElement).click();
     const row = (id: string) => $(`#${id}`, HTMLElement).closest('.row');
-    expect(row('element-text-depth')?.hasAttribute('hidden')).toBe(true);
-    const mode = $('#element-text-mode', HTMLSelectElement);
+    expect(row('element_text-depth')?.hasAttribute('hidden')).toBe(true);
+    const mode = $('#element_text-mode', HTMLSelectElement);
     mode.value = 'engraved';
     mode.dispatchEvent(new Event('change'));
-    expect(row('element-text-depth')?.hasAttribute('hidden')).toBe(false);
-    expect(row('element-text-height')?.hasAttribute('hidden')).toBe(true);
-    expect(row('element-text-arcRadius')?.hasAttribute('hidden')).toBe(true);
-    $('#element-text-arc', HTMLInputElement).click();
-    expect(row('element-text-arcRadius')?.hasAttribute('hidden')).toBe(false);
-    expect($('#element-text-arcRadius-n', HTMLInputElement).value).toBe('50');
+    expect(row('element_text-depth')?.hasAttribute('hidden')).toBe(false);
+    expect(row('element_text-height')?.hasAttribute('hidden')).toBe(true);
+    expect(row('element_text-arcRadius')?.hasAttribute('hidden')).toBe(true);
+    $('#element_text-arc', HTMLInputElement).click();
+    expect(row('element_text-arcRadius')?.hasAttribute('hidden')).toBe(false);
+    expect($('#element_text-arcRadius_n', HTMLInputElement).value).toBe('50');
   });
 
   it('types into the text as one step per edit and warns about joined arc lines', () => {
     start();
     $('#addText', HTMLButtonElement).click();
-    const area = $('#element-text', HTMLTextAreaElement);
+    const area = $('#element_text', HTMLTextAreaElement);
     area.value = 'Kitchen\nDoor';
     area.dispatchEvent(new Event('input'));
     area.dispatchEvent(new Event('change'));
-    $('#element-text-arc', HTMLInputElement).click();
+    $('#element_text-arc', HTMLInputElement).click();
     expect(text('#warningList')).toContain('Text 1: an arc takes one line; the lines are joined.');
     $('#undo', HTMLButtonElement).click();
     $('#undo', HTMLButtonElement).click();
-    expect($('#element-text', HTMLTextAreaElement).value).toBe('Text');
+    expect($('#element_text', HTMLTextAreaElement).value).toBe('Text');
   });
 
   it('shows the warnings the worker found', async () => {
@@ -821,27 +826,27 @@ describe('crop and rim', () => {
     start();
     $('#addText', HTMLButtonElement).click();
     await settle();
-    const kind = $('#plate-kind', HTMLSelectElement);
+    const kind = $('#plate_kind', HTMLSelectElement);
     kind.value = 'crop';
     kind.dispatchEvent(new Event('change'));
     const row = (id: string) => $(`#${id}`, HTMLElement).closest('.row');
-    expect(row('plate-width')?.hasAttribute('hidden')).toBe(true);
-    expect(row('plate-padding')?.hasAttribute('hidden')).toBe(false);
+    expect(row('plate_width')?.hasAttribute('hidden')).toBe(true);
+    expect(row('plate_padding')?.hasAttribute('hidden')).toBe(false);
     const job = outlineJobs().at(-1)?.job;
     expect(job?.kind === 'outline' && job.textRasters?.[0]?.width).toBe(10 * 8 * 4);
-    expect($('#element-text-inOutline', HTMLInputElement).closest('.row')?.hasAttribute('hidden')).toBe(false);
+    expect($('#element_text-inOutline', HTMLInputElement).closest('.row')?.hasAttribute('hidden')).toBe(false);
   });
 
   it('asks again when an element of the crop moves, and shows the outline’s warnings', async () => {
     start();
     $('#addText', HTMLButtonElement).click();
     await settle();
-    setInput('#plate-padding-n', '1');
-    const kind = $('#plate-kind', HTMLSelectElement);
+    setInput('#plate_padding_n', '1');
+    const kind = $('#plate_kind', HTMLSelectElement);
     kind.value = 'crop';
     kind.dispatchEvent(new Event('change'));
     const before = outlineJobs().length;
-    setInput('#element-x-n', '10');
+    setInput('#element_x_n', '10');
     expect(outlineJobs().length).toBe(before + 1);
     outlineJobs()
       .at(-1)
@@ -856,9 +861,9 @@ describe('crop and rim', () => {
   it('shows the rim’s sizes only with the rim on', () => {
     start();
     const row = (id: string) => $(`#${id}`, HTMLElement).closest('.row');
-    expect(row('plate-rimWidth')?.hasAttribute('hidden')).toBe(true);
-    $('#plate-rim', HTMLInputElement).click();
-    expect(row('plate-rimWidth')?.hasAttribute('hidden')).toBe(false);
+    expect(row('plate_rimWidth')?.hasAttribute('hidden')).toBe(true);
+    $('#plate_rim', HTMLInputElement).click();
+    expect(row('plate_rimWidth')?.hasAttribute('hidden')).toBe(false);
     timers.flush();
     expect(csg.last().job).toMatchObject({ state: { plate: { rim: true } } });
   });
@@ -870,24 +875,24 @@ function pick(selector: string, value: string) {
   select.dispatchEvent(new Event('change'));
 }
 const magnetRow = (id: string) => $(`#${id}`, HTMLElement).closest('.row');
-const layouts = () => [...$('#magnet-layout', HTMLSelectElement).options].map((o) => o.value);
+const layouts = () => [...$('#magnet_layout', HTMLSelectElement).options].map((o) => o.value);
 
 describe('magnets card', () => {
   it('shows the number alone at none; with magnets, their sizes, the layouts of the number and the pocket', () => {
     start();
-    expect([...$('#magnet-count', HTMLSelectElement).options].map((o) => o.textContent)).toEqual(['None', '1', '2', '3', '4']);
-    for (const id of ['magnet-layout', 'magnet-diameter', 'magnet-thickness', 'magnet-fit', 'magnet-edge']) {
+    expect([...$('#magnet_count', HTMLSelectElement).options].map((o) => o.textContent)).toEqual(['None', '1', '2', '3', '4']);
+    for (const id of ['magnet_layout', 'magnet_diameter', 'magnet_thickness', 'magnet_fit', 'magnet_edge']) {
       expect(magnetRow(id)?.hasAttribute('hidden')).toBe(true);
     }
     expect($('#magnetPocket', HTMLElement).hidden).toBe(true);
-    pick('#magnet-count', '4');
-    for (const id of ['magnet-layout', 'magnet-diameter', 'magnet-thickness', 'magnet-fit', 'magnet-edge']) {
+    pick('#magnet_count', '4');
+    for (const id of ['magnet_layout', 'magnet_diameter', 'magnet_thickness', 'magnet_fit', 'magnet_edge']) {
       expect(magnetRow(id)?.hasAttribute('hidden')).toBe(false);
     }
     expect(layouts()).toEqual(['corners', 'diamond', 'row', 'column']);
-    expect($('#magnet-layout', HTMLSelectElement).value).toBe('corners');
+    expect($('#magnet_layout', HTMLSelectElement).value).toBe('corners');
     expect(text('#magnetPocket')).toBe('Pocket ⌀ 10.2 mm, 2.1 mm deep, open at the back.');
-    setInput('#magnet-diameter-n', '12');
+    setInput('#magnet_diameter_n', '12');
     expect(text('#magnetPocket')).toBe('Pocket ⌀ 12.2 mm, 2.1 mm deep, open at the back.');
     timers.flush();
     expect(csg.last().job).toMatchObject({ state: { magnets: { count: 4, layout: 'corners', diameter: 12 } } });
@@ -895,32 +900,32 @@ describe('magnets card', () => {
 
   it('keeps the layout the new number has, else takes its first', () => {
     start();
-    pick('#magnet-count', '3');
-    pick('#magnet-layout', 'row');
-    pick('#magnet-count', '4');
-    expect($('#magnet-layout', HTMLSelectElement).value).toBe('row');
-    pick('#magnet-count', '1');
+    pick('#magnet_count', '3');
+    pick('#magnet_layout', 'row');
+    pick('#magnet_count', '4');
+    expect($('#magnet_layout', HTMLSelectElement).value).toBe('row');
+    pick('#magnet_count', '1');
     expect(layouts()).toEqual(['centre', 'top']);
-    expect($('#magnet-layout', HTMLSelectElement).value).toBe('centre');
+    expect($('#magnet_layout', HTMLSelectElement).value).toBe('centre');
   });
 
   it('is one undo step a change, says to glue the magnets in and warns about a thin plate', () => {
     start();
-    pick('#magnet-count', '2');
+    pick('#magnet_count', '2');
     expect(hints()).toContain('After printing, glue the magnets (2 × ⌀ 10 × 2 mm) into the pockets on the back.');
-    setInput('#plate-thickness-n', '2.5');
+    setInput('#plate_thickness_n', '2.5');
     expect(text('#warningList li span')).toBe('The magnets need a plate at least 2.9 mm thick, to leave 0.8 mm over their pockets.');
     $('#undo', HTMLButtonElement).click();
     $('#undo', HTMLButtonElement).click();
-    expect($('#magnet-count', HTMLSelectElement).value).toBe('0');
+    expect($('#magnet_count', HTMLSelectElement).value).toBe('0');
     expect(hints()).toEqual(['Print with the back on the bed; no supports needed.']);
   });
 
   it('translates its rows and layouts', () => {
     start(['ru']);
-    pick('#magnet-count', '2');
+    pick('#magnet_count', '2');
     expect(text('#magnetsCard h2')).toBe('Магниты');
-    expect([...$('#magnet-layout', HTMLSelectElement).options].map((o) => o.textContent)).toEqual(['В ряд', 'Столбиком', 'Верхние углы']);
+    expect([...$('#magnet_layout', HTMLSelectElement).options].map((o) => o.textContent)).toEqual(['В ряд', 'Столбиком', 'Верхние углы']);
   });
 });
 
@@ -934,7 +939,7 @@ describe('cards', () => {
 });
 
 function chooseKind(kind: string) {
-  const select = $('#plate-kind', HTMLSelectElement);
+  const select = $('#plate_kind', HTMLSelectElement);
   select.value = kind;
   select.dispatchEvent(new Event('change'));
 }
@@ -962,11 +967,11 @@ describe('vignettes and own SVG', () => {
     await settle();
     chooseKind('vignette');
     await settle();
-    $('#plate-keepProportions', HTMLInputElement).click();
+    $('#plate_keepProportions', HTMLInputElement).click();
     await settle();
     const job = outlineJobs().at(-1)?.job;
     expect(job?.kind === 'outline' && [job.silhouette?.width, job.silhouette?.height]).toEqual([100, 60]);
-    expect($('#plate-frameHeight', HTMLElement).closest('.row')?.hasAttribute('hidden')).toBe(false);
+    expect($('#plate_frameHeight', HTMLElement).closest('.row')?.hasAttribute('hidden')).toBe(false);
   });
 
   it('reads an own SVG into the plate, or says why not', async () => {
@@ -978,7 +983,7 @@ describe('vignettes and own SVG', () => {
     };
     choose('frame.svg');
     await settle();
-    expect($('#plate-kind', HTMLSelectElement).value).toBe('svg');
+    expect($('#plate_kind', HTMLSelectElement).value).toBe('svg');
     expect($('#svgChooser', HTMLElement).hidden).toBe(false);
     choose('frame.png');
     await settle();
@@ -992,10 +997,10 @@ describe('export card and warnings', () => {
   it('keeps the list buttons through an edit that does not change the lists, so a click that blurs a field lands', () => {
     start();
     $('#addHole', HTMLButtonElement).click();
-    setInput('#element-x-n', '47');
+    setInput('#element_x_n', '47');
     const row = $('.element-row .element-name', HTMLButtonElement);
     const show = $('#warningList button', HTMLButtonElement);
-    setInput('#element-y-n', '1');
+    setInput('#element_y_n', '1');
     expect(document.querySelector('.element-row .element-name')).toBe(row);
     expect(document.querySelector('#warningList button')).toBe(show);
   });
@@ -1003,7 +1008,7 @@ describe('export card and warnings', () => {
   it('gives the print hints and the colour changes of the flat reliefs', () => {
     start();
     expect(hints()).toEqual(['Print with the back on the bed; no supports needed.']);
-    $('#plate-rim', HTMLInputElement).click();
+    $('#plate_rim', HTMLInputElement).click();
     expect(hints()).toEqual([
       'Print with the back on the bed; no supports needed.',
       'Change filament at Z = 3 mm (the first layer above it).',
@@ -1021,10 +1026,10 @@ describe('export card and warnings', () => {
   it('lists a broken mesh among the warnings, without a place to show', async () => {
     start();
     timers.flush();
-    csg.last().settle({ result: meshResult({ problems: ['empty'] }), ms: 1 });
+    csg.last().settle({ result: meshResult({ problems: [{ code: 'kit.mesh.empty' }] }), ms: 1 });
     await settle();
     const item = $('#warningList li[data-code="mesh.invalid"]', HTMLElement);
-    expect(item.textContent).toBe('The mesh is broken (the mesh is empty); the STL cannot be exported.');
+    expect(item.textContent).toBe('The part is empty. The STL cannot be exported.');
     expect(item.querySelector('button')).toBeNull();
   });
 
@@ -1043,9 +1048,10 @@ describe('export card and warnings', () => {
     expect(bar.hidden).toBe(false);
     csg.last().settle({ result: meshResult(), ms: 1 });
     await settle();
+    timers.run(0);
     expect(bar.hidden).toBe(true);
     // a quick build ends before the delay: nothing is left to show the bar
-    setInput('#plate-width', '120');
+    setInput('#plate_width', '120');
     await answerOutlines();
     timers.run(PREVIEW_DELAY_MS);
     csg.last().settle({ result: meshResult(), ms: 1 });
@@ -1053,10 +1059,11 @@ describe('export card and warnings', () => {
     timers.run(PROGRESS_DELAY_MS);
     expect(bar.hidden).toBe(true);
     // the outline (a crop's new edges) alone, before its preview starts
-    setInput('#plate-width', '130');
+    setInput('#plate_width', '130');
     timers.run(PROGRESS_DELAY_MS);
     expect(bar.hidden).toBe(false);
     await answerOutlines();
+    timers.run(0);
     expect(bar.hidden).toBe(true);
     $('#downloadStl', HTMLButtonElement).click();
     expect($('#exportProgress', HTMLElement).hidden).toBe(false);
@@ -1065,8 +1072,9 @@ describe('export card and warnings', () => {
 
 class RefusingStorage extends MemoryStorage {
   refuse = true;
+  error: Error = new DOMException('quota', 'QuotaExceededError');
   override setItem(key: string, value: string) {
-    if (this.refuse) throw new DOMException('quota', 'QuotaExceededError');
+    if (this.refuse) throw this.error;
     super.setItem(key, value);
   }
 }
@@ -1081,25 +1089,33 @@ describe('projects, presets, storage', () => {
 
   it('keeps the project across a reload, saved after a pause', () => {
     start();
-    setInput('#plate-width-n', '140');
+    setInput('#plate_width_n', '140');
     expect(loadSettings(storage).project?.plate.width).toBe(100);
     timers.flush();
     expect(loadSettings(storage).project?.plate.width).toBe(140);
     stop();
     document.body.innerHTML = body;
     start();
-    expect($('#plate-width-n', HTMLInputElement).value).toBe('140');
+    expect($('#plate_width_n', HTMLInputElement).value).toBe('140');
   });
 
-  it('says when the browser does not keep the project, until a save works', () => {
+  it('says when the browser does not keep the project, and why, until a save works', () => {
     const refusing = new RefusingStorage();
     storage = refusing;
     start();
-    setInput('#plate-width-n', '120');
+    setInput('#plate_width_n', '120');
     timers.flush();
-    expect($('#storageBanner', HTMLElement).hidden).toBe(false);
+    const banner = $('#storageBanner', HTMLElement);
+    expect(banner.hidden).toBe(false);
+    expect(banner.textContent).toBe(messages.en['kit.storage.project.full']);
+    expect(banner.classList.contains('bad')).toBe(false);
+    refusing.error = new Error('denied');
+    setInput('#plate_width_n', '125');
+    timers.flush();
+    expect(banner.textContent).toBe(messages.en['kit.storage.project.blocked']);
+    expect(banner.classList.contains('bad')).toBe(true);
     refusing.refuse = false;
-    setInput('#plate-width-n', '130');
+    setInput('#plate_width_n', '130');
     timers.flush();
     expect($('#storageBanner', HTMLElement).hidden).toBe(true);
   });
@@ -1124,7 +1140,7 @@ describe('projects, presets, storage', () => {
     input.dispatchEvent(new Event('change'));
     await settle();
     expect($('#projectName', HTMLInputElement).value).toBe('Gate');
-    expect($('#plate-width-n', HTMLInputElement).value).toBe('77');
+    expect($('#plate_width_n', HTMLInputElement).value).toBe('77');
     // undo brings the project back that was open before
     $('#undo', HTMLButtonElement).click();
     expect($('#projectName', HTMLInputElement).value).toBe('Front door');
@@ -1141,7 +1157,7 @@ describe('projects, presets, storage', () => {
     };
     expect(await tryFile('{"app":"other"}')).toBe('This file is not a project of this app.');
     expect(await tryFile('{broken')).toBe('This file is not a readable project.');
-    expect($('#plate-width-n', HTMLInputElement).value).toBe('100');
+    expect($('#plate_width_n', HTMLInputElement).value).toBe('100');
   });
 
   it('opens the presets dialog from the top bar and closes it by its button, Esc and the backdrop', () => {
@@ -1188,15 +1204,17 @@ describe('projects, presets, storage', () => {
   it('opens a built-in preset from the dialog, closing it, and marks it changed once edited', () => {
     start();
     $('#presetsOpen', HTMLButtonElement).click();
-    expect([...document.querySelectorAll('.preset-row')].map((r) => r.textContent)).toEqual(
+    expect([...document.querySelectorAll('.preset-group')].map((h) => h.textContent)).toEqual(['My presets', 'Built-in']);
+    expect([...document.querySelectorAll('.preset-row[data-ref^="b:"] .preset-name')].map((r) => r.textContent)).toEqual(
       BUILT_IN_PRESETS.map((p) => staticText(messages.en, `preset.${p.id}.name`)),
     );
-    $('.preset-row[data-id="medal"] button', HTMLButtonElement).click();
+    $('.preset-row[data-ref="b:medal"] .preset-pick', HTMLButtonElement).click();
     expect($('#presets', HTMLElement).hidden).toBe(true);
     expect($('#projectName', HTMLInputElement).value).toBe('Medal');
+    expect($('.preset-row[data-ref="b:medal"] .preset-pick', HTMLElement).getAttribute('aria-current')).toBe('true');
     expect(document.querySelector('.preset-changed')).toBeNull();
-    setInput('#plate-thickness-n', '4');
-    expect($('.preset-row[data-id="medal"] .preset-changed', HTMLElement).textContent).toBe('changed');
+    setInput('#plate_thickness_n', '4');
+    expect($('.preset-row[data-ref="b:medal"] .preset-changed', HTMLElement).textContent).toBe('changed');
   });
 
   it('New opens an empty rectangle plate, one undo step', () => {
@@ -1207,8 +1225,8 @@ describe('projects, presets, storage', () => {
     expect(first.getAttribute('aria-label')).toBe('New plate');
     first.click();
     expect($('#projectName', HTMLInputElement).value).toBe('New plate');
-    expect($('#plate-kind', HTMLSelectElement).value).toBe('rectangle');
-    expect([$('#plate-width-n', HTMLInputElement).value, $('#plate-height-n', HTMLInputElement).value]).toEqual(['100', '60']);
+    expect($('#plate_kind', HTMLSelectElement).value).toBe('rectangle');
+    expect([$('#plate_width_n', HTMLInputElement).value, $('#plate_height_n', HTMLInputElement).value]).toEqual(['100', '60']);
     expect(document.querySelectorAll('.element-row')).toHaveLength(0);
     $('#undo', HTMLButtonElement).click();
     expect($('#projectName', HTMLInputElement).value).toBe('Door sign');
@@ -1216,18 +1234,25 @@ describe('projects, presets, storage', () => {
 
   it('saves, renames, opens and deletes a user preset, kept in storage', () => {
     start();
-    setInput('#plate-width-n', '111');
+    setInput('#plate_width_n', '111');
     $('#savePreset', HTMLButtonElement).click();
     expect(loadSettings(storage).presets.map((p) => [p.id, p.name, p.state.plate.width])).toEqual([['u1', 'plate', 111]]);
-    const name = $('.preset-row[data-id="u1"] input', HTMLInputElement);
+    const name = $('.preset-row[data-ref="u:u1"] input', HTMLInputElement);
     name.value = 'Wide';
     name.dispatchEvent(new Event('change'));
     expect(loadSettings(storage).presets[0]?.name).toBe('Wide');
-    setInput('#plate-width-n', '50');
-    $('.preset-row[data-id="u1"] .link-button', HTMLButtonElement).click();
-    expect($('#plate-width-n', HTMLInputElement).value).toBe('111');
-    $('.preset-row[data-id="u1"] [aria-label^="Delete"]', HTMLButtonElement).click();
+    setInput('#plate_width_n', '50');
+    $('.preset-row[data-ref="u:u1"] .preset-open', HTMLButtonElement).click();
+    expect($('#plate_width_n', HTMLInputElement).value).toBe('111');
+    // a destructive action in two taps: 🗑 asks, a second tap deletes
+    $('#presetsOpen', HTMLButtonElement).click();
+    const remove = () => $('.preset-row[data-ref="u:u1"] .preset-delete', HTMLButtonElement);
+    remove().click();
+    expect(remove().textContent).toBe('Delete?');
+    expect(loadSettings(storage).presets).toHaveLength(1);
+    remove().click();
     expect(loadSettings(storage).presets).toEqual([]);
+    expect(document.querySelector('.preset-row[data-ref^="u:"]')).toBeNull();
   });
 
   it('decodes the pictures of a stored project before building them, and builds again once in', async () => {

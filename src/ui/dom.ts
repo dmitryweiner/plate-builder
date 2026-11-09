@@ -1,17 +1,4 @@
-// Typed DOM access without `as` casts.
-
-export function el<T extends Element>(id: string, ctor: abstract new () => T): T {
-  const node = document.getElementById(id);
-  if (!(node instanceof ctor)) throw new Error(`#${id} is not ${ctor.name}`);
-  return node;
-}
-
-export function make<K extends keyof HTMLElementTagNameMap>(tag: K, className?: string, text?: string): HTMLElementTagNameMap[K] {
-  const node = document.createElement(tag);
-  if (className) node.className = className;
-  if (text !== undefined) node.textContent = text;
-  return node;
-}
+// What maker-kit's ui/dom lacks: el and make are the kit's.
 
 /**
  * Scrolls `container`, and nothing around it, the least that shows `target`

@@ -6,7 +6,6 @@ export const uk: Messages = {
   ...kitUk,
   title: 'Конструктор табличок',
   description: 'Пласка табличка — вивіска, брелок, жетон — у STL для 3D-друку.',
-  languageLabel: 'Мова',
   source: 'Вихідний код',
   mm: 'мм',
 
@@ -77,8 +76,6 @@ export const uk: Messages = {
   visible: 'Видимість',
   duplicate: 'Копія',
   remove: 'Видалити',
-  decrease: 'Зменшити',
-  increase: 'Збільшити',
   holeKind: 'Вид',
   holeRound: 'Круглий',
   holeSlot: 'Паз',
@@ -158,9 +155,6 @@ export const uk: Messages = {
   presetsHeading: 'Заготовки',
   close: 'Закрити',
   savePreset: 'Зберегти як заготовку',
-  presetChanged: 'змінено',
-  openPreset: 'Відкрити',
-  presetName: 'Назва заготовки',
   'preset.blank.name': 'Нова табличка',
   'preset.door-sign.name': 'Табличка на двері',
   'preset.keychain.name': 'Брелок',
@@ -169,7 +163,6 @@ export const uk: Messages = {
   'preset.medal.name': 'Медаль',
   'preset.name-plate.name': 'Іменна табличка з логотипом',
   'preset.fridge-magnet.name': 'Магніт на холодильник',
-  storageRefused: 'Браузер не зберігає проєкт (сховище заповнене або приватний режим). Збережіть файл проєкту, щоб не втратити його.',
 
   warningsCard: 'Попередження',
   show: 'Показати',
@@ -179,7 +172,7 @@ export const uk: Messages = {
   builtIn: (ms: number) => `побудовано за ${Math.round(ms)} мс`,
   exported: (name: string, ms: number) => `${name} збережено, побудовано за ${Math.round(ms)} мс`,
   engineFailed: (reason: string) => `Геометричний рушій не впорався: ${reason}`,
-  meshBlocked: (problems: string) => `Сітка зіпсована (${problems}); STL не експортувати.`,
+  meshBlocked: (problems: string) => `${problems} STL не експортувати.`,
   imageFailed: (reason: string) => `Не вдалося прочитати зображення: ${reason}`,
   svgFailed: (reason: string) => `Не вдалося прочитати SVG: ${reason}`,
   magnetPocket: (d: string, depth: string) => `Гніздо ⌀ ${d} мм завглибшки ${depth} мм, відкрите ззаду.`,
@@ -205,13 +198,5 @@ export const uk: Messages = {
     magnetNoRoom:
       'Магніти не вміщаються: гніздо ближче до контуру, ніж відступ від краю, або до іншого гнізда. Допоможуть менші магніти, менший відступ чи інше розташування.',
     magnetOverlap: (names: string) => `Гніздо магніту зачіпає ${names}.`,
-  },
-  meshProblem: {
-    nonFinite: 'координати — не числа',
-    badIndices: 'трикутники посилаються на неіснуючі вершини',
-    empty: 'сітка порожня',
-    open: 'поверхня не замкнена',
-    inverted: 'поверхня вивернута',
-    degenerate: 'забагато вироджених трикутників',
   },
 };

@@ -15,7 +15,8 @@ import {
   type PlateState,
   type TextElement,
 } from '../geo/state';
-import type { Control, SelectControl, TextKey } from './controls';
+import type { Control, SelectControl } from 'maker-kit/ui/controls';
+import type { TextKey } from '../i18n';
 import { FONTS } from './fonts';
 
 export const HOLE_LABELS: Record<HoleKind, TextKey> = {
@@ -32,7 +33,7 @@ const reachX = (s: PlateState) => s.plate.width / 2 + 20;
 const reachY = (s: PlateState) => s.plate.height / 2 + 20;
 
 /** Controls of the element `id`: position and rotation for any, the rest by its kind. */
-export function elementControls(id: string): Control<PlateState>[] {
+export function elementControls(id: string): Control<PlateState, TextKey>[] {
   const get = (s: PlateState) => findElement(s, id);
   const hole = (s: PlateState): HoleElement | null => {
     const e = get(s);
@@ -47,7 +48,7 @@ export function elementControls(id: string): Control<PlateState>[] {
     label: TextKey,
     kinds: HoleKind[],
     step = 0.1,
-  ): Control<PlateState> => {
+  ): Control<PlateState, TextKey> => {
     const range = {
       diameter: RANGES.holeDiameter,
       length: RANGES.slotLength,
@@ -88,7 +89,7 @@ export function elementControls(id: string): Control<PlateState>[] {
     range: { min: number; max: number; def: number },
     step: number,
     unit?: TextKey,
-  ): Control<PlateState> => ({
+  ): Control<PlateState, TextKey> => ({
     kind: 'range',
     key,
     label,
@@ -117,7 +118,7 @@ export function elementControls(id: string): Control<PlateState>[] {
     step: number,
     unit: TextKey,
     when: (s: PlateState) => boolean,
-  ): Control<PlateState> => ({
+  ): Control<PlateState, TextKey> => ({
     kind: 'range',
     key: `text-${key}`,
     label,
@@ -132,10 +133,10 @@ export function elementControls(id: string): Control<PlateState>[] {
   const textChoice = <K extends 'font' | 'align' | 'mode' | 'arcSide'>(
     key: K,
     label: TextKey,
-    options: SelectControl<PlateState>['options'],
+    options: SelectControl<PlateState, TextKey>['options'],
     values: readonly TextElement[K][],
     when: (s: PlateState) => boolean,
-  ): Control<PlateState> => ({
+  ): Control<PlateState, TextKey> => ({
     kind: 'select',
     key: `text-${key}`,
     label,
