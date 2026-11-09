@@ -3,7 +3,7 @@
 //
 //   node scripts/snap.mjs --out docs/images/medal.png --preset medal
 //   node scripts/snap.mjs --out shot.png --lang he --width 390 --height 844 --view 3d --camera iso
-//   node scripts/snap.mjs --out shot.png --preset keychain --eval "document.querySelector('#plate-rim').click()"
+//   node scripts/snap.mjs --out shot.png --preset keychain --eval "document.querySelector('#plate_rim').click()"
 //
 // Flags: --out <png> (required); --preset <id> (a built-in preset, opened
 // from the list); --lang en|ru|uk|he; --width/--height (default 1280 × 860);

@@ -138,7 +138,7 @@ async function exportMs(page) {
   return Number((await page.locator('#exportStatus').textContent()).match(/(\d+) ms/)[1]);
 }
 
-const fieldValue = async (page, id) => Number(await page.locator(`#${id}-n`).inputValue());
+const fieldValue = async (page, id) => Number(await page.locator(`#${id}_n`).inputValue());
 
 /** Waits until the shown build has this size line's start (a later build may land first). */
 async function builtAs(page, prefix) {
@@ -154,8 +154,8 @@ async function builtAs(page, prefix) {
 
 /** Sets a range control through its exact number field. */
 async function setNumber(page, id, value) {
-  await page.fill(`#${id}-n`, String(value));
-  await page.locator(`#${id}-n`).dispatchEvent('change');
+  await page.fill(`#${id}_n`, String(value));
+  await page.locator(`#${id}_n`).dispatchEvent('change');
 }
 
 try {
@@ -215,7 +215,7 @@ try {
     const { page, context } = await app.open();
     let { info } = await built(page);
     for (const kind of ['ellipse', 'triangle', 'polygon', 'star', 'heart', 'shield', 'tag', 'rectangle']) {
-      await page.selectOption('#plate-kind', kind);
+      await page.selectOption('#plate_kind', kind);
       // the size stays, the triangle count changes: wait for any new line
       ({ info } = await built(page, info));
       check(info.startsWith('100 × 60 × 3 mm'), `${kind}: unexpected size ${info}`);
@@ -228,13 +228,13 @@ try {
     const { page, context } = await app.open();
     let { info } = await built(page);
     const cases = [
-      ['plate-width', 300, '300 × 60 × 3 mm'],
-      ['plate-height', 300, '300 × 300 × 3 mm'],
-      ['plate-thickness', 20, '300 × 300 × 20 mm'],
-      ['plate-rounding', 150, '300 × 300 × 20 mm'],
-      ['plate-width', 10, '10 × 300 × 20 mm'],
-      ['plate-height', 10, '10 × 10 × 20 mm'],
-      ['plate-thickness', 0.6, '10 × 10 × 0.6 mm'],
+      ['plate_width', 300, '300 × 60 × 3 mm'],
+      ['plate_height', 300, '300 × 300 × 3 mm'],
+      ['plate_thickness', 20, '300 × 300 × 20 mm'],
+      ['plate_rounding', 150, '300 × 300 × 20 mm'],
+      ['plate_width', 10, '10 × 300 × 20 mm'],
+      ['plate_height', 10, '10 × 10 × 20 mm'],
+      ['plate_thickness', 0.6, '10 × 10 × 0.6 mm'],
     ];
     for (const [id, value, size] of cases) {
       await setNumber(page, id, value);
@@ -243,7 +243,7 @@ try {
       check(await page.locator('#meshBlocked').isHidden(), `${id} = ${value}: the mesh is blocked`);
     }
     for (const kind of ['star', 'polygon', 'heart']) {
-      await page.selectOption('#plate-kind', kind);
+      await page.selectOption('#plate_kind', kind);
       ({ info } = await built(page, info));
       check(await page.locator('#meshBlocked').isHidden(), `${kind} at 10 × 10 with full rounding: the mesh is blocked`);
     }
@@ -253,10 +253,10 @@ try {
   await step('− and + step by a click and repeat while held, each one undo step', async () => {
     const { page, context } = await app.open();
     await built(page);
-    const width = async () => Number(await page.inputValue('#plate-width-n'));
-    await page.click('#plate-width-inc');
+    const width = async () => Number(await page.inputValue('#plate_width_n'));
+    await page.click('#plate_width_inc');
     check((await width()) === 100.5, `a click stepped to ${await width()}`);
-    const box = await page.locator('#plate-width-inc').boundingBox();
+    const box = await page.locator('#plate_width_inc').boundingBox();
     check(box, 'no + beside the width');
     await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
     await page.mouse.down();
@@ -277,40 +277,40 @@ try {
     await page.uncheck('#snapping');
     for (const kind of ['round', 'slot', 'countersunk', 'keyhole']) {
       await page.click('#addHole');
-      await page.selectOption('#element-holeKind', kind);
+      await page.selectOption('#element_holeKind', kind);
       // a keyhole needs a thicker plate; the warning says so, the mesh still builds
       await mouseDrag(page, [0, 0], [-20, 10]);
-      check(Math.abs((await fieldValue(page, 'element-x')) + 20) < 0.3, `${kind}: drag did not move it`);
+      check(Math.abs((await fieldValue(page, 'element_x')) + 20) < 0.3, `${kind}: drag did not move it`);
       // the top right corner of a round hole's box is at (r, r) from its centre
       if (kind === 'round') {
         await mouseDrag(page, [-18, 12], [-16, 14]);
-        check((await fieldValue(page, 'element-diameter')) > 5, `round: the corner did not scale it`);
+        check((await fieldValue(page, 'element_diameter')) > 5, `round: the corner did not scale it`);
       }
       if (kind === 'slot') {
         // the rotation handle: 28 px above the top edge's middle
         const [, , scale] = await plateToPage(page, [0, 0]);
-        const width = await fieldValue(page, 'element-width');
+        const width = await fieldValue(page, 'element_width');
         const above = width / 2 + 28 / scale;
         await mouseDrag(page, [-20, 10 + above], [-20 - 30, 10], { shift: true });
-        check((await fieldValue(page, 'element-rotation')) === 90, `slot: turned to ${await fieldValue(page, 'element-rotation')}`);
+        check((await fieldValue(page, 'element_rotation')) === 90, `slot: turned to ${await fieldValue(page, 'element_rotation')}`);
       }
       ({ info } = await built(page, info));
       check(await page.locator('#meshBlocked').isHidden(), `${kind}: the mesh is blocked`);
       await page.click('#undo');
       if (kind === 'round' || kind === 'slot') await page.click('#undo');
       check(
-        Math.abs(await fieldValue(page, 'element-x')) < 1e-9,
-        `${kind}: undo did not bring it back (x = ${await fieldValue(page, 'element-x')})`,
+        Math.abs(await fieldValue(page, 'element_x')) < 1e-9,
+        `${kind}: undo did not bring it back (x = ${await fieldValue(page, 'element_x')})`,
       );
       // move it out of the way of the next one
-      await page.fill('#element-y-n', String(-20));
-      await page.locator('#element-y-n').dispatchEvent('change');
-      await page.fill('#element-x-n', String(-40 + 25 * ['round', 'slot', 'countersunk', 'keyhole'].indexOf(kind)));
-      await page.locator('#element-x-n').dispatchEvent('change');
+      await page.fill('#element_y_n', String(-20));
+      await page.locator('#element_y_n').dispatchEvent('change');
+      await page.fill('#element_x_n', String(-40 + 25 * ['round', 'slot', 'countersunk', 'keyhole'].indexOf(kind)));
+      await page.locator('#element_x_n').dispatchEvent('change');
     }
     check((await page.locator('.element-row').count()) === 4, 'four holes in the list');
-    await page.fill('#plate-thickness-n', '6');
-    await page.locator('#plate-thickness-n').dispatchEvent('change');
+    await page.fill('#plate_thickness_n', '6');
+    await page.locator('#plate_thickness_n').dispatchEvent('change');
     ({ info } = await built(page, info));
     check(await page.locator('#meshBlocked').isHidden(), 'four holes: the mesh is blocked');
     await page.click('[data-camera="back"]');
@@ -331,7 +331,7 @@ try {
     await touch('pointerdown', x0, y0);
     for (let i = 1; i <= 5; i++) await touch('pointermove', x0 + ((x1 - x0) * i) / 5, y0 + ((y1 - y0) * i) / 5);
     await touch('pointerup', x1, y1);
-    const [x, y] = [await fieldValue(page, 'element-x'), await fieldValue(page, 'element-y')];
+    const [x, y] = [await fieldValue(page, 'element_x'), await fieldValue(page, 'element_y')];
     check(Math.abs(x - 15) < 0.5 && Math.abs(y + 10) < 0.5, `touch drag landed at ${x}, ${y}`);
     if (shots) await page.screenshot({ path: 'shots/phone-2d.png' });
     await context.close();
@@ -347,22 +347,22 @@ try {
     // the disc rises 1.5 mm over the 3 mm base
     check(info.includes('× 4.5 mm'), `PNG relief: ${info}`);
     const cases = [
-      ['element-height', 10],
-      ['element-height', 0.1],
-      ['element-size', 300],
-      ['element-size', 5],
-      ['element-black', 254],
-      ['element-black', 0],
-      ['element-white', 1],
-      ['element-blur', 5],
-      ['element-rotation', 359],
+      ['element_height', 10],
+      ['element_height', 0.1],
+      ['element_size', 300],
+      ['element_size', 5],
+      ['element_black', 254],
+      ['element_black', 0],
+      ['element_white', 1],
+      ['element_blur', 5],
+      ['element_rotation', 359],
     ];
     for (const [id, value] of cases) {
       await setNumber(page, id, value);
       ({ info } = await built(page, info).catch(() => ({ info })));
       check(await page.locator('#meshBlocked').isHidden(), `${id} = ${value}: the mesh is blocked`);
     }
-    await page.check('#element-invert');
+    await page.check('#element_invert');
     await page.setInputFiles('#imageFile', await testPicture(page, 'jpeg', 640, 480));
     ({ info } = await built(page, info));
     check((await page.locator('.element-row').count()) === 2, 'the JPEG did not become an image');
@@ -382,11 +382,11 @@ try {
         [100, 60, 55],
         [300, 300, 290],
       ]) {
-        await setNumber(page, 'plate-width', w);
-        await setNumber(page, 'plate-height', h);
+        await setNumber(page, 'plate_width', w);
+        await setNumber(page, 'plate_height', h);
         // a click on the open card's name would fold it
-        if (!(await page.locator('#element-size-n').isVisible())) await page.click('.element-name');
-        await setNumber(page, 'element-size', size);
+        if (!(await page.locator('#element_size_n').isVisible())) await page.click('.element-name');
+        await setNumber(page, 'element_size', size);
         const result = await built(page, info);
         info = result.info;
         const ms = await exportMs(page);
@@ -400,25 +400,25 @@ try {
       let { info } = await built(page);
       await page.setInputFiles('#imageFile', await testPicture(page, 'jpeg'));
       ({ info } = await built(page, info));
-      if (!(await page.locator('#element-size-n').isVisible())) await page.click('.element-name');
-      await setNumber(page, 'element-size', 50);
+      if (!(await page.locator('#element_size_n').isVisible())) await page.click('.element-name');
+      await setNumber(page, 'element_size', 50);
       for (const y of [22, -22]) {
         await page.click('#addText');
-        await setNumber(page, 'element-y', y);
+        await setNumber(page, 'element_y', y);
         ({ info } = await built(page, info));
       }
       const reference = await built(page, '').catch(() => ({ info, ms: NaN }));
       console.log(`    reference: preview ${reference.ms} ms (${info}); export ${await exportMs(page)} ms`);
       // eight 100 mm photos tiling a 300 × 300 plate
-      await setNumber(page, 'plate-width', 300);
-      await setNumber(page, 'plate-height', 300);
+      await setNumber(page, 'plate_width', 300);
+      await setNumber(page, 'plate_height', 300);
       for (let k = 0; k < 7; k++) await page.setInputFiles('#imageFile', await testPicture(page, 'jpeg'));
       const images = page.locator('.element-row[data-id^="i"] .element-name');
       for (let k = 0; k < 8; k++) {
         await images.nth(k).click();
-        await setNumber(page, 'element-size', 100);
-        await setNumber(page, 'element-x', -100 + 100 * (k % 3));
-        await setNumber(page, 'element-y', 100 - 100 * Math.floor(k / 3));
+        await setNumber(page, 'element_size', 100);
+        await setNumber(page, 'element_x', -100 + 100 * (k % 3));
+        await setNumber(page, 'element_y', 100 - 100 * Math.floor(k / 3));
       }
       info = await builtAs(page, '300 × 300');
       const started = Date.now();
@@ -436,29 +436,29 @@ try {
     ({ info } = await built(page, info));
     check(info.includes('× 4 mm'), `raised text: ${info}`);
     const setText = async (value) => {
-      await page.fill('#element-text', value);
-      await page.locator('#element-text').dispatchEvent('change');
+      await page.fill('#element_text', value);
+      await page.locator('#element_text').dispatchEvent('change');
     };
     await setText('Kitchen\nКухня');
     ({ info } = await built(page, info));
     for (const font of ['oswald', 'ptSerif', 'comfortaa', 'marckScript', 'frankRuhl', 'rubik']) {
-      await page.selectOption('#element-text-font', font);
+      await page.selectOption('#element_text-font', font);
       ({ info } = await built(page, info));
       check(info.includes('× 4 mm') && (await page.locator('#meshBlocked').isHidden()), `${font}: ${info}`);
     }
     await setText('שלום 12');
     ({ info } = await built(page, info));
     check(await page.locator('#meshBlocked').isHidden(), 'Hebrew: the mesh is blocked');
-    await page.selectOption('#element-text-mode', 'engraved');
+    await page.selectOption('#element_text-mode', 'engraved');
     ({ info } = await built(page, info));
     check(info.includes('× 3 mm'), `engraved text: ${info}`);
-    await page.selectOption('#element-text-mode', 'raised');
+    await page.selectOption('#element_text-mode', 'raised');
     await setText('PLATE BUILDER');
-    await page.check('#element-text-arc');
-    await setNumber(page, 'element-text-arcRadius', 25);
+    await page.check('#element_text-arc');
+    await setNumber(page, 'element_text-arcRadius', 25);
     ({ info } = await built(page, info));
     check(info.includes('× 4 mm') && (await page.locator('#meshBlocked').isHidden()), `arc text: ${info}`);
-    await page.selectOption('#element-text-arcSide', 'inside');
+    await page.selectOption('#element_text-arcSide', 'inside');
     ({ info } = await built(page, info));
     check(await page.locator('#meshBlocked').isHidden(), 'inside arc: the mesh is blocked');
     if (shots) await page.screenshot({ path: 'shots/texts-desktop.png' });
@@ -469,15 +469,15 @@ try {
   await step('crop around an image and a text, padding at its extremes', async () => {
     const { page, context } = await app.open();
     let { info } = await built(page);
-    await page.selectOption('#plate-kind', 'crop');
+    await page.selectOption('#plate_kind', 'crop');
     await page.setInputFiles('#imageFile', await testPicture(page, 'png'));
     ({ info } = await built(page, info));
     await page.click('#addText');
     ({ info } = await built(page, info));
-    await setNumber(page, 'element-y', -40);
+    await setNumber(page, 'element_y', -40);
     ({ info } = await built(page, info));
     for (const padding of [0, 30, 3]) {
-      await setNumber(page, 'plate-padding', padding);
+      await setNumber(page, 'plate_padding', padding);
       ({ info } = await built(page, info));
       check(await page.locator('#meshBlocked').isHidden(), `padding ${padding}: the mesh is blocked`);
       console.log(`    padding ${padding}: ${info}`);
@@ -492,9 +492,9 @@ try {
   await step('a rim on every kind', async () => {
     const { page, context } = await app.open();
     let { info } = await built(page);
-    await page.check('#plate-rim');
+    await page.check('#plate_rim');
     for (const kind of ['rectangle', 'ellipse', 'triangle', 'polygon', 'star', 'heart', 'shield', 'tag']) {
-      await page.selectOption('#plate-kind', kind);
+      await page.selectOption('#plate_kind', kind);
       ({ info } = await built(page, info));
       check(info.includes('× 4 mm') && (await page.locator('#meshBlocked').isHidden()), `${kind} with a rim: ${info}`);
     }
@@ -505,19 +505,19 @@ try {
     const { page, context } = await app.open();
     let { info } = await built(page);
     const plain = Number(info.match(/([\d,]+) triangles/)?.[1].replace(/,/g, ''));
-    await setNumber(page, 'plate-edgeSize', 1.5);
+    await setNumber(page, 'plate_edgeSize', 1.5);
     const result = await built(page, info);
     info = result.info;
     check(info.startsWith('100 × 60 × 3 mm'), `a 1.5 mm fillet changes the size: ${info}`);
     check(Number(info.match(/([\d,]+) triangles/)?.[1].replace(/,/g, '')) > plain, `no terraces in the mesh: ${info}`);
-    check(await page.locator('#plate-edgeProfile').isVisible(), 'no profile row');
+    check(await page.locator('#plate_edgeProfile').isVisible(), 'no profile row');
     const ms = await exportMs(page);
     console.log(`    100 × 60 with a 1.5 mm fillet: preview ${result.ms} ms (${info}); export ${ms} ms`);
     if (shots) await page.screenshot({ path: 'shots/edges-fillet.png' });
     for (const profile of ['fillet', 'chamfer']) {
-      await page.selectOption('#plate-edgeProfile', profile);
+      await page.selectOption('#plate_edgeProfile', profile);
       for (const kind of ['ellipse', 'triangle', 'polygon', 'star', 'heart', 'shield', 'tag', 'rectangle']) {
-        await page.selectOption('#plate-kind', kind);
+        await page.selectOption('#plate_kind', kind);
         const made = await built(page, info);
         info = made.info;
         check(await page.locator('#meshBlocked').isHidden(), `${kind} with a 1.5 mm ${profile}: the mesh is blocked`);
@@ -526,19 +526,19 @@ try {
     }
     // top only and bottom only are mirror images, the same mesh info: each after both
     for (const sides of ['top', 'both', 'bottom', 'both']) {
-      await page.selectOption('#plate-edgeSides', sides);
+      await page.selectOption('#plate_edgeSides', sides);
       ({ info } = await built(page, info));
       // one edge reaches the outline; two at half the wall meet before it
       const size = sides === 'both' ? '99.7 × 59.7 × 3 mm' : '100 × 60 × 3 mm';
       check(info.startsWith(size) && (await page.locator('#meshBlocked').isHidden()), `a ${sides} chamfer: ${info}`);
     }
-    await page.check('#plate-rim');
-    await setNumber(page, 'plate-edgeSize', 2);
+    await page.check('#plate_rim');
+    await setNumber(page, 'plate_edgeSize', 2);
     ({ info } = await built(page, info));
     check(info.includes('× 4 mm') && (await page.locator('#meshBlocked').isHidden()), `a 2 mm chamfer with a rim: ${info}`);
-    await page.uncheck('#plate-rim');
-    await page.selectOption('#plate-edgeProfile', 'fillet');
-    await page.selectOption('#plate-kind', 'vignette');
+    await page.uncheck('#plate_rim');
+    await page.selectOption('#plate_edgeProfile', 'fillet');
+    await page.selectOption('#plate_kind', 'vignette');
     const [id] = await page.locator('.vignette').evaluateAll((nodes) => nodes.map((n) => n.dataset.id));
     await page.click(`.vignette[data-id="${id}"]`);
     const vignette = await built(page, info);
@@ -554,10 +554,10 @@ try {
     const { page, context } = await app.open();
     let { info } = await built(page);
     const plain = Number(info.match(/([\d,]+) triangles/)?.[1].replace(/,/g, ''));
-    await page.selectOption('#magnet-count', '4');
+    await page.selectOption('#magnet_count', '4');
     const result = await built(page, info);
     info = result.info;
-    check((await page.locator('#magnet-layout').inputValue()) === 'corners', 'four magnets do not take the corners');
+    check((await page.locator('#magnet_layout').inputValue()) === 'corners', 'four magnets do not take the corners');
     check(await page.locator('#magnetPocket').isVisible(), 'no line about the pocket');
     check(await page.locator('#warningsCard').isHidden(), 'four 10 mm magnets on 100 × 60 warn');
     check(Number(info.match(/([\d,]+) triangles/)?.[1].replace(/,/g, '')) > plain, `no pockets in the mesh: ${info}`);
@@ -567,7 +567,7 @@ try {
     if (shots) await page.screenshot({ path: 'shots/magnets-back.png' });
     // the rectangle is built already
     for (const kind of ['ellipse', 'triangle', 'polygon', 'star', 'heart', 'shield', 'tag']) {
-      await page.selectOption('#plate-kind', kind);
+      await page.selectOption('#plate_kind', kind);
       ({ info } = await built(page, info));
       check(await page.locator('#meshBlocked').isHidden(), `${kind} with four magnets: the mesh is blocked`);
     }
@@ -579,10 +579,10 @@ try {
     let { info } = await built(page);
     if (await page.locator('#sheetOpen').isVisible()) await page.click('#sheetOpen');
     await page.locator('#magnetsCard').scrollIntoViewIfNeeded();
-    await page.selectOption('#magnet-count', '2');
+    await page.selectOption('#magnet_count', '2');
     ({ info } = await built(page, info));
-    check(await page.locator('#magnet-layout').isVisible(), 'no layout row');
-    await setNumber(page, 'magnet-diameter', 15);
+    check(await page.locator('#magnet_layout').isVisible(), 'no layout row');
+    await setNumber(page, 'magnet_diameter', 15);
     ({ info } = await built(page, info));
     check(await page.locator('#meshBlocked').isHidden(), `two 15 mm magnets on a phone: ${info}`);
     if (shots) await page.screenshot({ path: 'shots/phone-magnets.png' });
@@ -592,24 +592,24 @@ try {
   await step('every catalog vignette with and without its frame, an own SVG, one with two islands', async () => {
     const { page, context } = await app.open();
     let { info } = await built(page);
-    await page.selectOption('#plate-kind', 'vignette');
+    await page.selectOption('#plate_kind', 'vignette');
     const ids = await page.locator('.vignette').evaluateAll((nodes) => nodes.map((n) => n.dataset.id));
     check(ids.length > 0, 'the catalog is empty');
     for (const id of ids) {
       await page.click(`.vignette[data-id="${id}"]`);
       ({ info } = await built(page, info));
       check(info.includes('× 4 mm') && (await page.locator('#meshBlocked').isHidden()), `${id} with its frame: ${info}`);
-      await page.uncheck('#plate-frame');
+      await page.uncheck('#plate_frame');
       ({ info } = await built(page, info));
       check(info.includes('× 3 mm') && (await page.locator('#meshBlocked').isHidden()), `${id} without its frame: ${info}`);
-      await page.check('#plate-frame');
+      await page.check('#plate_frame');
       ({ info } = await built(page, info));
     }
     if (shots) await page.screenshot({ path: 'shots/vignette-desktop.png' });
     await page.setInputFiles('#svgFile', svgFile('<path fill-rule="evenodd" d="M0 0H200V100H0Z M20 20V80H180V20Z"/>'));
     ({ info } = await built(page, info));
     check(
-      (await page.locator('#plate-kind').inputValue()) === 'svg' && (await page.locator('#meshBlocked').isHidden()),
+      (await page.locator('#plate_kind').inputValue()) === 'svg' && (await page.locator('#meshBlocked').isHidden()),
       `own SVG: ${info}`,
     );
     await page.setInputFiles('#svgFile', svgFile('<rect width="80" height="100"/><rect x="120" width="80" height="100"/>'));
@@ -622,24 +622,24 @@ try {
   await step('warnings: each of them, "show" moves the view, a blocked export', async () => {
     const { page, context } = await app.open();
     let { info } = await built(page);
-    await setNumber(page, 'plate-thickness', 1);
+    await setNumber(page, 'plate_thickness', 1);
     ({ info } = await built(page, info));
     // a hole near the edge and one outside, overlapping; a keyhole too thin; a tall arc text with lines
     const hole = async (kind, x, y) => {
       await page.click('#addHole');
-      await page.selectOption('#element-holeKind', kind);
-      await setNumber(page, 'element-x', x);
-      await setNumber(page, 'element-y', y);
+      await page.selectOption('#element_holeKind', kind);
+      await setNumber(page, 'element_x', x);
+      await setNumber(page, 'element_y', y);
     };
     await hole('round', 47, 0);
     await hole('round', 49, 3);
     await hole('keyhole', -30, 0);
     await page.click('#addText');
-    await page.fill('#element-text', 'Kitchen\nDoor');
-    await page.locator('#element-text').dispatchEvent('change');
-    await setNumber(page, 'element-text-height', 4);
-    await page.check('#element-text-arc');
-    await setNumber(page, 'element-text-arcRadius', 5);
+    await page.fill('#element_text', 'Kitchen\nDoor');
+    await page.locator('#element_text').dispatchEvent('change');
+    await setNumber(page, 'element_text-height', 4);
+    await page.check('#element_text-arc');
+    await setNumber(page, 'element_text-arcRadius', 5);
     ({ info } = await built(page, info));
     const codes = await page.locator('#warningList li').evaluateAll((items) => items.map((li) => li.dataset.code));
     for (const code of [
@@ -659,7 +659,7 @@ try {
     check(before !== after, `"show" did not move the 2D view (${before} → ${after})`);
     if (shots) await page.screenshot({ path: 'shots/warnings-desktop.png' });
     // nothing to crop around: an empty mesh, the export blocked and said why
-    await page.selectOption('#plate-kind', 'crop');
+    await page.selectOption('#plate_kind', 'crop');
     await page.locator('.element-row [aria-label^="Delete"]').first().click();
     while ((await page.locator('.element-row').count()) > 0) await page.locator('.element-row [aria-label^="Delete"]').first().click();
     await page.waitForFunction(() => document.querySelector('#warningList li[data-code="mesh.invalid"]') !== null, null, {
@@ -676,7 +676,7 @@ try {
     check((await page.locator('#projectName').inputValue()) === 'Door sign', 'a first visit did not open the door sign');
     await page.setInputFiles('#imageFile', await testPicture(page, 'png'));
     ({ info } = await built(page, info));
-    await setNumber(page, 'plate-width', 170);
+    await setNumber(page, 'plate_width', 170);
     ({ info } = await built(page, info));
     // the save waits a second after the last edit
     await page.waitForTimeout(1500);
@@ -725,7 +725,7 @@ try {
       },
     });
     let { info } = await built(page);
-    await setNumber(page, 'plate-width', 120);
+    await setNumber(page, 'plate_width', 120);
     ({ info } = await built(page, info));
     await page.waitForFunction(() => !document.querySelector('#storageBanner')?.hidden, null, { timeout: 5000 });
     await context.close();
@@ -869,10 +869,10 @@ try {
       let { info } = await built(page);
       // a font and a vignette this page never asked for online: precached all the same
       await page.click('#addText');
-      await page.selectOption('#element-text-font', 'marckScript');
+      await page.selectOption('#element_text-font', 'marckScript');
       ({ info } = await built(page, info));
       check(info.includes('× 4 mm'), `offline text: ${info}`);
-      await page.selectOption('#plate-kind', 'vignette');
+      await page.selectOption('#plate_kind', 'vignette');
       ({ info } = await built(page, info));
       check(await page.locator('#meshBlocked').isHidden(), `offline vignette: ${info}`);
       await context.close();
