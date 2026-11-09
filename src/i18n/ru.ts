@@ -77,8 +77,6 @@ export const ru: Messages = {
   visible: 'Видимость',
   duplicate: 'Копия',
   remove: 'Удалить',
-  decrease: 'Уменьшить',
-  increase: 'Увеличить',
   holeKind: 'Вид',
   holeRound: 'Круглое',
   holeSlot: 'Паз',

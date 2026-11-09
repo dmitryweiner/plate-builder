@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en" dir="ltr">
+<html lang="en" dir="ltr" data-accent="emerald">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
@@ -11,7 +11,7 @@
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <script type="module" src="./src/main.ts"></script>
   </head>
-  <body>
+  <body class="kit-app">
     <header class="topbar">
       <span class="brand" data-i18n="title">Plate Builder</span>
       <!-- the project's name; opens the presets -->
@@ -104,7 +104,7 @@
           <div id="buildProgress" class="view-progress" role="progressbar" aria-label="Building…" data-i18n-label="building" hidden>
             <div></div>
           </div>
-          <output id="status" class="status" aria-live="polite"></output>
+          <output id="status" class="view-status" aria-live="polite"></output>
         </div>
         <button id="sheetOpen" type="button" class="sheet-open" data-i18n="showPanel" hidden>Settings</button>
         <button id="swapViews" type="button" class="swap-views" title="Swap views" aria-label="Swap views" data-i18n-label="swapViews">
@@ -124,14 +124,14 @@
           <span data-i18n="storageRefused"
             >This browser does not keep the project (its storage is full or private). Save the project file to keep it.</span
           >
-          <button id="bannerSave" type="button" class="secondary" data-i18n="saveProject">Save project file</button>
+          <button id="bannerSave" type="button" class="btn" data-i18n="saveProject">Save project file</button>
         </div>
         <section class="card" id="plateCard">
           <h2 data-i18n="plateCard">Plate</h2>
           <div id="plateControls"></div>
           <div id="vignettePicker" class="vignette-picker" role="listbox" aria-label="Vignettes" data-i18n-label="vignettes" hidden></div>
           <div id="svgChooser" hidden>
-            <button id="svgUpload" type="button" class="secondary" data-i18n="uploadSvg">Choose an SVG file…</button>
+            <button id="svgUpload" type="button" class="btn" data-i18n="uploadSvg">Choose an SVG file…</button>
             <input id="svgFile" type="file" accept=".svg,image/svg+xml" hidden />
           </div>
           <p id="plateStatus" class="error" role="alert" hidden></p>
@@ -140,19 +140,19 @@
         <section class="card group-card" id="textsCard">
           <h2><span data-i18n="textsCard">Texts</span> <span id="textsCount" class="group-count"></span></h2>
           <ul id="textList" class="element-list"></ul>
-          <button id="addText" type="button" class="secondary add-button" data-i18n="addText">Add text</button>
+          <button id="addText" type="button" class="btn add-button" data-i18n="addText">Add text</button>
         </section>
         <section class="card group-card" id="imagesCard">
           <h2><span data-i18n="imagesCard">Images</span> <span id="imagesCount" class="group-count"></span></h2>
           <ul id="imageList" class="element-list"></ul>
-          <button id="addImage" type="button" class="secondary add-button" data-i18n="addImage">Add image</button>
+          <button id="addImage" type="button" class="btn add-button" data-i18n="addImage">Add image</button>
           <input id="imageFile" type="file" accept="image/*" hidden />
           <p id="elementsStatus" class="error" role="alert" hidden></p>
         </section>
         <section class="card group-card" id="holesCard">
           <h2><span data-i18n="holesCard">Holes</span> <span id="holesCount" class="group-count"></span></h2>
           <ul id="holeList" class="element-list"></ul>
-          <button id="addHole" type="button" class="secondary add-button" data-i18n="addHole">Add hole</button>
+          <button id="addHole" type="button" class="btn add-button" data-i18n="addHole">Add hole</button>
         </section>
         <section class="card" id="magnetsCard">
           <h2 data-i18n="magnetsCard">Magnets</h2>
@@ -176,7 +176,7 @@
           </div>
           <p id="meshInfo" class="note"></p>
           <p id="meshBlocked" class="error" role="alert" hidden></p>
-          <button id="downloadStl" type="button" class="primary" data-i18n="downloadStl">Download STL</button>
+          <button id="downloadStl" type="button" class="btn primary wide" data-i18n="downloadStl">Download STL</button>
           <progress id="exportProgress" class="progress" hidden></progress>
           <output id="exportStatus" class="note" aria-live="polite"></output>
           <h3 data-i18n="printHints">Printing</h3>

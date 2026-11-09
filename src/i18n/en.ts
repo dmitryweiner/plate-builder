@@ -79,8 +79,6 @@ export const en = {
   visible: 'Visible',
   duplicate: 'Duplicate',
   remove: 'Delete',
-  decrease: 'Decrease',
-  increase: 'Increase',
   holeKind: 'Kind',
   holeRound: 'Round',
   holeSlot: 'Slot',

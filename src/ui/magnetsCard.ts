@@ -1,7 +1,8 @@
 // The Magnets card's controls (spec §5a): how many, where, their size.
 
 import { layoutFor, MAGNET_LAYOUT_IDS, magnetLayouts, RANGES, type MagnetLayout, type Magnets, type PlateState } from '../geo/state';
-import type { Control, TextKey } from './controls';
+import type { Control } from 'maker-kit/ui/controls';
+import type { TextKey } from '../i18n';
 
 const LAYOUT_LABELS: Record<MagnetLayout, TextKey> = {
   centre: 'layoutCentre',
@@ -22,7 +23,7 @@ const any = (s: PlateState) => s.magnets.count > 0;
 
 type SizeKey = 'diameter' | 'thickness' | 'fit' | 'edge';
 
-const size = (key: SizeKey, label: TextKey, range: { min: number; max: number }, step: number): Control<PlateState> => ({
+const size = (key: SizeKey, label: TextKey, range: { min: number; max: number }, step: number): Control<PlateState, TextKey> => ({
   kind: 'range',
   key,
   label,
@@ -35,7 +36,7 @@ const size = (key: SizeKey, label: TextKey, range: { min: number; max: number },
   set: (s, value) => setMagnets(s, { [key]: value }),
 });
 
-export const magnetControls: readonly Control<PlateState>[] = [
+export const magnetControls: readonly Control<PlateState, TextKey>[] = [
   {
     kind: 'select',
     key: 'count',
