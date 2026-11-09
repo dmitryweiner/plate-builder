@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { gridSize, heightfieldMesh } from './grid';
-import { meshNormals } from './mesh';
-import { validateMesh } from './validate';
+import { meshNormals } from 'maker-kit/3d/mesh';
+import { validateMesh } from 'maker-kit/3d/validate';
 
 const spec = { width: 10, height: 6, step: 1, zero: 2.99, bottom: 1.5, avoid: 3 };
 

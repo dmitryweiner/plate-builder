@@ -20,11 +20,11 @@ import type { Raster } from './geo/heightmap';
 import { processPixels } from './geo/heightmap';
 import { magnetPocket } from './geo/magnets';
 import { colourChanges } from './geo/printHints';
-import { stlFileName } from './geo/stl';
 import { warnings as findWarnings, type Warning } from './geo/warnings';
 import { detectLocale, direction, LOCALES, messages, staticText, translator, type Locale, type Messages, type TextKey } from './i18n';
 import type { CameraPreset, SceneHandle } from './render/view';
 import { addHole, addText, duplicateElement, nudgeElement, removeElement, toggleVisible } from './state/edit';
+import { stlFileName } from 'maker-kit/3d/stl';
 import { History } from 'maker-kit/core/history';
 import type { Translate } from 'maker-kit/core/message';
 import type { StorageWrite } from 'maker-kit/core/storage';
@@ -476,7 +476,7 @@ export function startApp({
     }
     const problems = mesh?.problems ?? [];
     meshBlocked.hidden = problems.length === 0;
-    meshBlocked.textContent = problems.length ? m.meshBlocked(problems.map((p) => m.meshProblem[p]).join(', ')) : '';
+    meshBlocked.textContent = problems.length ? m.meshBlocked(problems.map((p) => tr(p.code, p.params)).join(' ')) : '';
     downloadButton.disabled = exporting.state === 'building' || problems.length > 0;
     exportProgress.hidden = exporting.state !== 'building';
     if (exporting.state === 'building') exportStatus.textContent = m.exporting;
@@ -573,7 +573,7 @@ export function startApp({
           views.dataset.show = '2d';
           editor.frame(spot);
         },
-        problems,
+        problems.map((p) => tr(p.code, p.params)),
       );
     }
     renderHints();
@@ -960,7 +960,7 @@ export function startApp({
   const onExport = () => {
     exporting = { state: 'building' };
     renderStatus();
-    const name = stlFileName(state().name);
+    const name = stlFileName(state().name, 'plate');
     // every picture decoded and every font in first: an export never leaves an element out
     ensureRasters();
     Promise.all([...decoding.values(), ...state().texts.map((text) => texts.loadFont(text.font))])

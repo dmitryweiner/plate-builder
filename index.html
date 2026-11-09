@@ -79,8 +79,8 @@
     <main class="workspace">
       <section class="views" id="views" data-show="2d" aria-label="Views" data-i18n-label="views">
         <div class="view-tabs">
-          <button type="button" data-show="2d" data-i18n="view2d">2D</button>
-          <button type="button" data-show="3d" data-i18n="view3dTab">3D</button>
+          <button type="button" class="chip" data-show="2d" data-i18n="view2d">2D</button>
+          <button type="button" class="chip" data-show="3d" data-i18n="view3dTab">3D</button>
         </div>
         <div class="pane pane2d">
           <canvas id="view2d" aria-label="Plate, top view" data-i18n-label="editor2d"></canvas>
@@ -88,16 +88,16 @@
         </div>
         <div class="pane pane3d" aria-label="3D view" data-i18n-label="view3d">
           <canvas id="view3d"></canvas>
-          <div class="cameras">
-            <button type="button" data-camera="front" data-i18n="cameraFront">Front</button>
-            <button type="button" data-camera="iso" data-i18n="cameraIso">Angle</button>
-            <button type="button" data-camera="back" data-i18n="cameraBack">Back</button>
+          <div class="chips">
+            <button type="button" class="chip" data-camera="front" data-i18n="cameraFront">Front</button>
+            <button type="button" class="chip" data-camera="iso" data-i18n="cameraIso">Angle</button>
+            <button type="button" class="chip" data-camera="back" data-i18n="cameraBack">Back</button>
           </div>
           <div id="buildProgress" class="view-progress" hidden></div>
           <output id="status" class="view-status" aria-live="polite"></output>
         </div>
         <button id="sheetOpen" type="button" class="sheet-open" data-i18n="showPanel" hidden>Settings</button>
-        <button id="swapViews" type="button" class="swap-views" title="Swap views" aria-label="Swap views" data-i18n-label="swapViews">
+        <button id="swapViews" type="button" class="chip swap-views" title="Swap views" aria-label="Swap views" data-i18n-label="swapViews">
           ⇄
         </button>
       </section>
