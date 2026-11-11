@@ -43,7 +43,7 @@ TypeScript 7 + Vite, no framework; Three.js for the 3D view;
 in a module worker. Built on
 [maker-kit](https://github.com/dmitryweiner/maker-kit), the shared library of
 the 3D-printing tools (controls, undo, storage, presets, the 3D view, the
-worker queue, STL, the design code). See [AGENTS.md](AGENTS.md) for the
+worker queue, STL, CSG helpers, the element lists, the design code). See [AGENTS.md](AGENTS.md) for the
 layout and conventions.
 
 ## License
