@@ -17,7 +17,7 @@ import { CHORD_TOLERANCE, primitiveOutline, ringArea, segmentsFor, type Ring } f
 import { PRIMITIVE_KINDS, type ImageElement, type Plate, type PlateState, type PrimitiveKind, type TextElement } from '../geo/state';
 import { maskRings, textRings, type TextRaster } from '../geo/textShape';
 import type { Warning } from '../geo/warnings';
-import type { CsgApi, CsgScope } from './csg';
+import { outerOutline, type CsgApi, type CsgScope } from 'maker-kit/csg/manifold';
 
 const isPrimitive = (kind: Plate['kind']): kind is PrimitiveKind => PRIMITIVE_KINDS.some((k) => k === kind);
 
@@ -82,10 +82,9 @@ function imageMask(csg: CsgApi, scope: CsgScope, image: ImageElement, raster: Ra
   return scope.keep(turned.translate([image.x, image.y]));
 }
 
-/** Only the outer contours: holes filled (spec §2.4, §2.5). */
+/** Only the outer contours: holes filled (spec §2.4, §2.5); null for an empty section, of which manifold makes none. */
 function fillHoles(csg: CsgApi, scope: CsgScope, section: CrossSection): CrossSection | null {
-  const outer = section.toPolygons().filter((ring) => ringArea(ring.map(([x, y]): [number, number] => [x, y])) > 0);
-  return outer.length ? scope.keep(new csg.CrossSection(outer, 'Positive')) : null;
+  return section.isEmpty() ? null : outerOutline(csg, scope, section);
 }
 
 function islandWarnings(section: CrossSection): Warning[] {

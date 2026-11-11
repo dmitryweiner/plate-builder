@@ -7,7 +7,7 @@ import { assessExport, validateMesh } from 'maker-kit/3d/validate';
 import { LOCALES, messages, staticText } from '../i18n';
 import { warnings } from '../geo/warnings';
 import { buildPlate, outlineRings, stateOutline } from '../worker/build';
-import { CsgScope, initCSG, type CsgApi } from '../worker/csg';
+import { CsgScope, initCSG, type CsgApi } from 'maker-kit/csg/manifold';
 import { BLANK_PRESET, BUILT_IN_PRESETS } from './presets';
 
 const presetById = (id: string) => {

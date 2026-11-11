@@ -134,8 +134,9 @@ browser (service worker, layout, workers) → a step in `scripts/smoke.mjs`.
   maker-kit's `worker/protocol`), `client.ts` (maker-kit's `WorkerClient`
   with the app's policy), `csg.worker.ts` (a thin adapter over the kit's
   `serveJobs`), `jobs.ts` (what
-  each job does), `build.ts` (the recipe of the solid), `csg.ts` (manifold
-  loading, `CsgScope`); all but the adapter tested in Node with real WASM.
+  each job does), `build.ts` (the recipe of the solid); manifold's loading,
+  `CsgScope` and `outerOutline` are maker-kit's `csg/manifold`; all but the
+  adapter tested in Node with real WASM.
 - `src/editor/` — the 2D view: `view.ts` (mm ↔ px, fit, zoom, pan),
   `elements.ts` (boxes, hit tests, uniform scaling), `gestures.ts` (move,
   corner scale, rotate, pinch, snapping), `editor2d.ts` (pointer events and

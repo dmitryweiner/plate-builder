@@ -31,7 +31,7 @@ import {
   type PlateMesh,
   type Rasters,
 } from './build';
-import { CsgScope, initCSG, type CsgApi } from './csg';
+import { CsgScope, initCSG, type CsgApi } from 'maker-kit/csg/manifold';
 
 let csg: CsgApi;
 beforeAll(async () => {
