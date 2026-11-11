@@ -30,8 +30,8 @@ const DOCS = [
   ['--out', 'docs/images/house-number-back.png', '--preset', 'house-number', '--swap', '--camera', 'back'],
   ['--out', 'docs/images/keychain.png', '--preset', 'keychain'],
   ['--out', 'docs/images/medal.png', '--preset', 'medal'],
-  ['--out', 'docs/images/medal-image.png', '--preset', 'medal', '--select', 'i1', '--panel', '.element-row.open'],
-  ['--out', 'docs/images/name-plate-text.png', '--preset', 'name-plate', '--select', 't1', '--panel', '.element-row.open'],
+  ['--out', 'docs/images/medal-image.png', '--preset', 'medal', '--select', 'i1', '--panel', '.item-row.open'],
+  ['--out', 'docs/images/name-plate-text.png', '--preset', 'name-plate', '--select', 't1', '--panel', '.item-row.open'],
   ['--out', 'docs/images/pet-tag-phone.png', '--preset', 'pet-tag', '--width', '390', '--height', '844'],
   ['--out', 'docs/images/fridge-magnet-back.png', '--preset', 'fridge-magnet', '--swap', '--camera', 'back'],
   [
@@ -71,7 +71,7 @@ async function shot(o) {
     await page.waitForTimeout(400);
     await settle();
   }
-  if (o.has('select')) await page.click(`.element-row[data-id="${o.get('select')}"] .element-name`);
+  if (o.has('select')) await page.click(`.item-row[data-id="${o.get('select')}"] .item-name`);
   if (o.has('eval')) await page.evaluate(o.get('eval'));
   if (o.has('view') && (await page.locator('.view-tabs').isVisible())) await page.click(`.view-tabs [data-show="${o.get('view')}"]`);
   if (o.has('swap')) await page.click('#swapViews');
