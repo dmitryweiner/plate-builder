@@ -4,7 +4,7 @@
 // serveJobs: the work itself is in jobs.ts, tested in Node.
 
 import { serveJobs } from 'maker-kit/worker/serve';
-import { initCSG } from './csg';
+import { initCSG } from 'maker-kit/csg/manifold';
 import { resultTransfer, runJob } from './jobs';
 import { isJob, type Job, type JobResult } from './protocol';
 

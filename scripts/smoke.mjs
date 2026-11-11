@@ -12,7 +12,7 @@
 // Prints one line per step; exits 1 on the first failed step or on any
 // console error. New checks are new steps here, not new scripts.
 
-import { binaryStl, check, download, launch, parseArgs, VIEWPORTS } from './lib/harness.mjs';
+import { binaryStl, check, download, launch, offline, parseArgs, VIEWPORTS } from './lib/harness.mjs';
 
 const flags = parseArgs(process.argv.slice(2));
 const preview = flags.has('preview');
@@ -303,7 +303,7 @@ await app.run(
         await page.fill('#element_x_n', String(-40 + 25 * ['round', 'slot', 'countersunk', 'keyhole'].indexOf(kind)));
         await page.locator('#element_x_n').dispatchEvent('change');
       }
-      check((await page.locator('.element-row').count()) === 4, 'four holes in the list');
+      check((await page.locator('.item-row').count()) === 4, 'four holes in the list');
       await page.fill('#plate_thickness_n', '6');
       await page.locator('#plate_thickness_n').dispatchEvent('change');
       ({ info } = await built(page, info));
@@ -337,7 +337,7 @@ await app.run(
       let { info } = await built(page);
       await page.setInputFiles('#imageFile', await testPicture(page, 'png'));
       ({ info } = await built(page, info));
-      check((await page.locator('.element-row').count()) === 1, 'the PNG did not become an image');
+      check((await page.locator('.item-row').count()) === 1, 'the PNG did not become an image');
       check(await page.locator('#selectedThumb').isVisible(), 'no height picture in the card');
       // the disc rises 1.5 mm over the 3 mm base
       check(info.includes('× 4.5 mm'), `PNG relief: ${info}`);
@@ -360,7 +360,7 @@ await app.run(
       await page.check('#element_invert');
       await page.setInputFiles('#imageFile', await testPicture(page, 'jpeg', 640, 480));
       ({ info } = await built(page, info));
-      check((await page.locator('.element-row').count()) === 2, 'the JPEG did not become an image');
+      check((await page.locator('.item-row').count()) === 2, 'the JPEG did not become an image');
       check(await page.locator('#meshBlocked').isHidden(), 'two images: the mesh is blocked');
       if (shots) await page.screenshot({ path: 'shots/images-desktop.png' });
       const ms = await exportMs(page);
@@ -380,7 +380,7 @@ await app.run(
           await setNumber(page, 'plate_width', w);
           await setNumber(page, 'plate_height', h);
           // a click on the open card's name would fold it
-          if (!(await page.locator('#element_size_n').isVisible())) await page.click('.element-name');
+          if (!(await page.locator('#element_size_n').isVisible())) await page.click('.item-name');
           await setNumber(page, 'element_size', size);
           const result = await built(page, info);
           info = result.info;
@@ -395,7 +395,7 @@ await app.run(
         let { info } = await built(page);
         await page.setInputFiles('#imageFile', await testPicture(page, 'jpeg'));
         ({ info } = await built(page, info));
-        if (!(await page.locator('#element_size_n').isVisible())) await page.click('.element-name');
+        if (!(await page.locator('#element_size_n').isVisible())) await page.click('.item-name');
         await setNumber(page, 'element_size', 50);
         for (const y of [22, -22]) {
           await page.click('#addText');
@@ -408,7 +408,7 @@ await app.run(
         await setNumber(page, 'plate_width', 300);
         await setNumber(page, 'plate_height', 300);
         for (let k = 0; k < 7; k++) await page.setInputFiles('#imageFile', await testPicture(page, 'jpeg'));
-        const images = page.locator('.element-row[data-id^="i"] .element-name');
+        const images = page.locator('.item-row[data-id^="i"] .item-name');
         for (let k = 0; k < 8; k++) {
           await images.nth(k).click();
           await setNumber(page, 'element_size', 100);
@@ -655,8 +655,8 @@ await app.run(
       if (shots) await page.screenshot({ path: 'shots/warnings-desktop.png' });
       // nothing to crop around: an empty mesh, the export blocked and said why
       await page.selectOption('#plate_kind', 'crop');
-      await page.locator('.element-row [aria-label^="Delete"]').first().click();
-      while ((await page.locator('.element-row').count()) > 0) await page.locator('.element-row [aria-label^="Delete"]').first().click();
+      await page.locator('.item-row [aria-label^="Delete"]').first().click();
+      while ((await page.locator('.item-row').count()) > 0) await page.locator('.item-row [aria-label^="Delete"]').first().click();
       await page.waitForFunction(() => document.querySelector('#warningList li[data-code="mesh.invalid"]') !== null, null, {
         timeout: 20000,
       });
@@ -678,7 +678,7 @@ await app.run(
       await page.reload();
       info = await builtAs(page, '170 × 60').catch(() => page.locator('#meshInfo').textContent());
       check(info.startsWith('170 × 60'), `the reload lost the project: ${info}`);
-      check((await page.locator('.element-row').count()) === 4, 'the reload lost an element');
+      check((await page.locator('.item-row').count()) === 4, 'the reload lost an element');
       check(await page.locator('#selectedThumb').isHidden(), 'nothing should be selected after a reload');
       // the project file, out and back in
       const { name: fileName, path } = await download(page, '#saveProject');
@@ -706,7 +706,7 @@ await app.run(
       // New: the blank rectangle, nothing on it
       await page.click('#newPlate');
       info = await builtAs(page, '100 × 60');
-      check((await page.locator('.element-row').count()) === 0, 'New left elements on the plate');
+      check((await page.locator('.item-row').count()) === 0, 'New left elements on the plate');
       await context.close();
     });
 
@@ -800,12 +800,12 @@ await app.run(
         // only the panel scrolls to the card: the page and its top bar stay put
         check((await page.evaluate(() => document.scrollingElement?.scrollTop)) === 0, 'the tap scrolled the page');
         await page.waitForFunction(() => document.querySelector('#panel')?.classList.contains('open'));
-        check((await page.locator('.element-row.open .element-title').textContent()) === 'Hole 1', 'the tapped hole is not selected');
+        check((await page.locator('.item-row.open .item-title').textContent()) === 'Hole 1', 'the tapped hole is not selected');
         // its card's head in the sheet's visible part, once the sheet has slid in (however slow the machine)
         await page.waitForFunction(() => document.querySelector('#panel')?.getAnimations().length === 0);
         // the top and the bottom of each; the sheet's cut at the window
         const [head, sheet] = await page.evaluate(() => {
-          const box = document.querySelector('.element-row.open .element-head')?.getBoundingClientRect();
+          const box = document.querySelector('.item-row.open .item-head')?.getBoundingClientRect();
           const panel = document.querySelector('#panel')?.getBoundingClientRect();
           return [box && [box.top, box.bottom], panel && [panel.top, Math.min(panel.bottom, innerHeight)]];
         });
@@ -828,9 +828,21 @@ await app.run(
       check(select !== null && select.x < VIEWPORTS.desktop.width / 2, 'the language switcher did not move to the left');
       // an element's card mirrors too: its name on the right, delete on the left
       await page.click('#addText');
-      const name = await page.locator('.element-row .element-title').boundingBox();
-      const remove = await page.locator('.element-row [aria-label^="מחיקה"]').boundingBox();
+      const name = await page.locator('.item-row .item-title').boundingBox();
+      const remove = await page.locator('.item-row [aria-label^="מחיקה"]').boundingBox();
       check(name !== null && remove !== null && remove.x < name.x, "the element card's head did not mirror");
+      // the count is a run of its own: "1 / 10" left to right, not turned into "10 / 1" by the line
+      const ltr = await page.locator('#textsCount').evaluate((node) => {
+        const text = node.firstChild;
+        const range = document.createRange();
+        const x = (i) => {
+          range.setStart(text, i);
+          range.setEnd(text, i + 1);
+          return range.getBoundingClientRect().x;
+        };
+        return node.textContent === '1 / 10' && x(0) < x(node.textContent.length - 1);
+      });
+      check(ltr, 'the Hebrew count does not read "1 / 10" left to right');
       if (shots) await page.screenshot({ path: 'shots/hebrew-groups.png' });
       await context.close();
     });
@@ -863,11 +875,10 @@ await app.run(
 
     if (preview) {
       await step('works offline after the first visit', async () => {
-        const { page, context } = await app.open();
-        await page.evaluate(() => navigator.serviceWorker.ready);
-        await context.setOffline(true);
-        await page.reload();
-        check((await page.locator('.brand').textContent()) === 'Plate Builder', 'the app did not load offline');
+        const { page, context } = await offline(app, {
+          ready: async (loaded) =>
+            check((await loaded.locator('.brand').textContent()) === 'Plate Builder', 'the app did not load offline'),
+        });
         let { info } = await built(page);
         // a font and a vignette this page never asked for online: precached all the same
         await page.click('#addText');

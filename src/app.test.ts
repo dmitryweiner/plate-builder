@@ -456,10 +456,10 @@ describe('3D view', () => {
 });
 
 /** The open element card (the selected element's), its title, the titles of a group's list. */
-const openRow = () => document.querySelector<HTMLElement>('.element-row.open');
-const openTitle = () => openRow()?.querySelector('.element-title')?.textContent ?? null;
-const headHints = () => [...document.querySelectorAll('.element-hint')].map((n) => n.textContent);
-const titles = (list: string) => [...document.querySelectorAll(`#${list} .element-title`)].map((n) => n.textContent);
+const openRow = () => document.querySelector<HTMLElement>('.item-row.open');
+const openTitle = () => openRow()?.querySelector('.item-title')?.textContent ?? null;
+const headHints = () => [...document.querySelectorAll('.item-hint')].map((n) => n.textContent);
+const titles = (list: string) => [...document.querySelectorAll(`#${list} .item-title`)].map((n) => n.textContent);
 
 const press = (key: string, over: KeyboardEventInit = {}) =>
   document.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true, ...over }));
@@ -471,7 +471,7 @@ const holes = () => {
 describe('elements', () => {
   it('adds a hole, selects it and shows its card', () => {
     start();
-    expect(document.querySelectorAll('.element-row')).toHaveLength(0);
+    expect(document.querySelectorAll('.item-row')).toHaveLength(0);
     $('#addHole', HTMLButtonElement).click();
     expect(titles('holeList')).toEqual(['Hole 1']);
     expect(openRow()).not.toBeNull();
@@ -497,20 +497,34 @@ describe('elements', () => {
   it('duplicates, hides and deletes from the list', () => {
     start();
     $('#addHole', HTMLButtonElement).click();
-    $('.element-row [aria-label^="Duplicate"]', HTMLButtonElement).click();
+    $('.item-row [aria-label^="Duplicate"]', HTMLButtonElement).click();
     expect(openTitle()).toBe('Hole 2');
-    const eye = document.querySelectorAll<HTMLInputElement>('.element-visible')[1];
+    const eye = document.querySelectorAll<HTMLInputElement>('.item-visible')[1];
     eye?.click();
-    expect(document.querySelectorAll('.hidden-element')).toHaveLength(1);
-    $('.element-row [aria-label="Delete: Hole 1"]', HTMLButtonElement).click();
+    expect(document.querySelectorAll('.hidden-item')).toHaveLength(1);
+    $('.item-row [aria-label="Delete: Hole 1"]', HTMLButtonElement).click();
     expect(titles('holeList')).toEqual(['Hole 1']);
+  });
+
+  it('gives each row and its buttons an id of the group and the element', () => {
+    start();
+    $('#addText', HTMLButtonElement).click();
+    $('#addHole', HTMLButtonElement).click();
+    expect([...document.querySelectorAll('.item-row')].map((row) => row.id)).toEqual(['text_t1', 'hole_h1']);
+    expect([...document.querySelectorAll('#hole_h1 .item-head [id]')].map((b) => b.id)).toEqual([
+      'hole_h1_visible',
+      'hole_h1_duplicate',
+      'hole_h1_remove',
+    ]);
+    $('#hole_h1_remove', HTMLButtonElement).click();
+    expect(titles('holeList')).toEqual([]);
   });
 
   it('selects from the list', () => {
     start();
     $('#addHole', HTMLButtonElement).click();
     $('#addHole', HTMLButtonElement).click();
-    $('.element-row[data-id="h1"] .element-name', HTMLButtonElement).click();
+    $('.item-row[data-id="h1"] .item-name', HTMLButtonElement).click();
     expect(openTitle()).toBe('Hole 1');
     expect(openRow()?.dataset.id).toBe('h1');
   });
@@ -520,8 +534,8 @@ describe('elements', () => {
     $('#addHole', HTMLButtonElement).click();
     $('#addHole', HTMLButtonElement).click();
     expect([titles('textList'), titles('imageList'), titles('holeList')]).toEqual([['Text 1'], [], ['Hole 1', 'Hole 2']]);
-    expect([...document.querySelectorAll('.element-row.open')].map((r) => r instanceof HTMLElement && r.dataset.id)).toEqual(['h2']);
-    expect($('#selectedControls', HTMLElement).closest('.element-row')).toBe(openRow());
+    expect([...document.querySelectorAll('.item-row.open')].map((r) => r instanceof HTMLElement && r.dataset.id)).toEqual(['h2']);
+    expect($('#selectedControls', HTMLElement).closest('.item-row')).toBe(openRow());
     expect([text('#textsCount'), text('#imagesCount'), text('#holesCount')]).toEqual(['1 / 10', '0 / 8', '2 / 16']);
   });
 
@@ -529,13 +543,13 @@ describe('elements', () => {
     start();
     $('#addText', HTMLButtonElement).click();
     $('#addHole', HTMLButtonElement).click();
-    $('.element-row[data-id="t1"] .element-name', HTMLButtonElement).click();
+    $('.item-row[data-id="t1"] .item-name', HTMLButtonElement).click();
     expect(openTitle()).toBe('Text 1');
-    expect($('.element-row[data-id="t1"] .element-name', HTMLButtonElement).getAttribute('aria-expanded')).toBe('true');
-    $('.element-row[data-id="t1"] .element-name', HTMLButtonElement).click();
+    expect($('.item-row[data-id="t1"] .item-name', HTMLButtonElement).getAttribute('aria-expanded')).toBe('true');
+    $('.item-row[data-id="t1"] .item-name', HTMLButtonElement).click();
     expect(openRow()).toBeNull();
-    expect($('#selectedControls', HTMLElement).closest('.element-row')).toBeNull();
-    expect($('.element-row[data-id="t1"] .element-name', HTMLButtonElement).getAttribute('aria-expanded')).toBe('false');
+    expect($('#selectedControls', HTMLElement).closest('.item-row')).toBeNull();
+    expect($('.item-row[data-id="t1"] .item-name', HTMLButtonElement).getAttribute('aria-expanded')).toBe('false');
   });
 
   it('shows a hint after the name: a text by its first line, a hole by its kind', () => {
@@ -543,7 +557,7 @@ describe('elements', () => {
     $('#addText', HTMLButtonElement).click();
     $('#addHole', HTMLButtonElement).click();
     expect(headHints()).toEqual(['Text', 'Round']);
-    $('.element-row[data-id="t1"] .element-name', HTMLButtonElement).click();
+    $('.item-row[data-id="t1"] .item-name', HTMLButtonElement).click();
     const area = $('#element_text', HTMLTextAreaElement);
     area.focus();
     area.value = 'Room 12\nKitchen';
@@ -570,7 +584,7 @@ describe('elements', () => {
     Object.defineProperty(panel, 'scrollTop', { value: 0, writable: true });
     const rects = vi.spyOn(Element.prototype, 'getBoundingClientRect').mockImplementation(function (this: Element) {
       if (this === panel) return DOMRect.fromRect({ x: 0, y: 300, width: 360, height: 544 });
-      if (this.classList.contains('element-head')) return DOMRect.fromRect({ x: 0, y: 900, width: 360, height: 40 });
+      if (this.classList.contains('item-head')) return DOMRect.fromRect({ x: 0, y: 900, width: 360, height: 40 });
       return DOMRect.fromRect();
     });
     press('d', { ctrlKey: true });
@@ -584,7 +598,7 @@ describe('elements', () => {
     selectLocale('ru');
     expect(openTitle()).toBe('Отверстие 1');
     expect(text('#holesCard h2')).toBe('Отверстия 1 / 16');
-    expect($('#selectedControls', HTMLElement).closest('.element-row')).toBe(openRow());
+    expect($('#selectedControls', HTMLElement).closest('.item-row')).toBe(openRow());
   });
 });
 
@@ -614,7 +628,7 @@ describe('history', () => {
     expect($('#plate_width_n', HTMLInputElement).value).toBe('130');
     $('#addHole', HTMLButtonElement).click();
     press('в', { code: 'KeyD', ctrlKey: true });
-    expect(document.querySelectorAll('.element-row')).toHaveLength(2);
+    expect(document.querySelectorAll('.item-row')).toHaveLength(2);
   });
 
   it('undoes with Ctrl+Z while a slider, a check box or a select has the focus', () => {
@@ -643,7 +657,7 @@ describe('history', () => {
     start();
     $('#addHole', HTMLButtonElement).click();
     press('z', { ctrlKey: true });
-    expect(document.querySelectorAll('.element-row')).toHaveLength(0);
+    expect(document.querySelectorAll('.item-row')).toHaveLength(0);
     expect(openRow()).toBeNull();
   });
 });
@@ -657,10 +671,10 @@ describe('keyboard', () => {
     expect($('#element_x_n', HTMLInputElement).value).toBe('0.5');
     expect($('#element_y_n', HTMLInputElement).value).toBe('5');
     press('d', { ctrlKey: true });
-    expect(document.querySelectorAll('.element-row')).toHaveLength(2);
+    expect(document.querySelectorAll('.item-row')).toHaveLength(2);
     press('Delete');
-    expect(document.querySelectorAll('.element-row')).toHaveLength(1);
-    $('.element-name', HTMLButtonElement).click();
+    expect(document.querySelectorAll('.item-row')).toHaveLength(1);
+    $('.item-name', HTMLButtonElement).click();
     press('Escape');
     expect(openRow()).toBeNull();
   });
@@ -669,7 +683,7 @@ describe('keyboard', () => {
     start();
     $('#addHole', HTMLButtonElement).click();
     $('#element_x_n', HTMLInputElement).dispatchEvent(new KeyboardEvent('keydown', { key: 'Delete', bubbles: true }));
-    expect(document.querySelectorAll('.element-row')).toHaveLength(1);
+    expect(document.querySelectorAll('.item-row')).toHaveLength(1);
   });
 });
 
@@ -682,6 +696,8 @@ describe('warnings and outline', () => {
     setInput('#element_x_n', '47');
     expect($('#warningsCard', HTMLElement).hidden).toBe(false);
     expect(text('#warningList li span')).toBe('Hole 1: only 1 mm of material to the edge; 2 mm or more holds better.');
+    // the kit's message line: a warning in the warn colour, found by its code
+    expect($('#warningList li[data-code="hole.nearEdge"]', HTMLElement).className).toBe('message warn');
     $('#warningList button', HTMLButtonElement).click();
     setInput('#element_x_n', '0');
     expect($('#warningsCard', HTMLElement).hidden).toBe(true);
@@ -731,14 +747,14 @@ describe('images', () => {
     await settle();
     expect($('#elementsStatus', HTMLElement).hidden).toBe(false);
     expect(text('#elementsStatus')).toBe('The picture could not be read: not a picture');
-    expect(document.querySelectorAll('.element-row')).toHaveLength(0);
+    expect(document.querySelectorAll('.item-row')).toHaveLength(0);
   });
 
   it('a duplicate shares the decoded picture: nothing to decode again', async () => {
     start();
     chooseFile('logo.png');
     await settle();
-    $('.element-row [aria-label^="Duplicate"]', HTMLButtonElement).click();
+    $('.item-row [aria-label^="Duplicate"]', HTMLButtonElement).click();
     timers.flush();
     const preview = csg.last().job;
     expect(preview.kind === 'mesh' && preview.rasters).toEqual([raster2x1, raster2x1]);
@@ -998,10 +1014,10 @@ describe('export card and warnings', () => {
     start();
     $('#addHole', HTMLButtonElement).click();
     setInput('#element_x_n', '47');
-    const row = $('.element-row .element-name', HTMLButtonElement);
+    const row = $('.item-row .item-name', HTMLButtonElement);
     const show = $('#warningList button', HTMLButtonElement);
     setInput('#element_y_n', '1');
-    expect(document.querySelector('.element-row .element-name')).toBe(row);
+    expect(document.querySelector('.item-row .item-name')).toBe(row);
     expect(document.querySelector('#warningList button')).toBe(show);
   });
 
@@ -1031,6 +1047,8 @@ describe('export card and warnings', () => {
     const item = $('#warningList li[data-code="mesh.invalid"]', HTMLElement);
     expect(item.textContent).toBe('The part is empty. The STL cannot be exported.');
     expect(item.querySelector('button')).toBeNull();
+    // it blocks the export: a blocker's colour
+    expect(item.className).toBe('message bad');
   });
 
   it('shows a bar over the 3D view once a build or an outline has run a while, never for a quick one', async () => {
@@ -1084,7 +1102,7 @@ describe('projects, presets, storage', () => {
     storage = new MemoryStorage();
     start();
     expect($('#projectName', HTMLInputElement).value).toBe('Door sign');
-    expect(document.querySelectorAll('.element-row')).toHaveLength(3);
+    expect(document.querySelectorAll('.item-row')).toHaveLength(3);
   });
 
   it('keeps the project across a reload, saved after a pause', () => {
@@ -1107,12 +1125,16 @@ describe('projects, presets, storage', () => {
     timers.flush();
     const banner = $('#storageBanner', HTMLElement);
     expect(banner.hidden).toBe(false);
-    expect(banner.textContent).toBe(messages.en['kit.storage.project.full']);
+    expect(banner.textContent).toBe(
+      'Your latest changes are not kept in this browser: its storage is full. Delete presets you no longer need, or save the project to a file with ⬇️.',
+    );
     expect(banner.classList.contains('bad')).toBe(false);
     refusing.error = new Error('denied');
     setInput('#plate_width_n', '125');
     timers.flush();
-    expect(banner.textContent).toBe(messages.en['kit.storage.project.blocked']);
+    expect(banner.textContent).toBe(
+      'This browser does not keep your project: its storage is unavailable (a private window or blocked site data). Save the project to a file with ⬇️ before closing the page.',
+    );
     expect(banner.classList.contains('bad')).toBe(true);
     refusing.refuse = false;
     setInput('#plate_width_n', '130');
@@ -1227,7 +1249,7 @@ describe('projects, presets, storage', () => {
     expect($('#projectName', HTMLInputElement).value).toBe('New plate');
     expect($('#plate_kind', HTMLSelectElement).value).toBe('rectangle');
     expect([$('#plate_width_n', HTMLInputElement).value, $('#plate_height_n', HTMLInputElement).value]).toEqual(['100', '60']);
-    expect(document.querySelectorAll('.element-row')).toHaveLength(0);
+    expect(document.querySelectorAll('.item-row')).toHaveLength(0);
     $('#undo', HTMLButtonElement).click();
     expect($('#projectName', HTMLInputElement).value).toBe('Door sign');
   });

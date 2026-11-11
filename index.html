@@ -123,19 +123,19 @@
         <!-- the elements by kind; the selected one's card is open with its controls -->
         <section class="card group-card" id="textsCard">
           <h2><span data-i18n="textsCard">Texts</span> <span id="textsCount" class="group-count"></span></h2>
-          <ul id="textList" class="element-list"></ul>
+          <ul id="textList" class="item-list"></ul>
           <button id="addText" type="button" class="btn add-button" data-i18n="addText">Add text</button>
         </section>
         <section class="card group-card" id="imagesCard">
           <h2><span data-i18n="imagesCard">Images</span> <span id="imagesCount" class="group-count"></span></h2>
-          <ul id="imageList" class="element-list"></ul>
+          <ul id="imageList" class="item-list"></ul>
           <button id="addImage" type="button" class="btn add-button" data-i18n="addImage">Add image</button>
           <input id="imageFile" type="file" accept="image/*" hidden />
           <p id="elementsStatus" class="error" role="alert" hidden></p>
         </section>
         <section class="card group-card" id="holesCard">
           <h2><span data-i18n="holesCard">Holes</span> <span id="holesCount" class="group-count"></span></h2>
-          <ul id="holeList" class="element-list"></ul>
+          <ul id="holeList" class="item-list"></ul>
           <button id="addHole" type="button" class="btn add-button" data-i18n="addHole">Add hole</button>
         </section>
         <section class="card" id="magnetsCard">
@@ -144,13 +144,13 @@
           <p id="magnetPocket" class="note" hidden></p>
         </section>
         <!-- moved into the selected element's card; parked here while none is -->
-        <div id="selectedBody" class="element-body" hidden>
+        <div id="selectedBody" hidden>
           <canvas id="selectedThumb" class="thumb" hidden></canvas>
           <div id="selectedControls"></div>
         </div>
         <section class="card" id="warningsCard" hidden>
           <h2 data-i18n="warningsCard">Warnings</h2>
-          <ul id="warningList" class="warning-list"></ul>
+          <ul id="warningList" class="messages"></ul>
         </section>
         <section class="card" id="exportCard">
           <h2 data-i18n="exportCard">Export</h2>

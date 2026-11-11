@@ -1,5 +1,5 @@
 import { createEditor, type EditorHandle } from './editor/editor2d';
-import { allElements, findElement } from './editor/elements';
+import { findElement } from './editor/elements';
 import { measuredTextBoxes } from './geo/boxes';
 import { bounds, primitiveOutline, type Ring } from './geo/outline';
 import {
@@ -33,6 +33,8 @@ import { renderControls, type ControlsHandle } from 'maker-kit/ui/controls';
 import { el } from 'maker-kit/ui/dom';
 import { bindHistory, shortcutLetter } from 'maker-kit/ui/historyKeys';
 import { createLanguagePicker } from 'maker-kit/ui/languagePicker';
+import { renderItemList } from 'maker-kit/ui/listCard';
+import { renderMessages } from 'maker-kit/ui/messageList';
 import { createModal, modalOpen } from 'maker-kit/ui/modal';
 import { createProgress, SHOW_DELAY_MS } from 'maker-kit/ui/progress';
 import { renderPresetList } from 'maker-kit/ui/presetList';
@@ -43,13 +45,13 @@ import { BLANK_PRESET, BUILT_IN_PRESETS } from './state/presets';
 import { projectFileName, projectFileText, readProjectFile } from './state/projectFile';
 import { loadSettings, saveSettings, type KeyValueStorage, type Settings } from './storage';
 import { scrollIntoContainer } from './ui/dom';
-import { elementsOf, renderElementGroup, syncHints, type ElementActions, type ElementType } from './ui/elementsCard';
+import { elementItems, elementsOf, type ElementType } from './ui/elementsCard';
 import { heightPicture, type ImportedImage } from './ui/imageImport';
 import { silhouetteSize, type VignetteEntry } from './ui/svgRaster';
 import { plateControls } from './ui/plateCard';
 import { magnetControls } from './ui/magnetsCard';
 import { elementControls } from './ui/selectedCard';
-import { renderWarnings } from './ui/warningsCard';
+import { warningLines } from './ui/warningsCard';
 import type { JobDone } from './worker/client';
 import type { Job, JobResult, MeshResult } from './worker/protocol';
 
@@ -173,21 +175,21 @@ export function startApp({
   const groups: { type: ElementType; list: HTMLElement; count: HTMLElement; add: HTMLButtonElement; limit: number }[] = [
     {
       type: 'text',
-      list: el('textList', HTMLElement),
+      list: el('textList', HTMLUListElement),
       count: el('textsCount', HTMLElement),
       add: el('addText', HTMLButtonElement),
       limit: LIMITS.texts,
     },
     {
       type: 'image',
-      list: el('imageList', HTMLElement),
+      list: el('imageList', HTMLUListElement),
       count: el('imagesCount', HTMLElement),
       add: el('addImage', HTMLButtonElement),
       limit: LIMITS.images,
     },
     {
       type: 'hole',
-      list: el('holeList', HTMLElement),
+      list: el('holeList', HTMLUListElement),
       count: el('holesCount', HTMLElement),
       add: el('addHole', HTMLButtonElement),
       limit: LIMITS.holes,
@@ -196,7 +198,7 @@ export function startApp({
   const selectedBody = el('selectedBody', HTMLElement);
   const selectedBox = el('selectedControls', HTMLElement);
   const warningsCard = el('warningsCard', HTMLElement);
-  const warningList = el('warningList', HTMLElement);
+  const warningList = el('warningList', HTMLUListElement);
   const meshInfo = el('meshInfo', HTMLElement);
   const meshBlocked = el('meshBlocked', HTMLElement);
   const downloadButton = el('downloadStl', HTMLButtonElement);
@@ -272,17 +274,8 @@ export function startApp({
   const textShapes = new Map<string, { raster: TextRaster; rings: Ring[] } | null>();
   /** warnings from the last build: what only the contours tell */
   let workerWarnings: Warning[] = [];
-  /** what the element lists and the warnings last showed, so they are made again only when it changes */
-  let elementListKey = '';
   /** the element whose card was last brought into view */
   let shownSelected: string | null = null;
-  const actions: ElementActions = {
-    select: (id) => select(id),
-    toggle: (id) => update(toggleVisible(state(), id), true),
-    duplicate: (id) => duplicate(id),
-    remove: (id) => remove(id),
-  };
-  let warningsKey = '';
   /** the vignette catalog, once fetched */
   let catalog: VignetteEntry[] = [];
   /** SVG proportions by URL, once loaded; a failed load stays NaN */
@@ -496,33 +489,34 @@ export function startApp({
     magnetPocketNote.hidden = s.magnets.count === 0;
     magnetPocketNote.textContent = m.magnetPocket(mm2(2 * pocket.radius), mm2(pocket.depth));
     renderPicker();
-    // lists are made again only when they change: a click that blurs a field (whose change re-renders)
-    // must find its button still there on mouseup
-    const listKey = JSON.stringify([
-      locale,
-      selected,
-      allElements(s).map((e) => [e.id, e.type, e.type === 'hole' ? e.kind : '', e.visible]),
-    ]);
-    if (listKey !== elementListKey) {
-      elementListKey = listKey;
-      // parked while no card is open; a card that opens takes it
-      selectedBody.hidden = true;
-      panel.append(selectedBody);
-      for (const group of groups) {
-        renderElementGroup(group.list, group.type, s, selected, m, actions, selectedBody);
-      }
-      // a selection made elsewhere (the 2D view, a key, a new element) shows its card's head
-      if (selected !== shownSelected) {
-        shownSelected = selected;
-        const head = selectedBody.closest('.element-row')?.querySelector('.element-head');
-        if (head) scrollIntoContainer(panel, head);
-      }
-    }
+    // the kit draws a list again only when it changes: a click that blurs a field (whose change
+    // re-renders) must find its button still there on mouseup; the open row takes the controls
     for (const group of groups) {
+      renderItemList(group.list, {
+        items: elementItems(s, group.type, m),
+        open: selected,
+        body: () => selectedBody,
+        t: tr,
+        idPrefix: group.type,
+        select: (id) => select(id),
+        toggle: (id) => update(toggleVisible(state(), id), true),
+        duplicate: (id) => duplicate(id),
+        remove: (id) => remove(id),
+      });
       const n = elementsOf(s, group.type).length;
       group.count.textContent = `${n} / ${group.limit}`;
       group.add.disabled = n >= group.limit;
-      syncHints(group.list, s, group.type, m);
+    }
+    // parked while no card is open (left in a row drawn away); a card that opens takes it
+    if (!selectedBody.isConnected) {
+      selectedBody.hidden = true;
+      panel.append(selectedBody);
+    }
+    // a selection made elsewhere (the 2D view, a key, a new element) shows its card's head
+    if (selected !== shownSelected) {
+      shownSelected = selected;
+      const head = selectedBody.closest('.item-row')?.querySelector('.item-head');
+      if (head) scrollIntoContainer(panel, head);
     }
 
     const element = findElement(s, selected);
@@ -558,12 +552,10 @@ export function startApp({
     // the last build's mesh check: a warning that blocks the export
     const problems = build.state === 'done' ? build.mesh.problems : [];
     if (problems.length) warnings.push({ code: 'mesh.invalid', ids: [], spot: [0, 0] });
-    const shownKey = JSON.stringify([locale, warnings.map((w) => ({ ...w, spot: null })), problems, allElements(s).map((e) => e.id)]);
-    if (shownKey !== warningsKey) {
-      warningsKey = shownKey;
-      renderWarnings(
-        warningsCard,
-        warningList,
+    warningsCard.hidden = warnings.length === 0;
+    renderMessages(
+      warningList,
+      warningLines(
         warnings,
         s,
         m,
@@ -574,8 +566,8 @@ export function startApp({
           editor.frame(spot);
         },
         problems.map((p) => tr(p.code, p.params)),
-      );
-    }
+      ),
+    );
     renderHints();
     if (document.activeElement !== projectName) projectName.value = s.name;
     presetsOpen.textContent = s.name;
@@ -644,13 +636,24 @@ export function startApp({
     editor.fit();
   }
 
+  const showBanner = () =>
+    renderBanner(
+      storageBanner,
+      { project: stored, preset: null },
+      {
+        t: translator(locale),
+        advice: { blocked: 'kit.storage.advice.file', full: 'kit.storage.advice.fileFull' },
+        onDismiss: () => {},
+      },
+    );
+
   /** Saves to the browser's storage; the banner says so when it refuses, and goes once a save works. */
   function persist(): void {
     if (saveTimer !== null) timers.clear(saveTimer);
     saveTimer = null;
     settings = { ...settings, project: state() };
     stored = saveSettings(storage, settings);
-    renderBanner(storageBanner, { project: stored, preset: null }, { t: translator(locale), onDismiss: () => {} });
+    showBanner();
   }
   const schedulePersist = () => {
     if (saveTimer !== null) timers.clear(saveTimer);
@@ -721,7 +724,7 @@ export function startApp({
   const render = () => {
     translatePage(locale, t());
     picker.set(locale);
-    renderBanner(storageBanner, { project: stored, preset: null }, { t: translator(locale), onDismiss: () => {} });
+    showBanner();
     progress.refresh();
     renderCards();
     renderState();

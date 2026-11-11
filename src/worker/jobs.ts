@@ -8,7 +8,7 @@ import { isRaster } from '../geo/heightmap';
 import { sanitizeState } from '../geo/state';
 import { isTextRaster } from '../geo/textShape';
 import { buildPlate, outlineRings, stateOutline } from './build';
-import { CsgScope, type CsgApi } from './csg';
+import { CsgScope, type CsgApi } from 'maker-kit/csg/manifold';
 import type { Job, JobResult } from './protocol';
 
 export function runJob(csg: CsgApi, job: Job): JobResult {

@@ -134,8 +134,9 @@ browser (service worker, layout, workers) → a step in `scripts/smoke.mjs`.
   maker-kit's `worker/protocol`), `client.ts` (maker-kit's `WorkerClient`
   with the app's policy), `csg.worker.ts` (a thin adapter over the kit's
   `serveJobs`), `jobs.ts` (what
-  each job does), `build.ts` (the recipe of the solid), `csg.ts` (manifold
-  loading, `CsgScope`); all but the adapter tested in Node with real WASM.
+  each job does), `build.ts` (the recipe of the solid); manifold's loading,
+  `CsgScope` and `outerOutline` are maker-kit's `csg/manifold`; all but the
+  adapter tested in Node with real WASM.
 - `src/editor/` — the 2D view: `view.ts` (mm ↔ px, fit, zoom, pan),
   `elements.ts` (boxes, hit tests, uniform scaling), `gestures.ts` (move,
   corner scale, rotate, pinch, snapping), `editor2d.ts` (pointer events and
@@ -149,8 +150,11 @@ browser (service worker, layout, workers) → a step in `scripts/smoke.mjs`.
   Angle, Back are the kit's `top`, `iso`, `bottom`; checked by the smoke,
   not vitest).
 - `src/ui/` — `plateCard.ts`, `magnetsCard.ts`, `selectedCard.ts` (the cards' rows for maker-kit's `ui/controls`: ids
-  `<prefix>_<key>`, `_n`, `_dec`, `_inc`), `elementsCard.ts` (the element groups: a foldable card
-  per element, the selected one open), `warningsCard.ts`,
+  `<prefix>_<key>`, `_n`, `_dec`, `_inc`), `elementsCard.ts` (the element groups' rows for
+  maker-kit's `ui/listCard`: a foldable card per element, the selected one
+  open; ids `<type>_<id>`, `_visible`, `_duplicate`, `_remove`, e.g.
+  `hole_h1_remove`), `warningsCard.ts` (its lines for
+  maker-kit's `ui/messageList`),
   `imageImport.ts` (files → grayscale + alpha PNG, decoding, height
   pictures), `fonts.ts` (bundled fonts, loaded on first use),
   `textRaster.ts` (a text block drawn at 10 px/mm), `svgRaster.ts`
@@ -199,7 +203,7 @@ browser (service worker, layout, workers) → a step in `scripts/smoke.mjs`.
   star, a logo, an apple) into `src/state/presetPictures.ts`.
 - `scripts/lib/harness.mjs` — maker-kit's harness (`maker-kit/harness`: flags,
   the vite server, console errors, `app.step` / `app.run`, downloads, STL
-  checks, throttling) on Plate Builder's ports, 5373/4373.
+  checks, throttling, `offline`) on Plate Builder's ports, 5373/4373.
 - `scripts/icons.mjs` — PWA icons from `public/icon.svg`.
 - `scripts/vignettes.mjs` — the vignette catalog: `--check` (one piece with
   a window, the index complete, licences allowed), `--sheet <dir>` (a

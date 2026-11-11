@@ -392,3 +392,9 @@ sheet on a phone, offline reload.
   gate, the worker, the 3D view and the smoke harness are the kit's. What
   changed for the user, and why, is in maker-kit's `plans/PLAN.md`
   (deviations of M1); the density is the kit's (the user's call).
+- **maker-kit v0.4.0** (its K7, 2026-11-11): manifold's loading, `CsgScope`
+  and the filled outline (`outerOutline`), the Warnings card's lines
+  (`ui/messageList`: a colour bar per line, a broken mesh in the blocker's
+  red), the element groups (`ui/listCard`: `.item-*`, ids `<type>_<id>`;
+  Hebrew counts read "1 / 10"), the banner's advice and the offline check
+  are the kit's.
