@@ -102,8 +102,7 @@
   color: var(--text);
 }
 
-.element-list,
-.warning-list {
+.element-list {
   margin: 0 0 8px;
   padding: 0;
   list-style: none;
@@ -191,17 +190,6 @@
 }
 .add-button::before {
   content: '+ ';
-}
-.warning {
-  display: flex;
-  align-items: baseline;
-  gap: 8px;
-  padding-block: 3px;
-  color: var(--warn);
-  font-size: var(--font-tiny);
-}
-.warning span {
-  flex: 1;
 }
 .note {
   display: block;

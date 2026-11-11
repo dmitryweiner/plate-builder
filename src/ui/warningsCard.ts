@@ -1,11 +1,12 @@
 // The Warnings card (spec §7.2, §10): each warning with the elements it
-// names and a "show" that frames its spot in the 2D view.
+// names and a "show" that frames its spot in the 2D view, drawn by the
+// kit's message list.
 
 import type { PlateState } from '../geo/state';
 import type { Warning } from '../geo/warnings';
 import type { Messages } from '../i18n';
 import { elementName } from '../state/edit';
-import { make } from 'maker-kit/ui/dom';
+import type { MessageLine } from 'maker-kit/ui/messageList';
 
 /** `problems`: what blocks the export, as text (the kit's `kit.mesh.*` sentences). */
 export function warningText(t: Messages, w: Warning, state: PlateState, problems: readonly string[] = []): string {
@@ -33,27 +34,20 @@ export function warningText(t: Messages, w: Warning, state: PlateState, problems
   return texts[w.code]();
 }
 
-export function renderWarnings(
-  card: HTMLElement,
-  list: HTMLElement,
+/** The card's lines for the kit's message list: a broken mesh blocks the export, the rest are warnings. */
+export function warningLines(
   warnings: readonly Warning[],
   state: PlateState,
   t: Messages,
   /** frames the spot of the warning at this place in the list (looked up when clicked: spots follow the elements) */
   show: (index: number) => void,
   problems: readonly string[] = [],
-): void {
-  card.hidden = warnings.length === 0;
-  list.textContent = '';
-  for (const [index, w] of warnings.entries()) {
-    const item = make('li', 'warning');
-    item.dataset.code = w.code;
-    const button = make('button', 'link-button', t.show);
-    button.type = 'button';
-    button.addEventListener('click', () => show(index));
-    item.append(make('span', undefined, warningText(t, w, state, problems)));
+): MessageLine[] {
+  return warnings.map((w, index) => ({
+    severity: w.code === 'mesh.invalid' ? 'bad' : 'warn',
+    text: warningText(t, w, state, problems),
+    code: w.code,
     // a broken mesh is no place on the plate
-    if (w.code !== 'mesh.invalid') item.append(button);
-    list.append(item);
-  }
+    ...(w.code === 'mesh.invalid' ? {} : { action: { label: t.show, run: () => show(index) } }),
+  }));
 }

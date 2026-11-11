@@ -151,7 +151,8 @@ browser (service worker, layout, workers) → a step in `scripts/smoke.mjs`.
   not vitest).
 - `src/ui/` — `plateCard.ts`, `magnetsCard.ts`, `selectedCard.ts` (the cards' rows for maker-kit's `ui/controls`: ids
   `<prefix>_<key>`, `_n`, `_dec`, `_inc`), `elementsCard.ts` (the element groups: a foldable card
-  per element, the selected one open), `warningsCard.ts`,
+  per element, the selected one open), `warningsCard.ts` (its lines for
+  maker-kit's `ui/messageList`),
   `imageImport.ts` (files → grayscale + alpha PNG, decoding, height
   pictures), `fonts.ts` (bundled fonts, loaded on first use),
   `textRaster.ts` (a text block drawn at 10 px/mm), `svgRaster.ts`

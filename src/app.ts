@@ -33,6 +33,7 @@ import { renderControls, type ControlsHandle } from 'maker-kit/ui/controls';
 import { el } from 'maker-kit/ui/dom';
 import { bindHistory, shortcutLetter } from 'maker-kit/ui/historyKeys';
 import { createLanguagePicker } from 'maker-kit/ui/languagePicker';
+import { renderMessages } from 'maker-kit/ui/messageList';
 import { createModal, modalOpen } from 'maker-kit/ui/modal';
 import { createProgress, SHOW_DELAY_MS } from 'maker-kit/ui/progress';
 import { renderPresetList } from 'maker-kit/ui/presetList';
@@ -49,7 +50,7 @@ import { silhouetteSize, type VignetteEntry } from './ui/svgRaster';
 import { plateControls } from './ui/plateCard';
 import { magnetControls } from './ui/magnetsCard';
 import { elementControls } from './ui/selectedCard';
-import { renderWarnings } from './ui/warningsCard';
+import { warningLines } from './ui/warningsCard';
 import type { JobDone } from './worker/client';
 import type { Job, JobResult, MeshResult } from './worker/protocol';
 
@@ -196,7 +197,7 @@ export function startApp({
   const selectedBody = el('selectedBody', HTMLElement);
   const selectedBox = el('selectedControls', HTMLElement);
   const warningsCard = el('warningsCard', HTMLElement);
-  const warningList = el('warningList', HTMLElement);
+  const warningList = el('warningList', HTMLUListElement);
   const meshInfo = el('meshInfo', HTMLElement);
   const meshBlocked = el('meshBlocked', HTMLElement);
   const downloadButton = el('downloadStl', HTMLButtonElement);
@@ -282,7 +283,6 @@ export function startApp({
     duplicate: (id) => duplicate(id),
     remove: (id) => remove(id),
   };
-  let warningsKey = '';
   /** the vignette catalog, once fetched */
   let catalog: VignetteEntry[] = [];
   /** SVG proportions by URL, once loaded; a failed load stays NaN */
@@ -558,12 +558,10 @@ export function startApp({
     // the last build's mesh check: a warning that blocks the export
     const problems = build.state === 'done' ? build.mesh.problems : [];
     if (problems.length) warnings.push({ code: 'mesh.invalid', ids: [], spot: [0, 0] });
-    const shownKey = JSON.stringify([locale, warnings.map((w) => ({ ...w, spot: null })), problems, allElements(s).map((e) => e.id)]);
-    if (shownKey !== warningsKey) {
-      warningsKey = shownKey;
-      renderWarnings(
-        warningsCard,
-        warningList,
+    warningsCard.hidden = warnings.length === 0;
+    renderMessages(
+      warningList,
+      warningLines(
         warnings,
         s,
         m,
@@ -574,8 +572,8 @@ export function startApp({
           editor.frame(spot);
         },
         problems.map((p) => tr(p.code, p.params)),
-      );
-    }
+      ),
+    );
     renderHints();
     if (document.activeElement !== projectName) projectName.value = s.name;
     presetsOpen.textContent = s.name;

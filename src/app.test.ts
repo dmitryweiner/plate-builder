@@ -682,6 +682,8 @@ describe('warnings and outline', () => {
     setInput('#element_x_n', '47');
     expect($('#warningsCard', HTMLElement).hidden).toBe(false);
     expect(text('#warningList li span')).toBe('Hole 1: only 1 mm of material to the edge; 2 mm or more holds better.');
+    // the kit's message line: a warning in the warn colour, found by its code
+    expect($('#warningList li[data-code="hole.nearEdge"]', HTMLElement).className).toBe('message warn');
     $('#warningList button', HTMLButtonElement).click();
     setInput('#element_x_n', '0');
     expect($('#warningsCard', HTMLElement).hidden).toBe(true);
@@ -1031,6 +1033,8 @@ describe('export card and warnings', () => {
     const item = $('#warningList li[data-code="mesh.invalid"]', HTMLElement);
     expect(item.textContent).toBe('The part is empty. The STL cannot be exported.');
     expect(item.querySelector('button')).toBeNull();
+    // it blocks the export: a blocker's colour
+    expect(item.className).toBe('message bad');
   });
 
   it('shows a bar over the 3D view once a build or an outline has run a while, never for a quick one', async () => {
