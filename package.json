@@ -31,7 +31,7 @@
     "vitest": "^4.1.12"
   },
   "dependencies": {
-    "maker-kit": "github:dmitryweiner/maker-kit#v0.3.1",
+    "maker-kit": "github:dmitryweiner/maker-kit#v0.4.0",
     "manifold-3d": "^3.5.4",
     "three": "^0.187.0"
   }

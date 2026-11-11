@@ -644,13 +644,24 @@ export function startApp({
     editor.fit();
   }
 
+  const showBanner = () =>
+    renderBanner(
+      storageBanner,
+      { project: stored, preset: null },
+      {
+        t: translator(locale),
+        advice: { blocked: 'kit.storage.advice.file', full: 'kit.storage.advice.fileFull' },
+        onDismiss: () => {},
+      },
+    );
+
   /** Saves to the browser's storage; the banner says so when it refuses, and goes once a save works. */
   function persist(): void {
     if (saveTimer !== null) timers.clear(saveTimer);
     saveTimer = null;
     settings = { ...settings, project: state() };
     stored = saveSettings(storage, settings);
-    renderBanner(storageBanner, { project: stored, preset: null }, { t: translator(locale), onDismiss: () => {} });
+    showBanner();
   }
   const schedulePersist = () => {
     if (saveTimer !== null) timers.clear(saveTimer);
@@ -721,7 +732,7 @@ export function startApp({
   const render = () => {
     translatePage(locale, t());
     picker.set(locale);
-    renderBanner(storageBanner, { project: stored, preset: null }, { t: translator(locale), onDismiss: () => {} });
+    showBanner();
     progress.refresh();
     renderCards();
     renderState();

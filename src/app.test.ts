@@ -1107,12 +1107,16 @@ describe('projects, presets, storage', () => {
     timers.flush();
     const banner = $('#storageBanner', HTMLElement);
     expect(banner.hidden).toBe(false);
-    expect(banner.textContent).toBe(messages.en['kit.storage.project.full']);
+    expect(banner.textContent).toBe(
+      'Your latest changes are not kept in this browser: its storage is full. Delete presets you no longer need, or save the project to a file with ⬇️.',
+    );
     expect(banner.classList.contains('bad')).toBe(false);
     refusing.error = new Error('denied');
     setInput('#plate_width_n', '125');
     timers.flush();
-    expect(banner.textContent).toBe(messages.en['kit.storage.project.blocked']);
+    expect(banner.textContent).toBe(
+      'This browser does not keep your project: its storage is unavailable (a private window or blocked site data). Save the project to a file with ⬇️ before closing the page.',
+    );
     expect(banner.classList.contains('bad')).toBe(true);
     refusing.refuse = false;
     setInput('#plate_width_n', '130');
