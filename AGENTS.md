@@ -11,9 +11,12 @@ What to build: `docs/spec.md`. The order of work: `plans/PLAN.md`.
 Built on **maker-kit** (`~/projects/maker-kit`, the shared library of the
 3D-printing tools), installed by git tag in `package.json`. Its modules are
 imported as `maker-kit/core/history` and so on; its docs are in its
-`docs/`. Moving onto it is maker-kit's milestone M1, one PR per group. For
-joint work on the app and the kit: `npm link ../maker-kit`; a kit change
-reaches the app as a new tag.
+`docs/`. The move onto it was maker-kit's milestone M1 (done 2026-11-10),
+then onto v0.4.0 with its K7 (2026-11-11: csg, the message list, the list
+card, the banner's advice, the offline check); the decisions and
+deviations are in maker-kit's `plans/PLAN.md`. For joint work on the app
+and the kit: `npm link ../maker-kit`; a kit change reaches the app as a new
+tag.
 
 The shared conventions behind this setup are in `~/projects/CLAUDE.md` and
 `~/projects/_conventions/`; this file is what holds for this repository.
