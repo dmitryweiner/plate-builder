@@ -13,8 +13,8 @@ Built on **maker-kit** (`~/projects/maker-kit`, the shared library of the
 imported as `maker-kit/core/history` and so on; its docs are in its
 `docs/`. The move onto it was maker-kit's milestone M1 (done 2026-11-10),
 then onto v0.4.0 with its K7 (2026-11-11: csg, the message list, the list
-card, the banner's advice, the offline check); the decisions and
-deviations are in maker-kit's `plans/PLAN.md`. For joint work on the app
+card, the banner's advice, the offline check), then v0.5.2 (2026-11-20);
+the decisions and deviations are in maker-kit's `plans/PLAN.md`. For joint work on the app
 and the kit: `npm link ../maker-kit`; a kit change reaches the app as a new
 tag.
 
@@ -164,7 +164,7 @@ browser (service worker, layout, workers) → a step in `scripts/smoke.mjs`.
   (vignette catalog schema, SVG silhouettes, own SVG files), `dom.ts`
   (`scrollIntoContainer`). The rest of the page is maker-kit's: the
   sheet, the bar over the 3D view (`ui/progress`), the storage banner, the
-  presets dialog (`ui/modal`) and its list, ↶ ↷ and their keys
+  presets dialog (`ui/modal`) and its list, ↩ ↪ and their keys
   (`ui/historyKeys`; the app's own keys wait while a dialog is open), the
   language picker, downloads (`ui/files`).
 - `public/fonts/` — woff2 subsets with their OFL licences.
