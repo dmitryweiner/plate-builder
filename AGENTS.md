@@ -13,10 +13,14 @@ Built on **maker-kit** (`~/projects/maker-kit`, the shared library of the
 imported as `maker-kit/core/history` and so on; its docs are in its
 `docs/`. The move onto it was maker-kit's milestone M1 (done 2026-11-10),
 then onto v0.4.0 with its K7 (2026-11-11: csg, the message list, the list
-card, the banner's advice, the offline check), then v0.5.2 (2026-11-20);
+card, the banner's advice, the offline check), then v0.5.2 (2026-11-20),
+then v0.5.3 (2026-11-22: the name button keeps its width on a desktop);
 the decisions and deviations are in maker-kit's `plans/PLAN.md`. For joint work on the app
-and the kit: `npm link ../maker-kit`; a kit change reaches the app as a new
-tag.
+and the kit: `npm link ../maker-kit` — but the dev server then cannot load
+manifold's WASM from the kit's own `node_modules` and the smoke fails, so a
+smoke on a kit branch takes `npm install --no-save
+github:dmitryweiner/maker-kit#<branch>` (and `npm ci` after); a kit change
+reaches the app as a new tag.
 
 The shared conventions behind this setup are in `~/projects/CLAUDE.md` and
 `~/projects/_conventions/`; this file is what holds for this repository.
