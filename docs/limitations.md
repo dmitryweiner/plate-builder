@@ -2,11 +2,11 @@
 
 What this version does not do:
 
-- A chamfered or rounded top edge of the plate.
 - Engraved (sunken) images, lithophanes.
 - Elements on the back face, except hidden keyholes and magnet pockets.
-- Square or bar magnets, magnets of different sizes on one plate, magnets
-  placed one by one, pockets closed inside (a print pause).
+- Square or bar magnets, magnets of different sizes or mounts on one plate,
+  magnets placed one by one.
+- Rounded edges of engraved letters (only raised letters get them).
 - Vector fonts from font files, or uploading a font: texts are drawn with
   the bundled fonts and traced.
 - Multi-part STL or 3MF for multi-material printers: one STL and a

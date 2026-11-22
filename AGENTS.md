@@ -133,7 +133,8 @@ browser (service worker, layout, workers) → a step in `scripts/smoke.mjs`.
   heights, the sealed magnets' pause),
   `holes.ts` (footprints, boxes and cutters of the hole kinds),
   `magnets.ts` (magnet layouts placed on the outline, pockets, cutters),
-  `edges.ts` (the edges' profile, terraces and slabs),
+  `edges.ts` (the edges' profile, terraces and slabs; a raised text's top
+  edge),
   `warnings.ts` (the warnings that need no CSG). Meshes, STL and the
   export gate are maker-kit's `3d/mesh`, `3d/stl`, `3d/validate`.
 - `src/worker/` — `protocol.ts` (the jobs and results; the envelope is
