@@ -10,6 +10,7 @@ import {
   HOLE_KINDS,
   LIMITS,
   MAGNET_LAYOUT_IDS,
+  MAGNET_MOUNTS,
   magnetLayouts,
   OUTLINE_KINDS,
   RANGES,
@@ -33,7 +34,7 @@ function fullState(): PlateState {
       { ...defaultHole('round'), id: 'h1' },
       { ...defaultHole('keyhole'), id: 'h2' },
     ],
-    magnets: { ...state.magnets, count: 4, layout: 'diamond', diameter: 12, thickness: 3 },
+    magnets: { ...state.magnets, count: 4, layout: 'diamond', diameter: 12, thickness: 3, mount: 'sealed', cover: 0.6 },
   };
 }
 
@@ -106,6 +107,8 @@ function expectValid(state: PlateState): void {
   inRange(m.thickness, RANGES.magnetThickness);
   inRange(m.fit, RANGES.magnetFit);
   inRange(m.edge, RANGES.magnetEdge);
+  expect(MAGNET_MOUNTS).toContain(m.mount);
+  inRange(m.cover, RANGES.magnetCover);
   for (const hole of state.holes) {
     expect(HOLE_KINDS).toContain(hole.kind);
     inRange(hole.diameter, RANGES.holeDiameter);
@@ -214,7 +217,16 @@ describe('defaultState', () => {
 
 describe('magnets', () => {
   it('are none by default, 10 × 2 mm with 0.2 mm of fit and 3 mm of edge', () => {
-    expect(defaultState().magnets).toEqual({ count: 0, layout: 'centre', diameter: 10, thickness: 2, fit: 0.2, edge: 3 });
+    expect(defaultState().magnets).toEqual({
+      count: 0,
+      layout: 'centre',
+      diameter: 10,
+      thickness: 2,
+      fit: 0.2,
+      edge: 3,
+      mount: 'glued',
+      cover: 0.4,
+    });
   });
 
   it('offer layouts by count', () => {
@@ -232,6 +244,12 @@ describe('magnets', () => {
     expect(sanitizeState(old).holes).toEqual(fullState().holes);
   });
 
+  it('come back glued, 0.4 mm deep, from a state saved before sealed ones', () => {
+    const state = fullState();
+    const old = Object.fromEntries(Object.entries(state.magnets).filter(([key]) => key !== 'mount' && key !== 'cover'));
+    expect(sanitizeState({ ...state, magnets: old }).magnets).toEqual({ ...old, mount: 'glued', cover: 0.4 });
+  });
+
   it('keep a layout the count has, else take the count’s first', () => {
     const state = fullState();
     const with2 = (layout: string) => sanitizeState({ ...state, magnets: { ...state.magnets, count: 2, layout } }).magnets.layout;
@@ -244,8 +262,12 @@ describe('magnets', () => {
 
   it('clamp the count and the sizes', () => {
     const state = fullState();
-    const m = sanitizeState({ ...state, magnets: { count: 7.4, layout: 'row', diameter: 100, thickness: 0, fit: -1, edge: 0 } }).magnets;
-    expect(m).toEqual({ count: 4, layout: 'row', diameter: 30, thickness: 0.5, fit: 0, edge: 1 });
+    const m = sanitizeState({
+      ...state,
+      magnets: { count: 7.4, layout: 'row', diameter: 100, thickness: 0, fit: -1, edge: 0, mount: 'nailed', cover: 9 },
+    }).magnets;
+    expect(m).toEqual({ count: 4, layout: 'row', diameter: 30, thickness: 0.5, fit: 0, edge: 1, mount: 'glued', cover: 5 });
+    expect(sanitizeState({ ...state, magnets: { ...state.magnets, cover: 0 } }).magnets.cover).toBe(0.2);
   });
 });
 

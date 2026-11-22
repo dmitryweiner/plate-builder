@@ -190,3 +190,14 @@ One branch and PR each, smallest first:
   corners in plan; own font upload.
 - The name field in the Presets dialog (it shrinks beside "changed"; left
   as it is).
+
+## Deviations
+
+- **M13**: the mount's words are shorter than planned — "Sealed (print
+  pause)", "Утопить (пауза печати)": the longer ones were cut off in the
+  select on a desktop. The depth's row is "Depth from the back" /
+  "Утопить на", with a hint (the plastic between the back face and the
+  magnet).
+- **M13**: no `--measure` row: a sealed pocket costs what an open one does;
+  the smoke's sealed step reads the flat levels of the real STL (0, 0.4,
+  2.6, 3.4 mm) instead.

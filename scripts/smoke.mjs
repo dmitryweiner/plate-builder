@@ -573,6 +573,36 @@ await app.run(
       await context.close();
     });
 
+    await step('magnets sealed inside: a closed pocket over its cover in a real STL, the pause in the hints', async () => {
+      const { page, context } = await app.open();
+      let { info } = await built(page);
+      await setNumber(page, 'plate_thickness', 3.4);
+      ({ info } = await built(page, info));
+      await page.selectOption('#magnet_count', '2');
+      ({ info } = await built(page, info));
+      await page.selectOption('#magnet_mount', 'sealed');
+      ({ info } = await built(page, info));
+      check(await page.locator('#magnet_cover').isVisible(), 'no depth row for sealed magnets');
+      check(await page.locator('#warningsCard').isHidden(), `two sealed magnets in 3.4 mm warn: ${info}`);
+      const hints = await page.locator('#printHints').textContent();
+      check(hints.includes('Z = 2.6 mm') && !hints.includes('glue'), `print hints: ${hints}`);
+      const { bytes } = await download(page, '#downloadStl');
+      check(binaryStl(bytes), `broken STL: ${bytes.length} bytes`);
+      // flat facets by height: the back face, the pockets' floors over 0.4 mm of cover, their ceilings, the top
+      const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+      const levels = new Set();
+      for (let at = 84; at < bytes.length; at += 50) {
+        const zs = [0, 1, 2].map((k) => view.getFloat32(at + 12 + k * 12 + 8, true));
+        if (Math.max(...zs) - Math.min(...zs) < 1e-4) levels.add(Math.round(zs[0] * 100) / 100);
+      }
+      check(
+        [0, 0.4, 2.6, 3.4].every((z) => levels.has(z)),
+        `flat levels in the STL: ${[...levels].join(', ')}`,
+      );
+      if (shots) await page.screenshot({ path: 'shots/magnets-sealed.png' });
+      await context.close();
+    });
+
     await step('the Magnets card on a phone', async () => {
       const { page, context } = await app.open({ viewport: VIEWPORTS.phone });
       let { info } = await built(page);

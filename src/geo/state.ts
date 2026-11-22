@@ -68,6 +68,10 @@ const LAYOUTS_BY_COUNT: readonly (readonly MagnetLayout[])[] = [
   ['corners', 'diamond', 'row', 'column'],
 ];
 
+/** How the magnets are held (spec §5a): glued into pockets open at the back, or sealed in during a print pause. */
+export const MAGNET_MOUNTS = ['glued', 'sealed'] as const;
+export type MagnetMount = (typeof MAGNET_MOUNTS)[number];
+
 /** The layouts a number of magnets offers; none for 0. */
 export function magnetLayouts(count: number): readonly MagnetLayout[] {
   return LAYOUTS_BY_COUNT[count] ?? [];
@@ -148,6 +152,8 @@ export const RANGES = {
   magnetFit: { min: 0, max: 1, def: 0.2 },
   /** material between a pocket and the outline */
   magnetEdge: { min: 1, max: 30, def: 3 },
+  /** a sealed magnet: material between the back face and the magnet */
+  magnetCover: { min: 0.2, max: 5, def: 0.4 },
 } as const satisfies Record<string, Range>;
 
 export const LIMITS = {
@@ -277,6 +283,9 @@ export interface Magnets {
   thickness: number;
   fit: number;
   edge: number;
+  mount: MagnetMount;
+  /** sealed: the material under the magnet, mm */
+  cover: number;
 }
 
 export interface PlateState {
@@ -323,6 +332,8 @@ export function defaultMagnets(): Magnets {
     thickness: RANGES.magnetThickness.def,
     fit: RANGES.magnetFit.def,
     edge: RANGES.magnetEdge.def,
+    mount: 'glued',
+    cover: RANGES.magnetCover.def,
   };
 }
 
@@ -551,7 +562,7 @@ function sanitizeHole(e: Fields): HoleElement {
   };
 }
 
-/** A state saved before magnets has none: the field's absence is "no magnets". */
+/** A state saved before magnets has none: the field's absence is "no magnets"; one saved before sealed ones has them glued. */
 function sanitizeMagnets(input: unknown): Magnets {
   const m = isRecord(input) ? input : {};
   const count = num(m.count, RANGES.magnetCount);
@@ -562,6 +573,8 @@ function sanitizeMagnets(input: unknown): Magnets {
     thickness: num(m.thickness, RANGES.magnetThickness),
     fit: num(m.fit, RANGES.magnetFit),
     edge: num(m.edge, RANGES.magnetEdge),
+    mount: oneOf(m.mount, MAGNET_MOUNTS, 'glued'),
+    cover: num(m.cover, RANGES.magnetCover),
   };
 }
 

@@ -19,7 +19,7 @@ import { maskRings, textRings, type TextRaster } from './geo/textShape';
 import type { Raster } from './geo/heightmap';
 import { processPixels } from './geo/heightmap';
 import { magnetPocket } from './geo/magnets';
-import { colourChanges } from './geo/printHints';
+import { colourChanges, magnetPause } from './geo/printHints';
 import { warnings as findWarnings, type Warning } from './geo/warnings';
 import { detectLocale, direction, LOCALES, messages, staticText, translator, type Locale, type Messages, type TextKey } from './i18n';
 import type { CameraPreset, SceneHandle } from './render/view';
@@ -487,7 +487,10 @@ export function startApp({
     magnetCard?.sync(s);
     const pocket = magnetPocket(s.magnets);
     magnetPocketNote.hidden = s.magnets.count === 0;
-    magnetPocketNote.textContent = m.magnetPocket(mm2(2 * pocket.radius), mm2(pocket.depth));
+    magnetPocketNote.textContent =
+      s.magnets.mount === 'sealed'
+        ? m.magnetPocketSealed(mm2(2 * pocket.radius), mm2(pocket.depth), mm2(pocket.floor))
+        : m.magnetPocket(mm2(2 * pocket.radius), mm2(pocket.depth));
     renderPicker();
     // the kit draws a list again only when it changes: a click that blurs a field (whose change
     // re-renders) must find its button still there on mouseup; the open row takes the controls
@@ -693,11 +696,17 @@ export function startApp({
     const m = t();
     const { heights, gradient } = colourChanges(state());
     const { magnets } = state();
+    const pause = magnetPause(state());
+    const [d, h] = [mm2(magnets.diameter), mm2(magnets.thickness)];
     const lines = [
       m.printBack,
       ...(heights.length > 1 ? heights.map((z) => m.colourChange(mm(z))) : []),
       ...(gradient ? [m.gradientNote] : []),
-      ...(magnets.count > 0 ? [m.magnetsGlue(magnets.count, mm2(magnets.diameter), mm2(magnets.thickness))] : []),
+      ...(pause !== null
+        ? [m.magnetsPause(mm(pause), magnets.count, d, h)]
+        : magnets.count > 0
+          ? [m.magnetsGlue(magnets.count, d, h)]
+          : []),
     ];
     printHints.textContent = '';
     for (const line of lines) printHints.append(Object.assign(document.createElement('li'), { textContent: line }));

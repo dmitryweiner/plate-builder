@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { colourChanges } from './printHints';
+import { colourChanges, magnetPause } from './printHints';
 import { defaultImage, defaultState, defaultText, type PlateState, type TextElement } from './state';
 
 function plate(over: Partial<PlateState['plate']> = {}, texts: Partial<TextElement>[] = []): PlateState {
@@ -32,5 +32,22 @@ describe('colourChanges', () => {
 
   it('rounds to the hundredth and drops a top equal to another', () => {
     expect(colourChanges(plate({ thickness: 3 }, [{ height: 1.0000001 }, { height: 1 }])).heights).toEqual([3, 4]);
+  });
+});
+
+function withMagnets(over: Partial<PlateState['magnets']>): PlateState {
+  const state = plate();
+  return { ...state, magnets: { ...state.magnets, count: 2, layout: 'row', ...over } };
+}
+
+describe('magnetPause', () => {
+  it('is the sealed pockets’ ceiling: the first layer above it closes them', () => {
+    expect(magnetPause(withMagnets({ mount: 'sealed' }))).toBe(2.6);
+    expect(magnetPause(withMagnets({ mount: 'sealed', cover: 0.8 }))).toBe(3);
+  });
+
+  it('is none for glued magnets, or none at all', () => {
+    expect(magnetPause(withMagnets({}))).toBeNull();
+    expect(magnetPause(withMagnets({ mount: 'sealed', count: 0 }))).toBeNull();
   });
 });

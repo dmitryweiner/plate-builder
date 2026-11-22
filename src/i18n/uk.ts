@@ -107,6 +107,11 @@ export const uk: Messages = {
   magnetThickness: 'Товщина магніту',
   magnetFit: 'Зазор',
   magnetEdge: 'Від краю',
+  magnetMount: 'Кріплення',
+  magnetGlued: 'Вклеїти ззаду',
+  magnetSealed: 'Утопити (пауза друку)',
+  magnetCover: 'Утопити на',
+  magnetCoverHint: 'пластик між заднім боком і магнітом, мм',
 
   addImage: 'Додати зображення',
   imageSize: 'Розмір (довга сторона)',
@@ -173,6 +178,10 @@ export const uk: Messages = {
   imageFailed: (reason: string) => `Не вдалося прочитати зображення: ${reason}`,
   svgFailed: (reason: string) => `Не вдалося прочитати SVG: ${reason}`,
   magnetPocket: (d: string, depth: string) => `Гніздо ⌀ ${d} мм завглибшки ${depth} мм, відкрите ззаду.`,
+  magnetPocketSealed: (d: string, depth: string, cover: string) =>
+    `Закрите гніздо ⌀ ${d} мм заввишки ${depth} мм, ${cover} мм над заднім боком.`,
+  magnetsPause: (z: string, count: number, d: string, h: string) =>
+    `Пауза друку на Z = ${z} мм (перший шар над цією висотою): вкладіть магніти (${count} × ⌀ ${d} × ${h} мм) у гнізда й продовжіть друк.`,
   magnetsGlue: (count: number, d: string, h: string) =>
     `Після друку вклейте магніти (${count} × ⌀ ${d} × ${h} мм) у гнізда на задньому боці.`,
   colourChange: (z: string) => `Зміна філаменту на Z = ${z} мм (перший шар над цією висотою).`,

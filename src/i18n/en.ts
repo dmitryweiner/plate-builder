@@ -109,6 +109,11 @@ export const en = {
   magnetThickness: 'Magnet thickness',
   magnetFit: 'Fit',
   magnetEdge: 'From the edge',
+  magnetMount: 'Mount',
+  magnetGlued: 'Glued in from the back',
+  magnetSealed: 'Sealed (print pause)',
+  magnetCover: 'Depth from the back',
+  magnetCoverHint: 'plastic between the back face and the magnet, mm',
 
   addImage: 'Add image',
   imageSize: 'Size (long side)',
@@ -175,6 +180,10 @@ export const en = {
   imageFailed: (reason: string) => `The picture could not be read: ${reason}`,
   svgFailed: (reason: string) => `The SVG could not be read: ${reason}`,
   magnetPocket: (d: string, depth: string) => `Pocket ⌀ ${d} mm, ${depth} mm deep, open at the back.`,
+  magnetPocketSealed: (d: string, depth: string, cover: string) =>
+    `Closed pocket ⌀ ${d} mm, ${depth} mm high, ${cover} mm over the back face.`,
+  magnetsPause: (z: string, count: number, d: string, h: string) =>
+    `Pause the print at Z = ${z} mm (the first layer above it), put the magnets (${count} × ⌀ ${d} × ${h} mm) into the pockets and resume.`,
   magnetsGlue: (count: number, d: string, h: string) =>
     `After printing, glue the magnets (${count} × ⌀ ${d} × ${h} mm) into the pockets on the back.`,
   colourChange: (z: string) => `Change filament at Z = ${z} mm (the first layer above it).`,

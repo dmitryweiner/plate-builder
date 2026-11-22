@@ -184,6 +184,14 @@ describe('warnings of magnets', () => {
     expect(codes(withMagnets({}, {}, 2.9))).toEqual([]);
   });
 
+  it('magnet.thin: a sealed pocket needs its cover under it too', () => {
+    // 0.4 of cover, the ceiling at 2.6, 0.8 over it
+    expect(warnings(withMagnets({ mount: 'sealed' }), outline)).toEqual([
+      expect.objectContaining({ code: 'magnet.thin', params: { needed: 3.4 } }),
+    ]);
+    expect(codes(withMagnets({ mount: 'sealed' }, {}, 3.4))).toEqual([]);
+  });
+
   it('magnet.noRoom: a pocket that does not fit with its edge, or two too close', () => {
     expect(codes(withMagnets({ diameter: 30, edge: 30 }))).toEqual(['magnet.noRoom']);
     // 30 mm pockets 23.8 mm apart, one over the other
@@ -215,6 +223,13 @@ describe('warnings of magnets', () => {
     expect(codes(withMagnets({}, oneText({ mode: 'engraved', depth: 0.5 })))).toEqual([]);
     expect(codes(withMagnets({}, oneText({ mode: 'engraved', depth: 0.6, x: -35 })))).toEqual([]);
     expect(codes(withMagnets({}, oneText({ mode: 'raised' })))).toEqual([]);
+  });
+
+  it('magnet.overlap: an engraving over a sealed pocket counts from its ceiling', () => {
+    // T 4, the sealed ceiling at 2.6: an engraving 1.2 deep leaves 0.2 (a glued pocket's 2.1 would leave 0.7)
+    const engraved = oneText({ mode: 'engraved', depth: 1.2 });
+    expect(codes(withMagnets({ mount: 'sealed' }, engraved, 4))).toEqual(['magnet.overlap']);
+    expect(codes(withMagnets({}, engraved, 4))).toEqual([]);
   });
 });
 

@@ -128,7 +128,7 @@ browser (service worker, layout, workers) → a step in `scripts/smoke.mjs`.
   solid), `contour.ts` (marching squares), `textLayout.ts` (line alignment,
   arc bending), `textShape.ts` (a text raster's contours), `boxes.ts`
   (element boxes; measured text boxes), `printHints.ts` (colour-change
-  heights),
+  heights, the sealed magnets' pause),
   `holes.ts` (footprints, boxes and cutters of the hole kinds),
   `magnets.ts` (magnet layouts placed on the outline, pockets, cutters),
   `edges.ts` (the edges' profile, terraces and slabs),
