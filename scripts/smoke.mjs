@@ -423,13 +423,17 @@ await app.run(
       });
     }
 
-    await step('texts: two lines in each font, Cyrillic, Hebrew, raised, engraved, on an arc', async () => {
+    await step('texts: typed at once, two lines in each font, Cyrillic, Hebrew, raised, engraved, on an arc', async () => {
       const { page, context } = await app.open();
       let { info } = await built(page);
       await page.click('#addText');
       // the font loads first: the text is built only then, 1 mm over the 3 mm base
       ({ info } = await built(page, info));
       check(info.includes('× 4 mm'), `raised text: ${info}`);
+      // a new text has the focus, its words selected: the keys replace them
+      await page.keyboard.type('Room 12');
+      const typed = await page.inputValue('#element_text');
+      check(typed === 'Room 12', `typed into a new text: ${JSON.stringify(typed)}`);
       const setText = async (value) => {
         await page.fill('#element_text', value);
         await page.locator('#element_text').dispatchEvent('change');

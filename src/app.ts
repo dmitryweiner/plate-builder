@@ -893,6 +893,12 @@ export function startApp({
     if (!id) return;
     selected = id;
     update(next, true);
+    // a new text is there to be typed: its words selected, the first key replaces them
+    const field = selectedBox.querySelector('#element_text');
+    if (field instanceof HTMLTextAreaElement) {
+      field.focus();
+      field.select();
+    }
   };
 
   const addHoleNow = () => {

@@ -167,7 +167,7 @@ export function elementControls(id: string): Control<PlateState, TextKey>[] {
       FONT_IDS,
       isText,
     ),
-    textRange('size', 'textSize', RANGES.textSize, 0.5, 'mm', isText),
+    textRange('size', 'textSize', RANGES.textSize, 0.1, 'mm', isText),
     textRange(
       'lineSpacing',
       'lineSpacing',

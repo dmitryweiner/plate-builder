@@ -3,14 +3,15 @@
 ![A text's card](images/name-plate-text.png)
 
 **+ Add text** in the Texts card puts a block of up to 10 lines and 300 characters on the plate.
+Its text field has the focus with "Text" selected: type, and the words replace it.
 
 - **Font** — Rubik (Latin, Cyrillic, Hebrew), Oswald, PT Serif, Comfortaa,
   Marck Script (Latin, Cyrillic) and Frank Ruhl Libre (Latin, Hebrew). They
   are bundled with the app and load the first time a text uses them; a text
   waits for its font rather than showing in another one.
-- **Size** is the height of a capital letter, 2–100 mm. **Line spacing** is
-  the distance between lines as a share of the size; **alignment** is per
-  block.
+- **Size** is the height of a capital letter, 2–100 mm, in steps of
+  0.1 mm. **Line spacing** is the distance between lines as a share of the
+  size; **alignment** is per block.
 - **Raised** text stands on the plate by its **height**; **engraved** text is
   cut into it by its **depth** (at most the thickness less 0.4 mm), through
   images and the rim too.

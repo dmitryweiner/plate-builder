@@ -398,3 +398,6 @@ sheet on a phone, offline reload.
   red), the element groups (`ui/listCard`: `.item-*`, ids `<type>_<id>`;
   Hebrew counts read "1 / 10"), the banner's advice and the offline check
   are the kit's.
+- **2026-11-22**: sealed magnets (M13), rounded letter edges (M14), seven
+  more fonts (M15), a new text's focus, the size's step, the name button's
+  width; see `plans/PLAN-TEXT-MAGNETS.md`.
