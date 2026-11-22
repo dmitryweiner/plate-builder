@@ -42,6 +42,7 @@ export const uk: Messages = {
   edgeFillet: 'Заокруглення',
   edgeChamfer: 'Фаска 45°',
   edgeSides: 'Ребра',
+  textEdge: 'Згладжування літер',
   edgeBoth: 'Згори й знизу',
   edgeTop: 'Тільки згори',
   edgeBottom: 'Тільки знизу',

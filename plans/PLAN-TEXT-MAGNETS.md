@@ -201,3 +201,8 @@ One branch and PR each, smallest first:
 - **M13**: no `--measure` row: a sealed pocket costs what an open one does;
   the smoke's sealed step reads the flat levels of the real STL (0, 0.4,
   2.6, 3.4 mm) instead.
+- **M14**: the size's row has its own words — "Letter edges", "Сглаживание
+  букв" (the user's) — not the plate card's "Edge fillet": in a text's card
+  that read as the plate's. The profile select keeps the plate's words.
+- **M14**: measured, "PLATE BUILDER" 8 mm with a 0.5 mm fillet: preview
+  64 ms, export 91 ms — no coarser preview needed.

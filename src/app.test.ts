@@ -823,6 +823,31 @@ describe('texts', () => {
     expect($('#element_text-size', HTMLInputElement).step).toBe('0.1');
   });
 
+  it('rounds a raised text’s letters: the size up to its height, the profile once above 0, one undo step each', () => {
+    start();
+    $('#addText', HTMLButtonElement).click();
+    const row = (id: string) => $(`#${id}`, HTMLElement).closest('.row');
+    expect(row('element_text-edgeSize')?.textContent).toContain('Letter edges');
+    expect(row('element_text-edgeSize')?.hasAttribute('hidden')).toBe(false);
+    expect(row('element_text-edgeProfile')?.hasAttribute('hidden')).toBe(true);
+    // the text stands 1 mm high
+    expect($('#element_text-edgeSize', HTMLInputElement).max).toBe('1');
+    setInput('#element_text-edgeSize_n', '0.5');
+    expect(row('element_text-edgeProfile')?.hasAttribute('hidden')).toBe(false);
+    expect([...$('#element_text-edgeProfile', HTMLSelectElement).options].map((o) => o.textContent)).toEqual(['Rounded', 'Chamfer 45°']);
+    pick('#element_text-edgeProfile', 'chamfer');
+    timers.flush();
+    expect(csg.last().job).toMatchObject({ state: { texts: [{ edgeSize: 0.5, edgeProfile: 'chamfer' }] } });
+    pick('#element_text-mode', 'engraved');
+    expect(row('element_text-edgeSize')?.hasAttribute('hidden')).toBe(true);
+    expect(row('element_text-edgeProfile')?.hasAttribute('hidden')).toBe(true);
+    $('#undo', HTMLButtonElement).click();
+    $('#undo', HTMLButtonElement).click();
+    expect($('#element_text-edgeProfile', HTMLSelectElement).value).toBe('fillet');
+    $('#undo', HTMLButtonElement).click();
+    expect($('#element_text-edgeSize_n', HTMLInputElement).value).toBe('0');
+  });
+
   it('shows the rows of the text’s kind and arc', async () => {
     start();
     $('#addText', HTMLButtonElement).click();

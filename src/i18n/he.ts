@@ -42,6 +42,7 @@ export const he: Messages = {
   edgeFillet: 'מעוגל',
   edgeChamfer: 'שיפוע 45°',
   edgeSides: 'מקצועות',
+  textEdge: 'עיגול האותיות',
   edgeBoth: 'למעלה ולמטה',
   edgeTop: 'רק למעלה',
   edgeBottom: 'רק למטה',

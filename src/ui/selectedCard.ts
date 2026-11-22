@@ -4,6 +4,7 @@
 import { findElement, replaceElement } from '../editor/elements';
 import {
   ALIGNS,
+  EDGE_PROFILES,
   FONT_IDS,
   HOLE_KINDS,
   LIMITS,
@@ -112,7 +113,7 @@ export function elementControls(id: string): Control<PlateState, TextKey>[] {
   };
   const isText = (s: PlateState) => text(s) !== null;
   const textRange = (
-    key: 'size' | 'lineSpacing' | 'height' | 'depth' | 'arcRadius',
+    key: 'size' | 'lineSpacing' | 'height' | 'depth' | 'arcRadius' | 'edgeSize',
     label: TextKey,
     range: { min: number; max: number | ((s: PlateState) => number); def: number },
     step: number,
@@ -130,7 +131,7 @@ export function elementControls(id: string): Control<PlateState, TextKey>[] {
     get: (s) => text(s)?.[key] ?? range.def,
     set: (s, value) => setText(s, { [key]: value }),
   });
-  const textChoice = <K extends 'font' | 'align' | 'mode' | 'arcSide'>(
+  const textChoice = <K extends 'font' | 'align' | 'mode' | 'arcSide' | 'edgeProfile'>(
     key: K,
     label: TextKey,
     options: SelectControl<PlateState, TextKey>['options'],
@@ -198,6 +199,25 @@ export function elementControls(id: string): Control<PlateState, TextKey>[] {
       isText,
     ),
     textRange('height', 'textHeight', RANGES.textHeight, 0.1, 'mm', (s) => text(s)?.mode === 'raised'),
+    // the letters' top edges, at most as high as they stand
+    textRange(
+      'edgeSize',
+      'textEdge',
+      { ...RANGES.textEdge, max: (s) => Math.min(RANGES.textEdge.max, text(s)?.height ?? RANGES.textHeight.def) },
+      0.1,
+      'mm',
+      (s) => text(s)?.mode === 'raised',
+    ),
+    textChoice(
+      'edgeProfile',
+      'edgeProfile',
+      [
+        { value: 'fillet', label: 'edgeFillet' },
+        { value: 'chamfer', label: 'edgeChamfer' },
+      ],
+      EDGE_PROFILES,
+      (s) => text(s)?.mode === 'raised' && (text(s)?.edgeSize ?? 0) > 0,
+    ),
     textRange(
       'depth',
       'engraveDepth',

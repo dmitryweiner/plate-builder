@@ -65,6 +65,20 @@ export function edgeLevels(size: number, profile: EdgeProfile, step: number): Ed
   });
 }
 
+/** An edge's levels as terraces: those closer than the gap merged, one that close to the wall dropped. */
+function keptLevels(size: number, profile: EdgeProfile, step: number): EdgeLevel[] {
+  // terraces closer than the gap are one: near the wall a fillet's insets differ by microns
+  const levels: EdgeLevel[] = [];
+  for (const level of edgeLevels(size, profile, step)) {
+    const last = levels.at(-1);
+    if (last && last.inset - level.inset < EDGE_MIN_GAP) last.t = level.t;
+    else levels.push({ ...level });
+  }
+  // a terrace closer than the gap to the outline is the wall's: the outline keeps its size
+  if ((levels.at(-1)?.inset ?? Infinity) < EDGE_MIN_GAP) levels.pop();
+  return levels;
+}
+
 export interface EdgeSlab {
   inset: number;
   z0: number;
@@ -87,15 +101,7 @@ export const EDGE_MIN_GAP = 0.025;
  * the prism that clips them).
  */
 export function edgeSlabs(plate: Plate, step: number, z1: number): EdgeSlab[] {
-  // terraces closer than the gap are one: near the wall a fillet's insets differ by microns
-  const levels: EdgeLevel[] = [];
-  for (const level of edgeLevels(plate.edgeSize, plate.edgeProfile, step)) {
-    const last = levels.at(-1);
-    if (last && last.inset - level.inset < EDGE_MIN_GAP) last.t = level.t;
-    else levels.push({ ...level });
-  }
-  // a terrace closer than the gap to the outline is the wall's: the plate keeps its size
-  if ((levels.at(-1)?.inset ?? Infinity) < EDGE_MIN_GAP) levels.pop();
+  const levels = keptLevels(plate.edgeSize, plate.edgeProfile, step);
   if (levels.length === 0) return [];
   const wall = wallHeight(plate);
   const ends = levels.map(({ t }) => t + EDGE_JITTER);
@@ -119,4 +125,19 @@ export function edgeSlabs(plate: Plate, step: number, z1: number): EdgeSlab[] {
         .toReversed()
     : [];
   return [...bottom, middle, ...top];
+}
+
+/**
+ * A raised text's slabs (spec §4), from z0 (inside the base) to its top:
+ * the wall, then its top edge's terraces, counted down from the top as the
+ * plate's are; one slab when the edge is sharp.
+ */
+export function topEdgeSlabs(z0: number, top: number, size: number, profile: EdgeProfile, step: number): EdgeSlab[] {
+  const levels = keptLevels(size, profile, step);
+  const ends = levels.map(({ t }) => t + EDGE_JITTER);
+  const wall: EdgeSlab = { inset: 0, z0, z1: top - (ends.at(-1) ?? 0) };
+  const terraces = levels
+    .map(({ inset }, k): EdgeSlab => ({ inset: inset + EDGE_JITTER, z0: top - ends[k], z1: k === 0 ? top : top - ends[k - 1] }))
+    .toReversed();
+  return [wall, ...terraces];
 }

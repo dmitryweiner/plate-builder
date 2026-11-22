@@ -29,7 +29,7 @@ function fullState(): PlateState {
     ...state,
     plate: { ...state.plate, edgeSize: 1, edgeProfile: 'chamfer', edgeSides: 'top' },
     images: [{ ...defaultImage(state, PNG, 64, 32), id: 'i1' }],
-    texts: [{ ...defaultText(state), id: 't1' }],
+    texts: [{ ...defaultText(state), id: 't1', edgeSize: 0.4, edgeProfile: 'chamfer' }],
     holes: [
       { ...defaultHole('round'), id: 'h1' },
       { ...defaultHole('keyhole'), id: 'h2' },
@@ -97,6 +97,8 @@ function expectValid(state: PlateState): void {
     inRange(text.height, RANGES.textHeight);
     inRange(text.depth, { min: RANGES.engraveDepth.min, max: p.thickness - 0.4 + 1e-9 });
     inRange(text.arcRadius, RANGES.arcRadius);
+    inRange(text.edgeSize, { min: RANGES.textEdge.min, max: Math.min(RANGES.textEdge.max, text.height) + 1e-9 });
+    expect(EDGE_PROFILES).toContain(text.edgeProfile);
   }
   const m = state.magnets;
   inRange(m.count, RANGES.magnetCount);
@@ -275,6 +277,27 @@ function sanitizedPlate(over: Record<string, unknown>) {
   const state = defaultState();
   return sanitizeState({ ...state, plate: { ...state.plate, ...over } }).plate;
 }
+
+describe('a text’s top edge', () => {
+  it('is sharp by default, a fillet when made', () => {
+    const text = defaultText(defaultState());
+    expect([text.edgeSize, text.edgeProfile]).toEqual([0, 'fillet']);
+  });
+
+  it('is at most the text’s height', () => {
+    const state = fullState();
+    const text = (over: Record<string, unknown>) => sanitizeState({ ...state, texts: [{ ...state.texts[0], ...over }] }).texts[0];
+    expect(text({ height: 1, edgeSize: 3 })?.edgeSize).toBe(1);
+    expect(text({ height: 10, edgeSize: 9 })?.edgeSize).toBe(5);
+    expect(text({ edgeSize: -1, edgeProfile: 'bevel' })).toMatchObject({ edgeSize: 0, edgeProfile: 'fillet' });
+  });
+
+  it('comes back sharp from a state saved before it', () => {
+    const state = fullState();
+    const old = Object.fromEntries(Object.entries(state.texts[0] ?? {}).filter(([key]) => key !== 'edgeSize' && key !== 'edgeProfile'));
+    expect(sanitizeState({ ...state, texts: [old] }).texts[0]).toEqual({ ...old, edgeSize: 0, edgeProfile: 'fillet' });
+  });
+});
 
 describe('edges', () => {
   it('are sharp by default, a fillet when made', () => {

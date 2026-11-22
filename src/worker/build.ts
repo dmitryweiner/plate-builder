@@ -2,12 +2,12 @@
 // the parts. Now: the outline with its rounded corners, extruded into the
 // base.
 //
-//   plate = ( base ∪ rim ∪ frame ∪ images ∪ raised texts ) ∩ outline prism (edges rounded or chamfered)
-//           − engraved texts − holes − magnet pockets
+//   plate = ( base ∪ rim ∪ frame ∪ images ∪ raised texts (top edges rounded or chamfered) )
+//           ∩ outline prism (edges rounded or chamfered) − engraved texts − holes − magnet pockets
 
 import type { CrossSection, Manifold } from 'manifold-3d';
 import { elementBox } from '../geo/boxes';
-import { EDGE_STEP, edgeOn, edgeSlabs } from '../geo/edges';
+import { EDGE_STEP, edgeOn, edgeSlabs, topEdgeSlabs } from '../geo/edges';
 import { heightfieldMesh } from '../geo/grid';
 import { traceContours, LEVEL } from '../geo/contour';
 import { heightField, processPixels, sampleField, type Raster } from '../geo/heightmap';
@@ -365,6 +365,30 @@ function terraceSolid(csg: CsgApi, scope: CsgScope, terraces: readonly Terrace[]
   return meshSolid(csg, scope, { positions: Float32Array.from(positions), indices: Uint32Array.from(triangles) }, 'the edges’ terraces');
 }
 
+/** A section shrunk by an inset as rings; an arc's vertices simplified, as a float32 cannot tell them apart. */
+function shrunkRings(scope: CsgScope, section: CrossSection, inset: number): Terrace['rings'] {
+  if (inset === 0) return section.toPolygons();
+  const offset = scope.keep(section.offset(-inset, 'Round', 2, segmentsFor(inset)));
+  return scope.keep(offset.simplify(CHORD_TOLERANCE / 10)).toPolygons();
+}
+
+/**
+ * A raised text from inside the base up to its height (spec §4): a prism,
+ * or, with its top edge rounded or chamfered, `topEdgeSlabs` as one
+ * terraced mesh, each slab the text shrunk by its inset. A stroke thinner
+ * than twice the inset has no slab there: its stack ends lower, in a ridge.
+ */
+function raisedText(csg: CsgApi, scope: CsgScope, text: TextElement, section: CrossSection, thickness: number, quality: Quality): Manifold {
+  const z0 = thickness / 2;
+  const top = thickness + text.height;
+  if (text.edgeSize <= 0) return prismOf(scope, section, z0, top);
+  const terraces = topEdgeSlabs(z0, top, text.edgeSize, text.edgeProfile, EDGE_STEP[quality]).flatMap((slab) => {
+    const rings = shrunkRings(scope, section, slab.inset);
+    return rings.length > 0 ? [{ ...slab, rings }] : [];
+  });
+  return terraceSolid(csg, scope, terraces);
+}
+
 /**
  * The outline's prisms from the back face up to a height, with the edges
  * (spec §2.2a) rounded or chamfered: the slabs of `geo/edges.ts` as one
@@ -377,9 +401,7 @@ function edgedPrisms(csg: CsgApi, scope: CsgScope, outline: CrossSection, plate:
   const ringsOf = (inset: number): Terrace['rings'] => {
     const known = shrunk.get(inset);
     if (known) return known;
-    if (inset === 0) return outline.toPolygons();
-    const offset = scope.keep(outline.offset(-inset, 'Round', 2, segmentsFor(inset)));
-    const rings = scope.keep(offset.simplify(CHORD_TOLERANCE / 10)).toPolygons();
+    const rings = shrunkRings(scope, outline, inset);
     shrunk.set(inset, rings);
     return rings;
   };
@@ -466,7 +488,7 @@ export function buildSolid(
     const reliefs = [
       ...images.map(({ image, raster }) => imageSolid(csg, scope, image, raster, thickness, quality)),
       // from inside the base, so the text is one with whatever is under it
-      ...raised.map(({ text, section }) => prismOf(scope, section, thickness / 2, thickness + text.height)),
+      ...raised.map(({ text, section }) => raisedText(csg, scope, text, section, thickness, quality)),
     ];
     const additive = scope.keep(csg.Manifold.union([base, ...reliefs]));
     // its edges trim whatever reaches them
