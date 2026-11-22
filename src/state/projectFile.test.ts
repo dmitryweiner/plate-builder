@@ -60,8 +60,16 @@ describe('project file', () => {
     expect(read.ok && read.state.plate).toEqual(plate);
   });
 
+  it('opens a file from before sealed magnets with them glued, 0.4 mm deep', () => {
+    const magnets: Record<string, unknown> = { ...state().magnets, count: 2, layout: 'row' };
+    delete magnets.mount;
+    delete magnets.cover;
+    const read = readProjectFile(JSON.stringify({ app: 'plate-builder', version: STATE_VERSION, state: { ...state(), magnets } }));
+    expect(read.ok && read.state.magnets).toEqual({ ...state().magnets, count: 2, layout: 'row', mount: 'glued', cover: 0.4 });
+  });
+
   it('round-trips magnets', () => {
-    const magnets = { ...state().magnets, count: 3, layout: 'triangleDown' as const, diameter: 8 };
+    const magnets = { ...state().magnets, count: 3, layout: 'triangleDown' as const, diameter: 8, mount: 'sealed' as const, cover: 0.6 };
     const read = readProjectFile(projectFileText({ ...state(), magnets }));
     expect(read.ok && read.state.magnets).toEqual(magnets);
   });

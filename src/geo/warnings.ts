@@ -177,7 +177,7 @@ function magnetWarnings(
   const spots = magnetPositions(magnets, outline, edgeOn(plate, 'bottom'));
   if (spots.length === 0) return [];
   const out: Warning[] = [];
-  const { radius, depth } = magnetPocket(magnets);
+  const { radius, ceiling } = magnetPocket(magnets);
   const needed = magnetMinThickness(magnets);
   if (plate.thickness < needed) out.push({ code: 'magnet.thin', ids: [], params: { needed }, spot: [spots[0].x, spots[0].y] });
   const crowded = spots.find(
@@ -192,7 +192,7 @@ function magnetWarnings(
   }
   // an engraving's floor too close to a pocket's ceiling: a micron of slack for 3 − 0.5 − 2.1
   for (const [text, ink] of inks) {
-    if (text.mode !== 'engraved' || plate.thickness - text.depth - depth >= ENGRAVE_FLOOR - 1e-9) continue;
+    if (text.mode !== 'engraved' || plate.thickness - text.depth - ceiling >= ENGRAVE_FLOOR - 1e-9) continue;
     const box = boxCorners(text);
     const at = pockets.findIndex((pocket) => (ink ? overlapsShape(pocket, ink) : ringsOverlap(pocket, box)));
     if (at >= 0) out.push({ code: 'magnet.overlap', ids: [text.id], spot: [spots[at].x, spots[at].y] });

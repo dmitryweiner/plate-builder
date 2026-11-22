@@ -967,6 +967,35 @@ describe('magnets card', () => {
     expect(hints()).toEqual(['Print with the back on the bed; no supports needed.']);
   });
 
+  it('seals the magnets in: their depth only then, a closed pocket, a pause in the hints, one undo step each', () => {
+    start();
+    pick('#magnet_count', '2');
+    expect([...$('#magnet_mount', HTMLSelectElement).options].map((o) => o.textContent)).toEqual([
+      'Glued in from the back',
+      'Sealed (print pause)',
+    ]);
+    expect(magnetRow('magnet_cover')?.hasAttribute('hidden')).toBe(true);
+    pick('#magnet_mount', 'sealed');
+    expect(magnetRow('magnet_cover')?.hasAttribute('hidden')).toBe(false);
+    expect($('#magnet_cover_n', HTMLInputElement).value).toBe('0.4');
+    expect(text('#magnetPocket')).toBe('Closed pocket ⌀ 10.2 mm, 2.2 mm high, 0.4 mm over the back face.');
+    expect(hints()).toContain(
+      'Pause the print at Z = 2.6 mm (the first layer above it), put the magnets (2 × ⌀ 10 × 2 mm) into the pockets and resume.',
+    );
+    expect(hints().some((hint) => hint?.includes('glue'))).toBe(false);
+    setInput('#magnet_cover_n', '0.8');
+    expect(hints()).toContain(
+      'Pause the print at Z = 3 mm (the first layer above it), put the magnets (2 × ⌀ 10 × 2 mm) into the pockets and resume.',
+    );
+    timers.flush();
+    expect(csg.last().job).toMatchObject({ state: { magnets: { mount: 'sealed', cover: 0.8 } } });
+    $('#undo', HTMLButtonElement).click();
+    expect($('#magnet_cover_n', HTMLInputElement).value).toBe('0.4');
+    $('#undo', HTMLButtonElement).click();
+    expect($('#magnet_mount', HTMLSelectElement).value).toBe('glued');
+    expect(magnetRow('magnet_cover')?.hasAttribute('hidden')).toBe(true);
+  });
+
   it('translates its rows and layouts', () => {
     start(['ru']);
     pick('#magnet_count', '2');

@@ -245,21 +245,30 @@ Up to 16 holes, each cutting through everything above it.
 Up to 4 round magnets of one size, set into the back face (`state.magnets`;
 not elements: they are placed by a layout, not one by one).
 
-| Parameter | Range     | Default | What                                                   |
-| --------- | --------- | ------- | ------------------------------------------------------ |
-| count     | 0–4       | 0       | 0: no magnets                                          |
-| layout    | by count  | first   | see below; a count change keeps it if the count has it |
-| diameter  | 3–30 mm   | 10      | the magnet's                                           |
-| thickness | 0.5–10 mm | 2       | the magnet's                                           |
-| fit       | 0–1 mm    | 0.2     | added to the diameter                                  |
-| edge      | 1–30 mm   | 3       | material between a pocket and the outline              |
+| Parameter | Range         | Default | What                                                   |
+| --------- | ------------- | ------- | ------------------------------------------------------ |
+| count     | 0–4           | 0       | 0: no magnets                                          |
+| layout    | by count      | first   | see below; a count change keeps it if the count has it |
+| diameter  | 3–30 mm       | 10      | the magnet's                                           |
+| thickness | 0.5–10 mm     | 2       | the magnet's                                           |
+| fit       | 0–1 mm        | 0.2     | added to the diameter                                  |
+| edge      | 1–30 mm       | 3       | material between a pocket and the outline              |
+| mount     | glued, sealed | glued   | how the magnets are held, below                        |
+| cover     | 0.2–5 mm      | 0.4     | sealed: material between the back face and the magnet  |
 
 Layouts: 1 — centre, top; 2 — row, column, top corners; 3 — triangle,
 triangle point down, row, column; 4 — corners, diamond, row, column.
 
-- **Pocket**: a cylinder of `diameter + fit` open at the back, `thickness +
-0.1` deep, so the magnet is flush with the back face (its hold drops fast
-  with a gap). The magnets are glued in after printing.
+- **Pocket, glued**: a cylinder of `diameter + fit` open at the back,
+  `thickness + 0.1` deep, so the magnet is flush with the back face (its
+  hold drops fast with a gap). The magnets are glued in after printing.
+- **Pocket, sealed**: a closed cylinder of `diameter + fit` from `cover`
+  up to `cover + thickness + 0.1` rounded up to a multiple of 0.2 mm (the
+  usual layer; an exact multiple stays). The print pauses there, the
+  magnets go in, the next layer closes them; the ceiling on a layer
+  boundary leaves the magnet under the nozzle's path. The pocket is a void
+  in the solid: its edges are in two triangles each, so the mesh check
+  passes and slicers print its walls.
 - **Placement**: each layout is a set of anchors in the outline's box,
   inset by the pocket's radius and the edge (rows spread evenly); the edge
   is counted from the foot of the plate's bottom edge (§2.2a), `e` in from
@@ -291,9 +300,10 @@ plate = ( base ∪ rim ∪ frame ∪ images ∪ raised texts ) ∩ outline prism
   just inside the base to their heights.
 - **engraved texts**: contours extruded from `T − depth` to above the top.
 - **holes**: cutters as in §5.
-- **magnet pockets**: cylinders from below the back face to their depth
-  (§5a), each a micron deeper than the one before, so no two cutters share
-  a plane.
+- **magnet pockets**: cylinders from below the back face (glued) or from
+  their cover (sealed) to their ceiling (§5a), each a micron deeper (and a
+  sealed one's floor a micron lower) than the one before, so no two cutters
+  share a plane.
 - Booleans are done once at the end: one union of everything additive, one
   intersection, one subtraction of the union of cutters.
 
@@ -481,8 +491,9 @@ under 60 s.
     it)". Images are a gradient, so for them the hint says a colour change
     gives bands, not a picture. A single STL plus this hint is the only
     multi-colour support in v1.
-  - **Magnets**: glue them into the pockets after printing (their number and
-    size).
+  - **Magnets**: glued, put them into the pockets after printing (their
+    number and size); sealed, "pause the print at Z = … mm (the first layer
+    above it)", the pockets' ceiling, to put them in.
 - Export is blocked while the mesh check fails; the message says why.
 
 ## 10. Warnings
@@ -502,7 +513,7 @@ under 60 s.
 | `text.arcTooLong`          | an arc text did not fit the circle and was squeezed (with %)             |
 | `text.arcLines`            | an arc text had several lines, joined into one                           |
 | `relief.tall`              | the relief is more than 3 × T (a tall thin relief on a thin base warps)  |
-| `magnet.thin`              | less than 0.8 mm over a magnet's pocket (with the T needed)              |
+| `magnet.thin`              | less than 0.8 mm over a magnet's pocket's ceiling (with the T needed)    |
 | `magnet.noRoom`            | a pocket does not fit with its edge, or two pockets are under 1 mm apart |
 | `magnet.overlap`           | a pocket crosses a hole, or an engraving leaves under 0.4 mm over it     |
 | `mesh.invalid`             | the mesh check failed (blocks export)                                    |
@@ -569,7 +580,7 @@ and carry a spot for the 2D view.
 - Vector fonts from font files, own font upload.
 - Multi-part STL or 3MF for multi-material printers.
 - Stands, mounting accessories; magnets other than round ones, or placed
-  one by one, or closed inside the plate (§5a).
+  one by one, or held in two ways on one plate (§5a).
 - Curved or bent plates.
 
 ## 15. Borrowed from siblings

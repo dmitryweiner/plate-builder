@@ -107,6 +107,11 @@ export const ru: Messages = {
   magnetThickness: 'Толщина магнита',
   magnetFit: 'Зазор',
   magnetEdge: 'От края',
+  magnetMount: 'Крепление',
+  magnetGlued: 'Вклеить сзади',
+  magnetSealed: 'Утопить (пауза печати)',
+  magnetCover: 'Утопить на',
+  magnetCoverHint: 'пластик между задней стороной и магнитом, мм',
 
   addImage: 'Добавить картинку',
   imageSize: 'Размер (длинная сторона)',
@@ -174,6 +179,10 @@ export const ru: Messages = {
   imageFailed: (reason: string) => `Не удалось прочитать картинку: ${reason}`,
   svgFailed: (reason: string) => `Не удалось прочитать SVG: ${reason}`,
   magnetPocket: (d: string, depth: string) => `Гнездо ⌀ ${d} мм глубиной ${depth} мм, открыто сзади.`,
+  magnetPocketSealed: (d: string, depth: string, cover: string) =>
+    `Закрытое гнездо ⌀ ${d} мм высотой ${depth} мм, ${cover} мм над задней стороной.`,
+  magnetsPause: (z: string, count: number, d: string, h: string) =>
+    `Пауза печати на Z = ${z} мм (первый слой над этой высотой): вложите магниты (${count} × ⌀ ${d} × ${h} мм) в гнёзда и продолжите печать.`,
   magnetsGlue: (count: number, d: string, h: string) =>
     `После печати вклейте магниты (${count} × ⌀ ${d} × ${h} мм) в гнёзда на задней стороне.`,
   colourChange: (z: string) => `Смена филамента на Z = ${z} мм (первый слой над этой высотой).`,

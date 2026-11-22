@@ -107,6 +107,11 @@ export const he: Messages = {
   magnetThickness: 'עובי המגנט',
   magnetFit: 'מרווח',
   magnetEdge: 'מהשוליים',
+  magnetMount: 'הרכבה',
+  magnetGlued: 'הדבקה מאחור',
+  magnetSealed: 'בתוך הלוח (עצירת הדפסה)',
+  magnetCover: 'עומק מהגב',
+  magnetCoverHint: 'פלסטיק בין הצד האחורי למגנט, מ״מ',
 
   addImage: 'הוספת תמונה',
   imageSize: 'גודל (הצלע הארוכה)',
@@ -173,6 +178,10 @@ export const he: Messages = {
   imageFailed: (reason: string) => `לא ניתן לקרוא את התמונה: ${reason}`,
   svgFailed: (reason: string) => `לא ניתן לקרוא את קובץ ה־SVG: ${reason}`,
   magnetPocket: (d: string, depth: string) => `שקע בקוטר ${d} מ״מ ובעומק ${depth} מ״מ, פתוח מאחור.`,
+  magnetPocketSealed: (d: string, depth: string, cover: string) =>
+    `שקע סגור בקוטר ${d} מ״מ ובגובה ${depth} מ״מ, ${cover} מ״מ מעל הצד האחורי.`,
+  magnetsPause: (z: string, count: number, d: string, h: string) =>
+    `עצרו את ההדפסה ב־Z = ${z} מ״מ (השכבה הראשונה מעל גובה זה), הכניסו את המגנטים (${count} × ⌀ ${d} × ${h} מ״מ) לשקעים והמשיכו.`,
   magnetsGlue: (count: number, d: string, h: string) => `אחרי ההדפסה הדביקו את המגנטים (${count} × ⌀ ${d} × ${h} מ״מ) בשקעים שבצד האחורי.`,
   colourChange: (z: string) => `החלפת חוט ב־Z = ${z} מ״מ (השכבה הראשונה מעל גובה זה).`,
   elementName: (type: 'image' | 'text' | 'hole', n: number) => `${{ image: 'תמונה', text: 'טקסט', hole: 'חור' }[type]} ${n}`,

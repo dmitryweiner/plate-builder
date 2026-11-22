@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { circle, CUT_OVERSHOOT } from './holes';
-import { magnetCutters, magnetFootprints, magnetMinThickness, magnetPocket, magnetPositions, MAGNET_SKIN } from './magnets';
+import { MAGNET_LAYER, magnetCutters, magnetFootprints, magnetMinThickness, magnetPocket, magnetPositions, MAGNET_SKIN } from './magnets';
 import { distanceToRings, primitiveOutline, type Ring } from './outline';
 import { defaultMagnets, defaultState, magnetLayouts, type MagnetLayout, type Magnets } from './state';
 
@@ -18,14 +18,31 @@ const Y = 30 - 8.1;
 
 describe('magnet pockets', () => {
   it('are the magnet with its fit across and 0.1 mm deeper than it, so it sits flush', () => {
-    expect(magnetPocket(defaultMagnets())).toEqual({ radius: 5.1, depth: 2.1 });
-    expect(magnetPocket({ ...defaultMagnets(), diameter: 12, thickness: 3, fit: 0 })).toEqual({ radius: 6, depth: 3.1 });
+    expect(magnetPocket(defaultMagnets())).toEqual({ radius: 5.1, depth: 2.1, floor: 0, ceiling: 2.1 });
+    expect(magnetPocket({ ...defaultMagnets(), diameter: 12, thickness: 3, fit: 0 })).toEqual({
+      radius: 6,
+      depth: 3.1,
+      floor: 0,
+      ceiling: 3.1,
+    });
+  });
+
+  it('sealed, start at the cover and end on the first layer boundary over the magnet with its 0.1 mm', () => {
+    expect(MAGNET_LAYER).toBe(0.2);
+    const sealed = { ...defaultMagnets(), mount: 'sealed' as const };
+    // 0.4 + 2 + 0.1 = 2.5, up to 2.6
+    expect(magnetPocket(sealed)).toEqual({ radius: 5.1, depth: 2.2, floor: 0.4, ceiling: 2.6 });
+    // 0.5 + 2 + 0.1 = 2.6 is a boundary already, though 2.6 / 0.2 is 13.000000000000002
+    expect(magnetPocket({ ...sealed, cover: 0.5 })).toMatchObject({ depth: 2.1, floor: 0.5, ceiling: 2.6 });
+    expect(magnetPocket({ ...sealed, cover: 0.2, thickness: 3 })).toMatchObject({ depth: 3.2, floor: 0.2, ceiling: 3.4 });
   });
 
   it('need the pocket and a front skin of 0.8 mm', () => {
     expect(MAGNET_SKIN).toBe(0.8);
     expect(magnetMinThickness(defaultMagnets())).toBe(2.9);
     expect(magnetMinThickness({ ...defaultMagnets(), thickness: 5 })).toBe(5.9);
+    // sealed: over the pocket's ceiling
+    expect(magnetMinThickness({ ...defaultMagnets(), mount: 'sealed' })).toBe(3.4);
   });
 });
 
@@ -197,6 +214,19 @@ describe('magnet footprints and cutters', () => {
     for (const top of tops) {
       expect(top).toBeGreaterThan(2.1);
       expect(top).toBeLessThan(2.1 + 0.01);
+    }
+  });
+
+  it('sealed, cut from just under the cover to just over the ceiling, a micron apart, closed at the back', () => {
+    const cutters = magnetCutters(magnets({ count: 4, layout: 'corners', mount: 'sealed' }), plate);
+    const levels = cutters.map((c) => (c.kind === 'prism' ? [c.z0, c.z1] : [NaN, NaN]));
+    expect(new Set(levels.map(([z0]) => z0)).size).toBe(4);
+    expect(new Set(levels.map(([, z1]) => z1)).size).toBe(4);
+    for (const [z0, z1] of levels) {
+      expect(z0).toBeLessThan(0.4);
+      expect(z0).toBeGreaterThan(0.4 - 0.01);
+      expect(z1).toBeGreaterThan(2.6);
+      expect(z1).toBeLessThan(2.6 + 0.01);
     }
   });
 

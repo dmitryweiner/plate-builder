@@ -524,6 +524,17 @@ describe('magnets', () => {
     expect(Math.abs((100 * 60 - faceArea(mesh, 0)) / (4 * pocket) - 1)).toBeLessThan(0.01);
   });
 
+  it('sealed pockets: closed voids, nothing shows at the back or the front, the export passes', () => {
+    const state = plateWithMagnets({ count: 2, layout: 'row', mount: 'sealed' }, { thickness: 3.4 });
+    const { mesh, report } = holeReport(state);
+    expect(report.watertight).toBe(true);
+    expect(assessExport(report, true).blockers).toEqual([]);
+    // from 0.4 to 2.6: 2.2 high
+    expect(Math.abs((100 * 60 * 3.4 - report.volume) / (2 * pocket * 2.2) - 1)).toBeLessThan(0.01);
+    expect(faceArea(mesh, 0)).toBeCloseTo(100 * 60, 3);
+    expect(faceArea(mesh, 3.4)).toBeCloseTo(100 * 60, 3);
+  });
+
   it('no magnets cut nothing', () => {
     expect(holeReport(plateWithMagnets({ count: 0 })).report.volume).toBeCloseTo(100 * 60 * 3, 3);
   });

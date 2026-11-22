@@ -2,6 +2,11 @@
 // outline, their pockets' footprints for the 2D view and the warnings, and
 // their cutters for the worker. No CSG here.
 //
+// A glued magnet's pocket is open at the back, the magnet flush with it. A
+// sealed one's is a closed void over `cover` mm of the plate, its ceiling
+// on a layer boundary: the print pauses there, the magnets go in, and the
+// next layer closes them.
+//
 // The 2D view and the worker both place the magnets with magnetPositions,
 // on the outline each of them has, so the two agree.
 
@@ -15,16 +20,34 @@ export const MAGNET_DEPTH_FIT = 0.1;
 export const MAGNET_SKIN = 0.8;
 /** How far apart each magnet's pocket top is from the next's, so no two cutters share a plane: a micron. */
 const MAGNET_JITTER = 0.001;
+/** The usual printed layer, mm: a sealed pocket's ceiling lies on a multiple of it, where the print pauses. */
+export const MAGNET_LAYER = 0.2;
 
 const hundredth = (value: number) => Math.round(value * 100) / 100;
 
-export function magnetPocket(m: Pick<Magnets, 'diameter' | 'thickness' | 'fit'>): { radius: number; depth: number } {
-  return { radius: hundredth((m.diameter + m.fit) / 2), depth: hundredth(m.thickness + MAGNET_DEPTH_FIT) };
+type PocketSizes = Pick<Magnets, 'diameter' | 'thickness' | 'fit' | 'mount' | 'cover'>;
+
+export interface MagnetPocket {
+  radius: number;
+  /** from the floor to the ceiling */
+  depth: number;
+  /** above the back face: 0 for a glued magnet's, the cover for a sealed one's */
+  floor: number;
+  ceiling: number;
+}
+
+export function magnetPocket(m: PocketSizes): MagnetPocket {
+  const radius = hundredth((m.diameter + m.fit) / 2);
+  const fitted = m.thickness + MAGNET_DEPTH_FIT;
+  if (m.mount === 'glued') return { radius, depth: hundredth(fitted), floor: 0, ceiling: hundredth(fitted) };
+  // up to the next layer boundary; a micron of slack, since 2.6 / 0.2 is 13.000000000000002
+  const ceiling = hundredth(Math.ceil((m.cover + fitted) / MAGNET_LAYER - 1e-6) * MAGNET_LAYER);
+  return { radius, depth: hundredth(ceiling - m.cover), floor: m.cover, ceiling };
 }
 
 /** The thickness the pockets need under the front skin (warning `magnet.thin`). */
-export function magnetMinThickness(m: Pick<Magnets, 'diameter' | 'thickness' | 'fit'>): number {
-  return hundredth(magnetPocket(m).depth + MAGNET_SKIN);
+export function magnetMinThickness(m: PocketSizes): number {
+  return hundredth(magnetPocket(m).ceiling + MAGNET_SKIN);
 }
 
 /** Evenly from −1 to 1. */
@@ -125,13 +148,13 @@ export function magnetFootprints(m: Magnets, outline: readonly Ring[], edgeSize 
   return magnetPositions(m, outline, edgeSize).map(({ x, y }) => circle(x, y, radius));
 }
 
-/** The pockets' cutters: from under the back face up to the pocket's depth. */
+/** The pockets' cutters: from under the back face (glued) or from the cover (sealed) up to the ceiling. */
 export function magnetCutters(m: Magnets, outline: readonly Ring[], edgeSize = 0): Cutter[] {
-  const { depth } = magnetPocket(m);
+  const { floor, ceiling } = magnetPocket(m);
   return magnetFootprints(m, outline, edgeSize).map((ring, i) => ({
     kind: 'prism',
     rings: [ring],
-    z0: -CUT_OVERSHOOT,
-    z1: depth + (i + 1) * MAGNET_JITTER,
+    z0: m.mount === 'glued' ? -CUT_OVERSHOOT : floor - (i + 1) * MAGNET_JITTER,
+    z1: ceiling + (i + 1) * MAGNET_JITTER,
   }));
 }

@@ -94,6 +94,28 @@ describe('settings storage', () => {
     expect(project().magnets.count).toBe(0);
   });
 
+  it('opens a save and a user preset from before sealed magnets with them glued, the rest kept', () => {
+    const storage = new MemoryStorage();
+    const withMagnets = { ...project(), magnets: { ...project().magnets, count: 2, layout: 'row' as const } };
+    const strip = (state: typeof withMagnets) => {
+      const magnets: Record<string, unknown> = { ...state.magnets };
+      delete magnets.mount;
+      delete magnets.cover;
+      return { ...state, magnets };
+    };
+    const raw = {
+      version: 2,
+      settings: { locale: 'ru', project: strip(withMagnets), presets: [{ id: 'u1', name: 'Mine', state: strip(withMagnets) }] },
+    };
+    storage.setItem(STORAGE_KEY, JSON.stringify(raw));
+    expect(loadSettings(storage)).toEqual({
+      locale: 'ru',
+      project: withMagnets,
+      presets: [{ id: 'u1', name: 'Mine', state: withMagnets }],
+    });
+    expect([withMagnets.magnets.mount, withMagnets.magnets.cover]).toEqual(['glued', 0.4]);
+  });
+
   it('opens a save from before the edges with sharp ones, the rest kept', () => {
     const storage = new MemoryStorage();
     const strip = (state: ReturnType<typeof project>) => {
