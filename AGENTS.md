@@ -42,13 +42,14 @@ publishes `dist/` to GitHub Pages.
 
 ## Plans
 
-| File                    | What                                     |
-| ----------------------- | ---------------------------------------- |
-| `plans/INITIAL-IDEA.md` | the idea as first written                |
-| `plans/PLAN.md`         | milestones M0…M10, decisions, deviations |
-| `plans/PLAN-DESIGN.md`  | Case Constructor's look, element groups  |
-| `plans/PLAN-MAGNETS.md` | magnet pockets on the back (M11)         |
-| `plans/PLAN-FILLET.md`  | rounded or chamfered edges (M12)         |
+| File                         | What                                                       |
+| ---------------------------- | ---------------------------------------------------------- |
+| `plans/INITIAL-IDEA.md`      | the idea as first written                                  |
+| `plans/PLAN.md`              | milestones M0…M10, decisions, deviations                   |
+| `plans/PLAN-DESIGN.md`       | Case Constructor's look, element groups                    |
+| `plans/PLAN-MAGNETS.md`      | magnet pockets on the back (M11)                           |
+| `plans/PLAN-FILLET.md`       | rounded or chamfered edges (M12)                           |
+| `plans/PLAN-TEXT-MAGNETS.md` | sealed magnets, letter edges, fonts (M13–M15), text tweaks |
 
 ## Architectural invariants
 

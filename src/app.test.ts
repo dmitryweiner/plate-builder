@@ -795,6 +795,34 @@ describe('texts', () => {
     expect(job.kind === 'mesh' && job.textRasters?.[0]?.width).toBe(10 * 8 * 4);
   });
 
+  it('puts the focus into a new text, its words selected, so typing replaces them', () => {
+    start();
+    $('#addText', HTMLButtonElement).click();
+    const area = $('#element_text', HTMLTextAreaElement);
+    expect(document.activeElement).toBe(area);
+    expect([area.selectionStart, area.selectionEnd]).toEqual([0, 'Text'.length]);
+  });
+
+  it('does not put the focus into a text that is selected or duplicated', () => {
+    start();
+    $('#addText', HTMLButtonElement).click();
+    $('#addHole', HTMLButtonElement).click();
+    $('.item-row[data-id="t1"] .item-name', HTMLButtonElement).click();
+    expect(openTitle()).toBe('Text 1');
+    expect(document.activeElement).not.toBe($('#element_text', HTMLTextAreaElement));
+    $('#text_t1_duplicate', HTMLButtonElement).click();
+    expect(openTitle()).toBe('Text 2');
+    expect(document.activeElement).not.toBe($('#element_text', HTMLTextAreaElement));
+  });
+
+  it('steps the text size by 0.1 mm', () => {
+    start();
+    $('#addText', HTMLButtonElement).click();
+    $('#element_text-size_inc', HTMLButtonElement).click();
+    expect($('#element_text-size_n', HTMLInputElement).value).toBe('8.1');
+    expect($('#element_text-size', HTMLInputElement).step).toBe('0.1');
+  });
+
   it('shows the rows of the text’s kind and arc', async () => {
     start();
     $('#addText', HTMLButtonElement).click();
@@ -817,6 +845,8 @@ describe('texts', () => {
     const area = $('#element_text', HTMLTextAreaElement);
     area.value = 'Kitchen\nDoor';
     area.dispatchEvent(new Event('input'));
+    // a text area's change comes when it loses the focus (a new text has it)
+    area.blur();
     area.dispatchEvent(new Event('change'));
     $('#element_text-arc', HTMLInputElement).click();
     expect(text('#warningList')).toContain('Text 1: an arc takes one line; the lines are joined.');
