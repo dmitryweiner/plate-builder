@@ -15,6 +15,14 @@ Its text field has the focus with "Text" selected: type, and the words replace i
 - **Raised** text stands on the plate by its **height**; **engraved** text is
   cut into it by its **depth** (at most the thickness less 0.4 mm), through
   images and the rim too.
+- **Letter edges** round (or chamfer at 45°) the top edges of raised
+  letters, 0–5 mm and at most their height, as **Edge fillet** does for the
+  plate. Where a stroke is thinner than twice the size, its top comes to a
+  ridge a little lower than the rest. The preview shows the curve in coarse
+  steps; the exported STL in 0.1 mm ones, finer than a printed layer.
+
+![A house number with 2 mm letter edges](images/house-number-edges.png)
+
 - **On an arc**: the block becomes one line (a warning says when lines were
   joined) bent around a circle of the **arc radius**, whose centre is the
   text's position. **Outside, along the top**: letters stand on the circle

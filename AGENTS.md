@@ -61,8 +61,9 @@ publishes `dist/` to GitHub Pages.
   (fuzz-tested).
 - Manifold objects live in a `CsgScope` and are disposed.
 - The edges are no boolean: the outline's prism is one terraced mesh
-  (`edgedPrisms` in `worker/build.ts`); neighbouring terraces' insets differ
-  by at least `EDGE_MIN_GAP`, so their rings never cross.
+  (`edgedPrisms` in `worker/build.ts`), and so is a raised text with letter
+  edges (`raisedText`); neighbouring terraces' insets differ by at least
+  `EDGE_MIN_GAP`, so their rings never cross.
 - No two solids in one boolean share a plane by construction (`ε` offsets);
   where unavoidable, cutters get a few microns of jitter.
 - The worker client keeps one waiting job per lane; a replaced job resolves
@@ -86,6 +87,7 @@ Measured on an M1 Mac, Chromium, worker time (`ms` of the job), with
 | a cartouche vignette with its frame and a 2 mm fillet — preview / export                   | 44 ms / 104 ms                                          |
 | preview with four holes, one of each kind (100 × 60 × 6, 1300 triangles)                   | ~15 ms                                                  |
 | one raised text "PLATE BUILDER" on an arc, 8 mm (7.8k triangles) — preview                 | ~60 ms                                                  |
+| "PLATE BUILDER", 8 mm, 0.5 mm letter edges (9k triangles) — preview / export               | 64 ms / 91 ms                                           |
 | crop around a 36 mm picture and a text, padding 3, with its outline job                    | ~200 ms                                                 |
 | crop around a 37 mm line-art JPEG (threshold 10 %, its dark background's noise) — preview  | 360 ms (7 s before the mask's holes were filled first)  |
 | **reference plate** (spec §8.4: 100 × 60, a 512 px image, two texts) — preview             | 380 ms (target 500)                                     |

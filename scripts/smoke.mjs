@@ -465,6 +465,33 @@ await app.run(
       await context.close();
     });
 
+    await step('texts: rounded and chamfered letters in every font, in a real STL', async () => {
+      const { page, context } = await app.open();
+      let { info } = await built(page);
+      await page.click('#addText');
+      ({ info } = await built(page, info));
+      await page.fill('#element_text', 'PLATE BUILDER');
+      await page.locator('#element_text').dispatchEvent('change');
+      ({ info } = await built(page, info));
+      const sharp = Number(info.match(/([\d,]+) triangles/)?.[1].replace(/,/g, ''));
+      await setNumber(page, 'element_text-edgeSize', 0.5);
+      const result = await built(page, info);
+      info = result.info;
+      check(info.includes('× 4 mm') && (await page.locator('#meshBlocked').isHidden()), `rounded letters: ${info}`);
+      check(Number(info.match(/([\d,]+) triangles/)?.[1].replace(/,/g, '')) > sharp, `no terraces on the letters: ${info}`);
+      const ms = await exportMs(page);
+      console.log(`    "PLATE BUILDER", 8 mm, a 0.5 mm fillet: preview ${result.ms} ms (${info}); export ${ms} ms`);
+      await page.selectOption('#element_text-edgeProfile', 'chamfer');
+      ({ info } = await built(page, info));
+      for (const font of ['oswald', 'ptSerif', 'comfortaa', 'marckScript', 'frankRuhl']) {
+        await page.selectOption('#element_text-font', font);
+        ({ info } = await built(page, info));
+        check(await page.locator('#meshBlocked').isHidden(), `${font}, chamfered letters: ${info}`);
+      }
+      if (shots) await page.screenshot({ path: 'shots/texts-edges.png' });
+      await context.close();
+    });
+
     await step('crop around an image and a text, padding at its extremes', async () => {
       const { page, context } = await app.open();
       let { info } = await built(page);

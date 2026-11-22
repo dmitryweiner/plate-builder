@@ -132,6 +132,8 @@ export const RANGES = {
   /** × size */
   lineSpacing: { min: 0.8, max: 2, def: 1.2 },
   textHeight: { min: 0.2, max: 10, def: 1 },
+  /** a raised text's top edge; the upper limit is its height */
+  textEdge: { min: 0, max: 5, def: 0 },
   /** the upper limit is T − 0.4 */
   engraveDepth: { min: 0.2, max: 19.6, def: 0.6 },
   arcRadius: { min: 5, max: 300, def: 50 },
@@ -253,6 +255,9 @@ export interface TextElement extends Placed {
   arcRadius: number;
   arcSide: 'outside' | 'inside';
   inOutline: boolean;
+  /** a raised text's top edge: fillet radius or chamfer leg; 0 = sharp */
+  edgeSize: number;
+  edgeProfile: EdgeProfile;
 }
 
 export interface HoleElement extends Placed {
@@ -386,6 +391,8 @@ export function defaultText(state: PlateState): TextElement {
     arcRadius: clamp(state.plate.width / 2, RANGES.arcRadius),
     arcSide: 'outside',
     inOutline: true,
+    edgeSize: RANGES.textEdge.def,
+    edgeProfile: 'fillet',
   };
 }
 
@@ -524,6 +531,7 @@ export function maxEngraveDepth(thickness: number): number {
 }
 
 function sanitizeText(e: Fields, thickness: number): TextElement {
+  const height = num(e.height, RANGES.textHeight);
   return {
     ...sanitizePlaced(e),
     id: typeof e.id === 'string' ? e.id : '',
@@ -534,12 +542,15 @@ function sanitizeText(e: Fields, thickness: number): TextElement {
     lineSpacing: num(e.lineSpacing, RANGES.lineSpacing),
     align: oneOf(e.align, ALIGNS, 'center'),
     mode: oneOf(e.mode, ['raised', 'engraved'], 'raised'),
-    height: num(e.height, RANGES.textHeight),
+    height,
     depth: num(e.depth, RANGES.engraveDepth, maxEngraveDepth(thickness)),
     arc: bool(e.arc, false),
     arcRadius: num(e.arcRadius, RANGES.arcRadius),
     arcSide: oneOf(e.arcSide, ['outside', 'inside'], 'outside'),
     inOutline: bool(e.inOutline, true),
+    // a text saved before its edge has a sharp one
+    edgeSize: num(e.edgeSize, RANGES.textEdge, Math.min(RANGES.textEdge.max, height)),
+    edgeProfile: oneOf(e.edgeProfile, EDGE_PROFILES, 'fillet'),
   };
 }
 

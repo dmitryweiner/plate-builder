@@ -1,5 +1,5 @@
 import { beforeAll, describe, expect, it } from 'vitest';
-import { edgeInset } from '../geo/edges';
+import { EDGE_JITTER, edgeInset } from '../geo/edges';
 import { meshNormals } from 'maker-kit/3d/mesh';
 import { bounds, ringArea } from '../geo/outline';
 import type { Raster } from '../geo/heightmap';
@@ -322,6 +322,45 @@ describe('texts', () => {
     expect(assessExport(report, true).blockers).toEqual([]);
     expect(report.bbox.max[2]).toBeCloseTo(4.5, 4);
     expect(report.volume).toBeCloseTo(100 * 60 * 3 + 20 * 8 * 1.5, -1);
+  });
+
+  it('a chamfered top edge: watertight, as high, its top shrunk by the top terrace, the chamfer’s volume gone', () => {
+    // a preview's 0.5 mm chamfer: four terraces, the top one 0.4375 in
+    const { mesh, report } = builtTexts(plateWithTexts([{ height: 1, edgeSize: 0.5, edgeProfile: 'chamfer' }]), [blockRaster(20, 8)]);
+    expect(report.watertight).toBe(true);
+    expect(assessExport(report, true).blockers).toEqual([]);
+    expect(report.bbox.max[2]).toBeCloseTo(4, 4);
+    const inset = 0.4375 + EDGE_JITTER;
+    expect(faceArea(mesh, 4)).toBeCloseTo((20 - 2 * inset) * (8 - 2 * inset), 2);
+    // a 45° chamfer takes r² / 2 along the 56 mm around the block
+    expect(report.volume).toBeCloseTo(100 * 60 * 3 + 20 * 8 - 56 * 0.125, 0);
+  });
+
+  it('a rounded top edge as high as the text takes the quarter round’s volume', () => {
+    const { report } = builtTexts(plateWithTexts([{ height: 1, edgeSize: 1 }]), [blockRaster(20, 8)]);
+    expect(report.watertight).toBe(true);
+    expect(report.bbox.max[2]).toBeCloseTo(4, 4);
+    const rounded = 100 * 60 * 3 + 20 * 8 - report.volume;
+    expect(Math.abs(rounded / (56 * (1 - Math.PI / 4)) - 1)).toBeLessThan(0.1);
+  });
+
+  it('a stroke thinner than twice the edge ends lower, in a ridge, never cut through', () => {
+    const { report } = builtTexts(plateWithTexts([{ height: 1, edgeSize: 0.5, edgeProfile: 'chamfer' }]), [blockRaster(20, 0.6)]);
+    expect(report.watertight).toBe(true);
+    expect(report.bbox.max[2]).toBeLessThan(4);
+    expect(report.bbox.max[2]).toBeGreaterThan(3.5);
+  });
+
+  it('an edged text on an arc builds closed', () => {
+    const { report } = builtTexts(plateWithTexts([{ height: 1.5, edgeSize: 0.6, arc: true, arcRadius: 20 }]), [blockRaster(30, 6)]);
+    expect(report.watertight).toBe(true);
+    expect(assessExport(report, true).blockers).toEqual([]);
+  });
+
+  it('an engraved text keeps sharp edges whatever its edge size', () => {
+    const sharp = builtTexts(plateWithTexts([{ mode: 'engraved', depth: 1.2 }]), [blockRaster(20, 8)]).report.volume;
+    const edged = builtTexts(plateWithTexts([{ mode: 'engraved', depth: 1.2, edgeSize: 0.5 }]), [blockRaster(20, 8)]).report.volume;
+    expect(edged).toBeCloseTo(sharp, 6);
   });
 
   it('an engraved text is cut to its depth', () => {

@@ -42,6 +42,7 @@ export const ru: Messages = {
   edgeFillet: 'Скругление',
   edgeChamfer: 'Фаска 45°',
   edgeSides: 'Рёбра',
+  textEdge: 'Сглаживание букв',
   edgeBoth: 'Сверху и снизу',
   edgeTop: 'Только сверху',
   edgeBottom: 'Только снизу',

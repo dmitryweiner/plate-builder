@@ -44,6 +44,7 @@ export const en = {
   edgeFillet: 'Rounded',
   edgeChamfer: 'Chamfer 45°',
   edgeSides: 'Edges',
+  textEdge: 'Letter edges',
   edgeBoth: 'Top and bottom',
   edgeTop: 'Top only',
   edgeBottom: 'Bottom only',

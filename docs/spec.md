@@ -184,6 +184,7 @@ Up to 10 text blocks. Each has:
 | Alignment                    | left, centre, right                                                                                            | centre                 |
 | Raised / engraved            |                                                                                                                | raised                 |
 | Height (raised)              | 0.2–10 mm                                                                                                      | 1                      |
+| Letter edges (raised)        | 0–5 mm, at most the height: the letters' top edges rounded or chamfered 45°, as the plate's (§2.2a)            | 0, rounded             |
 | Depth (engraved)             | 0.2 mm … T − 0.4 mm                                                                                            | 0.6                    |
 | Position x, y; rotation      |                                                                                                                | centre, 0              |
 | On an arc                    | on/off                                                                                                         | off                    |
@@ -296,6 +297,10 @@ plate = ( base ∪ rim ∪ frame ∪ images ∪ raised texts ) ∩ outline prism
   frame on a regular grid (§8.4), its bottom inside the base and its zero
   level `ε` below `T` (so it never shares a plane with the base's top), then
   turned and moved into place. Their union is the max of the heights.
+- **raised texts with letter edges**: the text's section shrunk level by
+  level (the plate's edge profile and steps, §2.2a, counted down from the
+  text's top) and stacked into one terraced mesh, from just inside the base;
+  a stroke thinner than twice the edge ends lower, in a ridge.
 - **raised texts, rim, frame**: 2D contours (cross-sections) extruded from
   just inside the base to their heights.
 - **engraved texts**: contours extruded from `T − depth` to above the top.

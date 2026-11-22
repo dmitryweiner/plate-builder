@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { EDGE_JITTER, EDGE_MIN_GAP, EDGE_STEP, edgeInset, edgeLevels, edgeOn, edgeSlabs } from './edges';
+import { EDGE_JITTER, EDGE_MIN_GAP, EDGE_STEP, edgeInset, edgeLevels, edgeOn, edgeSlabs, topEdgeSlabs } from './edges';
 import { defaultPlate, type Plate } from './state';
 
 const plate = (over: Partial<Plate>): Plate => ({ ...defaultPlate(), ...over });
@@ -166,5 +166,36 @@ describe('edgeSlabs', () => {
     const slabs = edgeSlabs(p, EDGE_STEP.export, 3.2);
     expect(slabs).toHaveLength(31);
     for (const { z0, z1 } of slabs) for (const z of [z0, z1]) expect(Math.abs(z - 3)).toBeGreaterThan(EDGE_JITTER / 2);
+  });
+});
+
+describe('topEdgeSlabs (a raised text’s top edge)', () => {
+  it('is one slab from its foot to its top when sharp', () => {
+    expect(topEdgeSlabs(1.5, 4, 0, 'fillet', EDGE_STEP.export)).toEqual([{ inset: 0, z0: 1.5, z1: 4 }]);
+  });
+
+  it('stacks the wall, then the terraces, each on the last, the top one at the top', () => {
+    // a 0.5 mm chamfer in a preview: four levels of 0.125 mm
+    const slabs = topEdgeSlabs(1.5, 4, 0.5, 'chamfer', EDGE_STEP.preview);
+    expect(slabs).toHaveLength(5);
+    expect(slabs[0]).toEqual({ inset: 0, z0: 1.5, z1: 4 - 0.5 - EDGE_JITTER });
+    for (let k = 1; k < slabs.length; k++) {
+      expect(slabs[k].z0).toBe(slabs[k - 1].z1);
+      expect(slabs[k].inset - slabs[k - 1].inset).toBeGreaterThanOrEqual(EDGE_MIN_GAP);
+    }
+    expect(slabs.at(-1)).toEqual({ inset: 0.4375 + EDGE_JITTER, z0: 4 - 0.125 - EDGE_JITTER, z1: 4 });
+  });
+
+  it('drops a fillet’s last terrace, as close to the wall as the gap', () => {
+    const slabs = topEdgeSlabs(1.5, 4, 1, 'fillet', EDGE_STEP.preview);
+    // four levels, the wall's one dropped: the wall and three terraces
+    expect(slabs.map(({ inset }) => Math.round(inset * 1000) / 1000)).toEqual([0, 0.171, 0.447, 0.807]);
+    expect(slabs[0].z1).toBeCloseTo(4 - (1 - Math.cos((3 * Math.PI) / 8)) - EDGE_JITTER, 9);
+  });
+
+  it('at the largest size, the edge’s foot is under the base’s top, still above the slab’s foot', () => {
+    const slabs = topEdgeSlabs(1.5, 4, 1, 'chamfer', EDGE_STEP.export);
+    expect(slabs[0].z1).toBeCloseTo(3 - EDGE_JITTER, 9);
+    expect(slabs[0].z1).toBeGreaterThan(1.5);
   });
 });
