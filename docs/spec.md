@@ -358,10 +358,13 @@ Cards, top to bottom:
    parameters, with exact numeric fields for position, size and rotation.
    A click on a closed card's head selects the element, on the open one
    deselects it; selecting in the 2D view opens its card and brings it
-   into view.
-3. **Warnings** — each with a "show" action that frames its spot in the 2D
+   into view. A new text's field takes the focus, its words selected, so
+   typing replaces them.
+3. **Magnets** — the number, the layout, the mount (glued / sealed) and a
+   sealed one's depth from the back, the sizes; a line with the pocket's.
+4. **Warnings** — each with a "show" action that frames its spot in the 2D
    view.
-4. **Export** — the project's name (it names the files), STL download, the
+5. **Export** — the project's name (it names the files), STL download, the
    print hints (§9).
 
 A slider row is, from 1024 px, one line: the name, − slider +, the exact
@@ -541,8 +544,9 @@ and carry a spot for the 2D view.
   kept and offers the project file; it goes away once a save succeeds.
 - **Project file**: `*.plate.json` download and upload, the same schema
   with its version; a foreign or broken file is refused with a message. A
-  field added later (the magnets, the edges) is filled with its default when
-  a save or a file lacks it, so the version stays.
+  field added later (the magnets, the edges, the magnets' mount and cover, a
+  text's letter edges) is filled with its default when a save or a file
+  lacks it, so the version stays.
 - **Undo / redo** over the whole state, a drag or a slider move being one
   step.
 - **Built-in presets** (7): door sign (rectangle, two lines, two

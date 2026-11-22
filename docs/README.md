@@ -6,9 +6,9 @@ User and design documentation of Plate Builder, in English.
 | -------------------------------------- | ----------------------------------------------------------------------- |
 | [guide-plate.md](guide-plate.md)       | the plate: outlines, thickness, rounding, rim, vignettes, own SVG, crop |
 | [guide-images.md](guide-images.md)     | images: what becomes height, levels, smoothing                          |
-| [guide-texts.md](guide-texts.md)       | texts: fonts, lines, raised and engraved, on an arc                     |
+| [guide-texts.md](guide-texts.md)       | texts: fonts, lines, raised and engraved, letter edges, on an arc       |
 | [guide-holes.md](guide-holes.md)       | holes: round, slot, countersunk, hidden keyhole                         |
-| [guide-magnets.md](guide-magnets.md)   | magnets in the back: number, layout, size, fit                          |
+| [guide-magnets.md](guide-magnets.md)   | magnets in the back: number, layout, glued or sealed, size, fit         |
 | [guide-editor.md](guide-editor.md)     | the 2D editor: selecting, moving, scaling, turning, snapping, keys      |
 | [guide-export.md](guide-export.md)     | export and printing: the STL, warnings, colour changes                  |
 | [guide-projects.md](guide-projects.md) | projects and presets: saving, files, presets                            |

@@ -16,9 +16,11 @@ browser, offline included.
 - Images (PNG, JPEG, WebP, GIF, SVG) as relief, with levels, inversion and
   smoothing; transparency is height 0.
 - Texts in thirteen bundled fonts (Latin, Cyrillic, Hebrew), several lines,
-  raised or engraved, on an arc.
+  raised (their top edges rounded or chamfered, if wanted) or engraved, on
+  an arc.
 - Holes: round, slot, countersunk, hidden keyhole from the back.
-- Magnets in the back (a fridge magnet): 1 to 4, their size and a layout.
+- Magnets in the back (a fridge magnet): 1 to 4, their size and a layout;
+  glued in after printing, or sealed inside during a print pause.
 - A 2D editor (drag, scale, turn, snap; touch too) and a 3D preview; undo
   and redo; warnings with a "show"; colour-change heights for the slicer.
 - Projects kept in the browser, project files, seven built-in presets and

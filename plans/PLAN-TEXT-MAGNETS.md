@@ -191,6 +191,16 @@ One branch and PR each, smallest first:
 - The name field in the Presets dialog (it shrinks beside "changed"; left
   as it is).
 
+## Status (2026-11-22)
+
+| Item                          | PR                                                     |
+| ----------------------------- | ------------------------------------------------------ |
+| 2, 3 — focus, the size's step | #27                                                    |
+| 1 — sealed magnets (M13)      | #28, on #27                                            |
+| 4 — letter edges (M14)        | #29, on #28                                            |
+| 5 — seven fonts (M15)         | #30, on #29; the round's docs pass                     |
+| 6 — the name button's width   | maker-kit #32, tag `v0.5.3`; here #31, based on `main` |
+
 ## Deviations
 
 - **M13**: the mount's words are shorter than planned — "Sealed (print
@@ -211,3 +221,8 @@ One branch and PR each, smallest first:
   subsets), Press Start 2P the smallest (7 kB).
 - **M15**: besides the font loop, a Node test checks that every font has
   its subsets' files and an OFL licence on disk.
+- **Order**: the kit's item went last, not second: its tag needed a merge
+  in maker-kit, the user's.
+- **Item 6**: a fixed 240 px squeezed the language picker on a narrow
+  desktop bar (760 px, Ukrainian); the button gives way first
+  (`flex: 0 100 240px`), the kit's smoke checks the picker whole.
