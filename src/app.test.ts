@@ -786,6 +786,13 @@ describe('texts', () => {
       'Comfortaa',
       'Marck Script',
       'Frank Ruhl Libre',
+      'Lobster',
+      'Playfair Display',
+      'Russo One',
+      'Rubik Bubbles',
+      'Pacifico',
+      'Bona Nova',
+      'Press Start 2P',
     ]);
     // the font was asked for when the text was first drawn
     expect(loadedFonts.has('rubik')).toBe(true);

@@ -22,6 +22,31 @@ export const FONTS: Record<FontId, FontFile> = {
   comfortaa: { family: 'plate-comfortaa', label: 'Comfortaa', file: 'comfortaa', weight: '700', subsets: ['latin', 'cyrillic'] },
   marckScript: { family: 'plate-marck-script', label: 'Marck Script', file: 'marck-script', weight: '400', subsets: ['latin', 'cyrillic'] },
   frankRuhl: { family: 'plate-frank-ruhl', label: 'Frank Ruhl Libre', file: 'frank-ruhl', weight: '700', subsets: ['latin', 'hebrew'] },
+  lobster: { family: 'plate-lobster', label: 'Lobster', file: 'lobster', weight: '400', subsets: ['latin', 'cyrillic'] },
+  playfair: {
+    family: 'plate-playfair-display',
+    label: 'Playfair Display',
+    file: 'playfair-display',
+    weight: '900',
+    subsets: ['latin', 'cyrillic'],
+  },
+  russoOne: { family: 'plate-russo-one', label: 'Russo One', file: 'russo-one', weight: '400', subsets: ['latin', 'cyrillic'] },
+  rubikBubbles: {
+    family: 'plate-rubik-bubbles',
+    label: 'Rubik Bubbles',
+    file: 'rubik-bubbles',
+    weight: '400',
+    subsets: ['latin', 'cyrillic', 'hebrew'],
+  },
+  pacifico: { family: 'plate-pacifico', label: 'Pacifico', file: 'pacifico', weight: '400', subsets: ['latin', 'cyrillic'] },
+  bonaNova: { family: 'plate-bona-nova', label: 'Bona Nova', file: 'bona-nova', weight: '700', subsets: ['latin', 'cyrillic', 'hebrew'] },
+  pressStart: {
+    family: 'plate-press-start-2p',
+    label: 'Press Start 2P',
+    file: 'press-start-2p',
+    weight: '400',
+    subsets: ['latin', 'cyrillic'],
+  },
 };
 
 /** The subsets' ranges, as Google Fonts cut them. */

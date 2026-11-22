@@ -206,3 +206,8 @@ One branch and PR each, smallest first:
   that read as the plate's. The profile select keeps the plate's words.
 - **M14**: measured, "PLATE BUILDER" 8 mm with a 0.5 mm fillet: preview
   64 ms, export 91 ms — no coarser preview needed.
+- **M15**: the seven add 230 kB of woff2 to the precache (`public/fonts/`
+  is 560 kB in all). Rubik Bubbles is the largest (73 kB for three
+  subsets), Press Start 2P the smallest (7 kB).
+- **M15**: besides the font loop, a Node test checks that every font has
+  its subsets' files and an OFL licence on disk.

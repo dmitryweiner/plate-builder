@@ -440,7 +440,9 @@ await app.run(
       };
       await setText('Kitchen\nКухня');
       ({ info } = await built(page, info));
-      for (const font of ['oswald', 'ptSerif', 'comfortaa', 'marckScript', 'frankRuhl', 'rubik']) {
+      const fonts = ['oswald', 'ptSerif', 'comfortaa', 'marckScript', 'frankRuhl'];
+      const later = ['lobster', 'playfair', 'russoOne', 'rubikBubbles', 'pacifico', 'bonaNova', 'pressStart'];
+      for (const font of [...fonts, ...later, 'rubik']) {
         await page.selectOption('#element_text-font', font);
         ({ info } = await built(page, info));
         check(info.includes('× 4 mm') && (await page.locator('#meshBlocked').isHidden()), `${font}: ${info}`);
@@ -448,6 +450,12 @@ await app.run(
       await setText('שלום 12');
       ({ info } = await built(page, info));
       check(await page.locator('#meshBlocked').isHidden(), 'Hebrew: the mesh is blocked');
+      // the later fonts with Hebrew of their own
+      for (const font of ['rubikBubbles', 'bonaNova', 'rubik']) {
+        await page.selectOption('#element_text-font', font);
+        ({ info } = await built(page, info));
+        check(await page.locator('#meshBlocked').isHidden(), `${font}, Hebrew: ${info}`);
+      }
       await page.selectOption('#element_text-mode', 'engraved');
       ({ info } = await built(page, info));
       check(info.includes('× 3 mm'), `engraved text: ${info}`);
@@ -483,7 +491,7 @@ await app.run(
       console.log(`    "PLATE BUILDER", 8 mm, a 0.5 mm fillet: preview ${result.ms} ms (${info}); export ${ms} ms`);
       await page.selectOption('#element_text-edgeProfile', 'chamfer');
       ({ info } = await built(page, info));
-      for (const font of ['oswald', 'ptSerif', 'comfortaa', 'marckScript', 'frankRuhl']) {
+      for (const font of ['oswald', 'ptSerif', 'comfortaa', 'marckScript', 'frankRuhl', 'playfair', 'pacifico', 'pressStart']) {
         await page.selectOption('#element_text-font', font);
         ({ info } = await built(page, info));
         check(await page.locator('#meshBlocked').isHidden(), `${font}, chamfered letters: ${info}`);
@@ -941,9 +949,11 @@ await app.run(
             check((await loaded.locator('.brand').textContent()) === 'Plate Builder', 'the app did not load offline'),
         });
         let { info } = await built(page);
-        // a font and a vignette this page never asked for online: precached all the same
+        // fonts and a vignette this page never asked for online: precached all the same
         await page.click('#addText');
         await page.selectOption('#element_text-font', 'marckScript');
+        ({ info } = await built(page, info));
+        await page.selectOption('#element_text-font', 'rubikBubbles');
         ({ info } = await built(page, info));
         check(info.includes('× 4 mm'), `offline text: ${info}`);
         await page.selectOption('#plate_kind', 'vignette');
