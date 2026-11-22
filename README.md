@@ -15,7 +15,7 @@ browser, offline included.
   rounding and a rim.
 - Images (PNG, JPEG, WebP, GIF, SVG) as relief, with levels, inversion and
   smoothing; transparency is height 0.
-- Texts in six bundled fonts (Latin, Cyrillic, Hebrew), several lines,
+- Texts in thirteen bundled fonts (Latin, Cyrillic, Hebrew), several lines,
   raised or engraved, on an arc.
 - Holes: round, slot, countersunk, hidden keyhole from the back.
 - Magnets in the back (a fridge magnet): 1 to 4, their size and a layout.
@@ -54,7 +54,8 @@ layout and conventions.
 
 - **Fonts** (SIL Open Font License 1.1, the licence next to each in
   [public/fonts/](public/fonts/)): Rubik, Oswald, PT Serif, Comfortaa, Marck
-  Script, Frank Ruhl Libre.
+  Script, Frank Ruhl Libre, Lobster, Playfair Display, Russo One, Rubik
+  Bubbles, Pacifico, Bona Nova, Press Start 2P.
 - **Vignettes**: drawn for the project, CC0 (sources and licences in
   [public/vignettes/index.json](public/vignettes/index.json)).
 - **Preset pictures**: drawn for the project

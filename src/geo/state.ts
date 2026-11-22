@@ -83,8 +83,28 @@ export function layoutFor(count: number, layout: MagnetLayout): MagnetLayout {
   return offered.length === 0 || offered.includes(layout) ? layout : offered[0];
 }
 
-/** Bundled fonts (spec §4): Rubik (Latin, Cyrillic, Hebrew), Oswald, PT Serif, Comfortaa, Marck Script (Latin, Cyrillic), Frank Ruhl Libre (Latin, Hebrew). */
-export const FONT_IDS = ['rubik', 'oswald', 'ptSerif', 'comfortaa', 'marckScript', 'frankRuhl'] as const;
+/**
+ * Bundled fonts (spec §4), in the menu's order: Rubik (Latin, Cyrillic,
+ * Hebrew), Oswald, PT Serif, Comfortaa, Marck Script (Latin, Cyrillic),
+ * Frank Ruhl Libre (Latin, Hebrew); then Lobster, Playfair Display, Russo
+ * One, Pacifico, Press Start 2P (Latin, Cyrillic), Rubik Bubbles, Bona Nova
+ * (Latin, Cyrillic, Hebrew).
+ */
+export const FONT_IDS = [
+  'rubik',
+  'oswald',
+  'ptSerif',
+  'comfortaa',
+  'marckScript',
+  'frankRuhl',
+  'lobster',
+  'playfair',
+  'russoOne',
+  'rubikBubbles',
+  'pacifico',
+  'bonaNova',
+  'pressStart',
+] as const;
 export type FontId = (typeof FONT_IDS)[number];
 
 export const ALIGNS = ['left', 'center', 'right'] as const;

@@ -192,11 +192,15 @@ Up to 10 text blocks. Each has:
 | Arc side                     | outside (letters stand on the arc, read along its top) / inside (letters hang under it, read along its bottom) | outside                |
 | In the outline (§2.4)        | on/off                                                                                                         | on                     |
 
-- **Fonts**: 5–7 OFL fonts bundled as woff2 in `public/fonts/` (Latin and
-  Cyrillic subsets, Hebrew where the font has it): Rubik (with Hebrew),
-  Oswald, PT Serif, Comfortaa (from the siblings), plus a script font and a
-  Hebrew serif to be picked in M4. They load only when a text uses them;
-  nothing comes from a CDN, so a rebuild always gets the same letters.
+- **Fonts**: thirteen OFL fonts bundled as woff2 in `public/fonts/` (Latin
+  and Cyrillic subsets, Hebrew where the font has it): Rubik (with Hebrew),
+  Oswald, PT Serif, Comfortaa (from the siblings), Marck Script and Frank
+  Ruhl Libre (a Hebrew serif, no Cyrillic) of M4; Lobster, Playfair Display
+  (900), Russo One, Rubik Bubbles (with Hebrew), Pacifico, Bona Nova (700,
+  with Hebrew) and Press Start 2P, picked by the user (2026-11-22). They
+  load only when a text uses them; nothing comes from a CDN, so a rebuild
+  always gets the same letters. `scripts/fonts.mjs` fetches a family's
+  subsets and licence.
 - **Rasterised text**: the browser draws the text block into a canvas at
   10 px/mm (`ctx.direction` follows the text, so Hebrew is shaped right to
   left); the contours are traced from that raster with sub-pixel accuracy

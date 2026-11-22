@@ -5,10 +5,12 @@
 **+ Add text** in the Texts card puts a block of up to 10 lines and 300 characters on the plate.
 Its text field has the focus with "Text" selected: type, and the words replace it.
 
-- **Font** — Rubik (Latin, Cyrillic, Hebrew), Oswald, PT Serif, Comfortaa,
-  Marck Script (Latin, Cyrillic) and Frank Ruhl Libre (Latin, Hebrew). They
-  are bundled with the app and load the first time a text uses them; a text
-  waits for its font rather than showing in another one.
+- **Font** — Rubik, Rubik Bubbles and Bona Nova (Latin, Cyrillic, Hebrew);
+  Oswald, PT Serif, Comfortaa, Marck Script, Lobster, Playfair Display,
+  Russo One, Pacifico and Press Start 2P (Latin, Cyrillic); Frank Ruhl
+  Libre (Latin, Hebrew). They are bundled with the app and load the first
+  time a text uses them; a text waits for its font rather than showing in
+  another one.
 - **Size** is the height of a capital letter, 2–100 mm, in steps of
   0.1 mm. **Line spacing** is the distance between lines as a share of the
   size; **alignment** is per block.

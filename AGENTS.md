@@ -211,6 +211,9 @@ browser (service worker, layout, workers) → a step in `scripts/smoke.mjs`.
   the vite server, console errors, `app.step` / `app.run`, downloads, STL
   checks, throttling, `offline`) on Plate Builder's ports, 5373/4373.
 - `scripts/icons.mjs` — PWA icons from `public/icon.svg`.
+- `scripts/fonts.mjs` — a Google Fonts family into `public/fonts/`: one
+  weight's woff2 subsets as Google cuts them and its OFL licence
+  (`node scripts/fonts.mjs "Playfair Display" 900 playfair-display latin cyrillic`).
 - `scripts/vignettes.mjs` — the vignette catalog: `--check` (one piece with
   a window, the index complete, licences allowed), `--sheet <dir>` (a
   contact sheet: each frame and its outline) for review before a new one is
