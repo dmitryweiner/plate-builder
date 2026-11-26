@@ -15,7 +15,8 @@ import {
   type PrimitiveKind,
   type TextElement,
 } from './geo/state';
-import { maskRings, textRings, type TextRaster } from './geo/textShape';
+import type { TextRaster } from 'maker-kit/core/raster';
+import { maskRings, textRings } from './geo/textShape';
 import type { Raster } from './geo/heightmap';
 import { processPixels } from './geo/heightmap';
 import { magnetPocket } from './geo/magnets';

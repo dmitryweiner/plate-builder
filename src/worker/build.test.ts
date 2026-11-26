@@ -17,7 +17,7 @@ import {
   type PlateState,
   type TextElement,
 } from '../geo/state';
-import type { TextRaster } from '../geo/textShape';
+import type { TextRaster } from 'maker-kit/core/raster';
 import { assessExport, validateMesh } from 'maker-kit/3d/validate';
 import {
   buildMesh,

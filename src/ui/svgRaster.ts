@@ -5,8 +5,9 @@
 // are pure and tested; the drawing is checked by the smoke.
 
 import { LIMITS } from '../geo/state';
-import type { TextRaster } from '../geo/textShape';
-import { MAX_RASTER_PX, rasterScale } from './textRaster';
+import type { TextRaster } from 'maker-kit/core/raster';
+import { MAX_RASTER_PX } from 'maker-kit/core/raster';
+import { rasterScale } from 'maker-kit/ui/textRaster';
 
 /** Only these go into the catalog (spec §2.5). */
 export const ALLOWED_LICENCES = ['CC0-1.0', 'public-domain'] as const;
