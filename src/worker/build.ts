@@ -8,14 +8,14 @@
 import type { CrossSection, Manifold } from 'manifold-3d';
 import { elementBox } from '../geo/boxes';
 import { EDGE_STEP, edgeOn, edgeSlabs, topEdgeSlabs } from '../geo/edges';
-import { heightfieldMesh } from '../geo/grid';
-import { traceContours, LEVEL } from '../geo/contour';
-import { heightField, processPixels, sampleField, type Raster } from '../geo/heightmap';
+import { heightfieldMesh } from 'maker-kit/3d/heightfield';
+import { LEVEL, sampleField, traceContours, type TextRaster } from 'maker-kit/core/raster';
+import { heightField, processPixels, type Raster } from '../geo/heightmap';
 import { holeCutters, type Cutter } from '../geo/holes';
 import { magnetCutters } from '../geo/magnets';
 import { CHORD_TOLERANCE, primitiveOutline, ringArea, segmentsFor, type Ring } from '../geo/outline';
 import { PRIMITIVE_KINDS, type ImageElement, type Plate, type PlateState, type PrimitiveKind, type TextElement } from '../geo/state';
-import { maskRings, textRings, type TextRaster } from '../geo/textShape';
+import { maskRings, textRings } from '../geo/textShape';
 import type { Warning } from '../geo/warnings';
 import { outerOutline, type CsgApi, type CsgScope } from 'maker-kit/csg/manifold';
 

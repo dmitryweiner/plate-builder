@@ -1,7 +1,8 @@
 // An image's height function (spec §3): h = height · L(v) · a, where v is
 // the pixel's brightness (inverted when asked), L the levels mapping clamped
-// to 0…1 and a the alpha; smoothed by a box blur, sampled bilinearly between
-// pixel centres, 0 outside the picture.
+// to 0…1 and a the alpha; smoothed by a box blur. The worker samples it
+// bilinearly between pixel centres, 0 outside the picture, with the kit's
+// `sampleField` (`maker-kit/core/raster`).
 
 /** A stored picture: gray and alpha interleaved, row 0 at the top. */
 export interface Raster {
@@ -50,27 +51,6 @@ export function boxBlur(field: Float32Array, width: number, height: number, r: n
     return dst;
   };
   return pass(pass(field, true), false);
-}
-
-/**
- * The field at a point of the image's own frame (mm, y up, the picture
- * w × h mm around the origin). Between pixel centres it is bilinear; in the
- * half pixel at the border it holds the edge; outside the picture it is 0.
- */
-export function sampleField(field: Float32Array, pw: number, ph: number, w: number, h: number, x: number, y: number): number {
-  if (x < -w / 2 || x > w / 2 || y < -h / 2 || y > h / 2) return 0;
-  // pixel coordinates with centres at whole numbers
-  const u = Math.min(pw - 1, Math.max(0, ((x + w / 2) / w) * pw - 0.5));
-  const v = Math.min(ph - 1, Math.max(0, ((h / 2 - y) / h) * ph - 0.5));
-  const i0 = Math.floor(u);
-  const j0 = Math.floor(v);
-  const i1 = Math.min(pw - 1, i0 + 1);
-  const j1 = Math.min(ph - 1, j0 + 1);
-  const fu = u - i0;
-  const fv = v - j0;
-  const top = field[j0 * pw + i0] * (1 - fu) + field[j0 * pw + i1] * fu;
-  const bottom = field[j1 * pw + i0] * (1 - fu) + field[j1 * pw + i1] * fu;
-  return top * (1 - fv) + bottom * fv;
 }
 
 export interface HeightField {

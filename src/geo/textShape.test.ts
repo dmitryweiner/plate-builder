@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { bounds, ringArea } from './outline';
-import { isTextRaster, textRings, type TextRaster } from './textShape';
+import type { TextRaster } from 'maker-kit/core/raster';
+import { textRings } from './textShape';
 
 /** A 10 px/mm raster 40 × 20 px with a filled 20 × 8 px block whose middle is at (20, 10). */
 function block(): TextRaster {
@@ -30,14 +31,5 @@ describe('textRings', () => {
     const b = bounds(rings);
     expect(b.minY).toBeGreaterThan(9.8);
     expect(b.maxY).toBeCloseTo(10.8, 1);
-  });
-});
-
-describe('isTextRaster', () => {
-  it('accepts a whole raster and refuses a broken one', () => {
-    expect(isTextRaster(block())).toBe(true);
-    expect(isTextRaster({ ...block(), data: new Uint8Array(3) })).toBe(false);
-    expect(isTextRaster({ ...block(), pxPerMm: 0 })).toBe(false);
-    expect(isTextRaster(null)).toBe(false);
   });
 });

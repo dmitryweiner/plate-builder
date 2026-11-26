@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { boxBlur, heightField, processPixels, sampleField, type Raster } from './heightmap';
+import { boxBlur, heightField, processPixels, type Raster } from './heightmap';
 
 /** A raster from rows of [gray, alpha] pairs. */
 function raster(rows: [number, number][][]): Raster {
@@ -66,30 +66,6 @@ describe('boxBlur', () => {
   it('does nothing with radius 0', () => {
     const field = new Float32Array([1, 0, 1]);
     expect(boxBlur(field, 3, 1, 0)).toBe(field);
-  });
-});
-
-describe('sampleField', () => {
-  // a 2 × 1 picture 20 × 10 mm: pixel centres at x = −5 and +5
-  const field = new Float32Array([0, 1]);
-  const at = (x: number, y: number) => sampleField(field, 2, 1, 20, 10, x, y);
-
-  it('is bilinear between pixel centres', () => {
-    expect(at(-5, 0)).toBeCloseTo(0);
-    expect(at(0, 0)).toBeCloseTo(0.5);
-    expect(at(2.5, 3)).toBeCloseTo(0.75);
-  });
-
-  it('holds the edge pixel out to the picture border and is 0 outside it', () => {
-    expect(at(9.9, 4.9)).toBeCloseTo(1);
-    expect(at(10.1, 0)).toBe(0);
-    expect(at(0, -5.1)).toBe(0);
-  });
-
-  it('puts row 0 at the top (y up)', () => {
-    const tall = new Float32Array([1, 0]);
-    expect(sampleField(tall, 1, 2, 10, 20, 0, 5)).toBeCloseTo(1);
-    expect(sampleField(tall, 1, 2, 10, 20, 0, -5)).toBeCloseTo(0);
   });
 });
 

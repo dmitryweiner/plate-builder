@@ -6,7 +6,7 @@ import { encodeSTL } from 'maker-kit/3d/stl';
 import { assessExport, validateMesh } from 'maker-kit/3d/validate';
 import { isRaster } from '../geo/heightmap';
 import { sanitizeState } from '../geo/state';
-import { isTextRaster } from '../geo/textShape';
+import { isTextRaster } from 'maker-kit/core/raster';
 import { buildPlate, outlineRings, stateOutline } from './build';
 import { CsgScope, type CsgApi } from 'maker-kit/csg/manifold';
 import type { Job, JobResult } from './protocol';

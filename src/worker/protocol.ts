@@ -8,7 +8,7 @@
 import type { Raster } from '../geo/heightmap';
 import type { Ring } from '../geo/outline';
 import type { PlateState } from '../geo/state';
-import type { TextRaster } from '../geo/textShape';
+import type { TextRaster } from 'maker-kit/core/raster';
 import type { Warning } from '../geo/warnings';
 import type { MeshReport } from 'maker-kit/3d/validate';
 import type { Message } from 'maker-kit/core/message';

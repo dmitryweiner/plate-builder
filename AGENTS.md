@@ -14,7 +14,9 @@ imported as `maker-kit/core/history` and so on; its docs are in its
 `docs/`. The move onto it was maker-kit's milestone M1 (done 2026-11-10),
 then onto v0.4.0 with its K7 (2026-11-11: csg, the message list, the list
 card, the banner's advice, the offline check), then v0.5.2 (2026-11-20),
-then v0.5.3 (2026-11-22: the name button keeps its width on a desktop);
+then v0.5.3 (2026-11-22: the name button keeps its width on a desktop),
+then v0.6.0 (2026-11-26: fonts, text rasters, picture import, raster
+contours and heightfields, taken from this app into the kit for ClayForm);
 the decisions and deviations are in maker-kit's `plans/PLAN.md`. For joint work on the app
 and the kit: `npm link ../maker-kit` — but the dev server then cannot load
 manifold's WASM from the kit's own `node_modules` and the smoke fails, so a
@@ -130,9 +132,9 @@ browser (service worker, layout, workers) → a step in `scripts/smoke.mjs`.
   after a pause in the edits, the export.
 - `src/geo/` — the pure core: `state.ts` (schema, ranges, defaults,
   `sanitizeState`), `outline.ts` (primitive outlines as polygons),
-  `heightmap.ts` (an image's height function), `grid.ts` (its heightfield
-  solid), `contour.ts` (marching squares), `textLayout.ts` (line alignment,
-  arc bending), `textShape.ts` (a text raster's contours), `boxes.ts`
+  `heightmap.ts` (an image's height function: levels, blur),
+  `textLayout.ts` (line alignment, arc bending), `textShape.ts` (a text
+  raster's contours, bent onto an arc), `boxes.ts`
   (element boxes; measured text boxes), `printHints.ts` (colour-change
   heights, the sealed magnets' pause),
   `holes.ts` (footprints, boxes and cutters of the hole kinds),
@@ -140,7 +142,9 @@ browser (service worker, layout, workers) → a step in `scripts/smoke.mjs`.
   `edges.ts` (the edges' profile, terraces and slabs; a raised text's top
   edge),
   `warnings.ts` (the warnings that need no CSG). Meshes, STL and the
-  export gate are maker-kit's `3d/mesh`, `3d/stl`, `3d/validate`.
+  export gate are maker-kit's `3d/mesh`, `3d/stl`, `3d/validate`; the
+  heightfield solid `3d/heightfield`; marching squares, the text raster's
+  check and the field's bilinear sample `core/raster`.
 - `src/worker/` — `protocol.ts` (the jobs and results; the envelope is
   maker-kit's `worker/protocol`), `client.ts` (maker-kit's `WorkerClient`
   with the app's policy), `csg.worker.ts` (a thin adapter over the kit's
@@ -166,9 +170,10 @@ browser (service worker, layout, workers) → a step in `scripts/smoke.mjs`.
   open; ids `<type>_<id>`, `_visible`, `_duplicate`, `_remove`, e.g.
   `hole_h1_remove`), `warningsCard.ts` (its lines for
   maker-kit's `ui/messageList`),
-  `imageImport.ts` (files → grayscale + alpha PNG, decoding, height
-  pictures), `fonts.ts` (bundled fonts, loaded on first use),
-  `textRaster.ts` (a text block drawn at 10 px/mm), `svgRaster.ts`
+  `imageImport.ts` (the kit's `ui/imageImport` → a grayscale + alpha PNG,
+  decoding, height pictures), `fonts.ts` (bundled fonts on the kit's
+  `ui/fonts` loader), `textRaster.ts` (a text element drawn by the kit's
+  `ui/textRaster` at 10 px/mm), `svgRaster.ts`
   (vignette catalog schema, SVG silhouettes, own SVG files), `dom.ts`
   (`scrollIntoContainer`). The rest of the page is maker-kit's: the
   sheet, the bar over the 3D view (`ui/progress`), the storage banner, the

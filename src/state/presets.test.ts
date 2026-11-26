@@ -2,7 +2,7 @@ import { beforeAll, describe, expect, it } from 'vitest';
 import type { Raster } from '../geo/heightmap';
 import { meshNormals } from 'maker-kit/3d/mesh';
 import { defaultPlate, sanitizeState } from '../geo/state';
-import type { TextRaster } from '../geo/textShape';
+import type { TextRaster } from 'maker-kit/core/raster';
 import { assessExport, validateMesh } from 'maker-kit/3d/validate';
 import { LOCALES, messages, staticText } from '../i18n';
 import { warnings } from '../geo/warnings';
